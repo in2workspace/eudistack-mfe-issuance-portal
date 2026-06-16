@@ -29,23 +29,12 @@ const CERT_IDENTIFIER_URL =
 function readIdentifiedUser(): AuthenticatedUser | null {
   try {
     const raw = sessionStorage.getItem('cgcom_identified_user');
-    if (raw) {
-      sessionStorage.removeItem('cgcom_identified_user');
-      return JSON.parse(raw) as AuthenticatedUser;
-    }
-  } catch { /* fall through */ }
-  // Hardcoded mock para pruebas locales (sessionStorage no es cross-origin entre puertos).
-  return {
-    id: 'DR-12345',
-    name: 'Dra. Maria Garcia Lopez',
-    collegiateNumber: '282912345',
-    dni: '12345678A',
-    email: 'maria.garcia@ejemplo.com',
-    phone: '+34 600 123 456',
-    college: 'Colegio Oficial de Medicos de Madrid',
-    specialty: 'Medicina Familiar y Comunitaria',
-    authMethod: 'claveMobile',
-  };
+    if (!raw) return null;
+    sessionStorage.removeItem('cgcom_identified_user');
+    return JSON.parse(raw) as AuthenticatedUser;
+  } catch {
+    return null;
+  }
 }
 
 function PortalApp({ LandingComponent = LandingPage }: { LandingComponent?: React.ComponentType<LandingPageProps> }) {
