@@ -21,7 +21,7 @@ import { Alert, AlertDescription } from '../ui/alert';
 import { CredentialOfferUrlBox } from './CredentialOfferUrlBox';
 import type { AuthenticatedUser } from '../../types';
 
-const WALLET_CALLBACK_BASE = 'https://wallet.cgcom.demo.fikua.com/protocol/callback';
+const WALLET_CALLBACK_BASE = import.meta.env.VITE_WALLET_CALLBACK_BASE ?? 'https://cgcom.stg.eudistack.net/wallet/protocol/callback';
 
 /**
  * Construye la URL del wallet web a partir de la Credential Offer URL del issuer.
