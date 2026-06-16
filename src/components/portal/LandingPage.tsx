@@ -47,7 +47,7 @@ export function LandingPage({ onNavigate, onLogin }: LandingPageProps) {
               <div className="flex flex-col sm:flex-row gap-4">
                 <Button
                   size="lg"
-                  onClick={() => onNavigate('auth')}
+                  onClick={onLogin}
                   className="bg-[#E67E22] hover:bg-[#D35400] text-white"
                 >
                   Obtener mi DoctorID
@@ -185,7 +185,7 @@ export function LandingPage({ onNavigate, onLogin }: LandingPageProps) {
           <div className="text-center mt-12">
             <Button
               size="lg"
-              onClick={() => onNavigate('auth')}
+              onClick={onLogin}
               className="bg-[#E67E22] hover:bg-[#D35400] text-white"
             >
               Comenzar Ahora
