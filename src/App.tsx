@@ -26,15 +26,20 @@ import * as issuerService from './services/issuerService';
 const CERT_IDENTIFIER_URL =
   import.meta.env.VITE_CERT_IDENTIFIER_URL ?? 'http://localhost:3000';
 
-function readIdentifiedUser(): AuthenticatedUser | null {
+// TEMPORAL: lee el usuario desde el param ?u= (Base64) cuando sessionStorage no está
+// disponible por diferencia de origen (localhost:3000 ≠ localhost:3001).
+// Sustituir por el contrato definitivo de EUDISTACK-622.
+function readIdentifiedUser(urlParams: URLSearchParams): AuthenticatedUser | null {
   try {
+    const encoded = urlParams.get('u');
+    if (encoded) return JSON.parse(decodeURIComponent(atob(encoded))) as AuthenticatedUser;
     const raw = sessionStorage.getItem('cgcom_identified_user');
-    if (!raw) return null;
-    sessionStorage.removeItem('cgcom_identified_user');
-    return JSON.parse(raw) as AuthenticatedUser;
-  } catch {
-    return null;
-  }
+    if (raw) {
+      sessionStorage.removeItem('cgcom_identified_user');
+      return JSON.parse(raw) as AuthenticatedUser;
+    }
+  } catch { /* fall through */ }
+  return null;
 }
 
 function PortalApp({ LandingComponent = LandingPage }: { LandingComponent?: React.ComponentType<LandingPageProps> }) {
@@ -44,7 +49,7 @@ function PortalApp({ LandingComponent = LandingPage }: { LandingComponent?: Reac
   // Retorno desde el Portal de Identificación (handoff).
   const justIdentified = urlParams.get('identified') === '1';
 
-  const identifiedUser = justIdentified ? readIdentifiedUser() : null;
+  const identifiedUser = justIdentified ? readIdentifiedUser(urlParams) : null;
 
   const [currentPage, setCurrentPage] = useState<Page>(
     hasOidcCode ? 'portal' : identifiedUser ? 'doctor-data' : 'landing',
