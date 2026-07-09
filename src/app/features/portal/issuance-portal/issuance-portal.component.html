@@ -1,0 +1,307 @@
+<!-- Paso: confirm -->
+@if (issuanceStep() === 'confirm' && selectedCredential()) {
+  <div class="min-h-screen bg-gray-50">
+    <header class="bg-white border-b border-gray-200">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div class="flex items-center gap-6">
+          <button (click)="resetFlow()" class="inline-flex items-center justify-center h-9 w-9 rounded-md text-gray-600 hover:bg-gray-100 transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+          </button>
+          <img src="/cgcom-header-logo.svg" alt="CGCOM - Organización Médica Colegial" class="h-12 w-auto" />
+          <div class="border-l border-gray-300 pl-6">
+            <p class="text-sm font-medium text-gray-700">Cartera de Identidad Digital</p>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div class="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border p-8">
+        <div class="text-center mb-8">
+          <div class="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"
+            [style.background-color]="selectedCredential()!.color + '20'">
+            <!-- Shield or FileCheck icon based on icon field -->
+            @if (selectedCredential()!.icon === 'shield') {
+              <svg class="w-10 h-10" [style.color]="selectedCredential()!.color" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+            } @else {
+              <svg class="w-10 h-10" [style.color]="selectedCredential()!.color" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            }
+          </div>
+          <h2 class="text-2xl font-bold text-gray-900 mb-2">{{ selectedCredential()!.name }}</h2>
+          <p class="text-gray-600">{{ selectedCredential()!.description }}</p>
+        </div>
+
+        <div class="bg-gray-50 rounded-lg p-6 mb-8">
+          <h3 class="font-bold text-gray-900 mb-4">Datos que se incluirán en la credencial:</h3>
+          <div class="grid md:grid-cols-2 gap-4">
+            @for (attr of selectedCredential()!.attributes; track attr.key) {
+              <div class="flex items-start gap-3">
+                <svg class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                  <p class="text-sm font-semibold text-gray-900">{{ attr.key }}</p>
+                  <p class="text-sm text-gray-600">{{ attr.value }}</p>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+
+        <div class="relative w-full rounded-lg border px-4 py-3 text-sm mb-8" role="alert">
+          <div class="flex items-start gap-3">
+            <svg class="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p>
+              Esta credencial será válida por
+              <strong>{{ selectedCredential()!.validityYears }} año{{ selectedCredential()!.validityYears > 1 ? 's' : '' }}</strong>
+              desde su fecha de emisión. Podrás revocarla o renovarla en cualquier momento desde este portal.
+            </p>
+          </div>
+        </div>
+
+        <div class="flex gap-4">
+          <button (click)="resetFlow()" class="flex-1 inline-flex items-center justify-center rounded-md text-sm font-medium h-9 px-4 border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors">Cancelar</button>
+          <button (click)="handleConfirmIssuance()" class="flex-1 inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium h-9 px-4 text-white transition-colors" [style.background-color]="selectedCredential()!.color">
+            Continuar
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Paso: qr -->
+@if (issuanceStep() === 'qr' && selectedCredential()) {
+  <div class="min-h-screen bg-gray-50">
+    <header class="bg-white border-b border-gray-200">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div class="flex items-center gap-6">
+          <img src="/cgcom-header-logo.svg" alt="CGCOM - Organización Médica Colegial" class="h-12 w-auto" />
+          <div class="border-l border-gray-300 pl-6">
+            <p class="text-sm font-medium text-gray-700">Cartera de Identidad Digital</p>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div class="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border p-8">
+        <div class="text-center mb-8">
+          <div class="w-20 h-20 bg-[#1A5276]/10 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg class="w-10 h-10 text-[#1A5276]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <h2 class="text-2xl font-bold text-gray-900 mb-2">Escanea el Código QR</h2>
+          <p class="text-gray-600">Abrirá la aplicación Cartera Digital CGCOM en tu dispositivo y recibirás tu credencial</p>
+        </div>
+
+        <div class="bg-gray-50 rounded-lg p-8 mb-8 flex flex-col items-center">
+          <div class="bg-white p-4 rounded-lg shadow-sm">
+            <app-credential-qr-code
+              [credentialId]="selectedCredential()!.id"
+              [credentialType]="selectedCredential()!.type"
+              [userId]="user.id"
+              [name]="user.name"
+              [collegiateNumber]="user.collegiateNumber"
+              [college]="user.college"
+              [specialty]="user.specialty"
+              [size]="220"
+            />
+          </div>
+          <p class="text-center text-sm text-gray-500 mt-4">Nº Colegiado: {{ user.collegiateNumber }}</p>
+        </div>
+
+        <div class="space-y-4 mb-8">
+          @for (step of [{n:1,title:'Abre la aplicación móvil',desc:'Abre la Cartera Digital CGCOM en tu smartphone'},{n:2,title:'Escanea el código QR',desc:'Usa el escáner de la app para escanear este código'},{n:3,title:'Confirma la descarga',desc:'Acepta la descarga en tu dispositivo móvil'}]; track step.n) {
+            <div class="flex items-start gap-3">
+              <div class="w-8 h-8 bg-[#E67E22] text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold">{{ step.n }}</div>
+              <div>
+                <p class="font-semibold text-gray-900">{{ step.title }}</p>
+                <p class="text-sm text-gray-600">{{ step.desc }}</p>
+              </div>
+            </div>
+          }
+        </div>
+
+        <div class="relative w-full rounded-lg border px-4 py-3 text-sm bg-blue-50 border-blue-200 mb-8" role="alert">
+          <p class="text-gray-700">Este código QR es válido por <strong>10 minutos</strong>. Si necesitas más tiempo, puedes generar uno nuevo</p>
+        </div>
+
+        <div class="flex gap-4">
+          <button (click)="resetFlow()" class="flex-1 inline-flex items-center justify-center rounded-md text-sm font-medium h-9 px-4 border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors">Cancelar</button>
+          <button (click)="handleCompleteIssuance()" class="flex-1 inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium h-9 px-4 bg-green-600 hover:bg-green-700 text-white transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Marcar como Completado
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Paso: success -->
+@if (issuanceStep() === 'success') {
+  <div class="min-h-screen bg-gray-50">
+    <header class="bg-white border-b border-gray-200">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div class="flex items-center gap-6">
+          <img src="/cgcom-header-logo.svg" alt="CGCOM - Organización Médica Colegial" class="h-12 w-auto" />
+          <div class="border-l border-gray-300 pl-6">
+            <p class="text-sm font-medium text-gray-700">Cartera de Identidad Digital</p>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div class="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border p-8 text-center">
+        <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+          <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <h2 class="text-2xl font-bold text-gray-900 mb-4">¡Credencial Emitida con Éxito!</h2>
+        <p class="text-gray-600 mb-8">
+          Tu credencial <strong>{{ selectedCredential()?.name }}</strong> ha sido emitida y descargada en tu dispositivo móvil.
+        </p>
+        <div class="bg-gray-50 rounded-lg p-6 mb-8">
+          <div class="grid md:grid-cols-2 gap-4 text-left">
+            <div>
+              <p class="text-sm text-gray-600 mb-1">ID de Credencial</p>
+              <p class="font-semibold text-gray-900">{{ successCredentialId }}</p>
+            </div>
+            <div>
+              <p class="text-sm text-gray-600 mb-1">Fecha de Emisión</p>
+              <p class="font-semibold text-gray-900">{{ successIssueDate }}</p>
+            </div>
+            <div>
+              <p class="text-sm text-gray-600 mb-1">Válida Hasta</p>
+              <p class="font-semibold text-gray-900">{{ successExpiryDate }}</p>
+            </div>
+            <div>
+              <p class="text-sm text-gray-600 mb-1">Estado</p>
+              <span class="inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 border-transparent">Activa</span>
+            </div>
+          </div>
+        </div>
+        <button (click)="resetFlow()" class="inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium h-9 px-4 bg-[#E67E22] hover:bg-[#D35400] text-white transition-colors">
+          Volver al Portal
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Paso: list (paso por defecto) -->
+@if (issuanceStep() === 'list') {
+  <div class="min-h-screen bg-gray-50">
+    <header class="bg-white border-b border-gray-200">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div class="flex justify-between items-center">
+          <div class="flex items-center gap-6">
+            <img src="/cgcom-header-logo.svg" alt="CGCOM - Organización Médica Colegial" class="h-12 w-auto" />
+            <div class="border-l border-gray-300 pl-6">
+              <p class="text-sm font-medium text-gray-700">Cartera de Identidad Digital</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-4">
+            <div class="text-right">
+              <p class="text-sm font-semibold text-gray-900">{{ user.name }}</p>
+              <p class="text-xs text-gray-600">Nº Colegiado: {{ user.collegiateNumber }}</p>
+            </div>
+            <button (click)="onLogout()" class="inline-flex items-center justify-center rounded-md text-sm font-medium h-9 px-4 border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 transition-colors">
+              Cerrar Sesión
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <!-- Welcome -->
+      <div class="mb-12">
+        <h2 class="text-3xl font-bold text-gray-900 mb-4">Bienvenido/a, {{ firstTwoNameWords() }}</h2>
+        <p class="text-xl text-gray-600">Gestiona tus credenciales digitales de forma segura</p>
+      </div>
+
+      <!-- User Info Card -->
+      <div class="bg-gradient-to-br from-[#1A5276] to-[#2874A6] rounded-xl border p-6 mb-12 text-white">
+        <h3 class="font-bold text-xl mb-4">Información del Profesional</h3>
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div><p class="text-blue-100 text-sm mb-1">Nombre Completo</p><p class="font-semibold">{{ user.name }}</p></div>
+          <div><p class="text-blue-100 text-sm mb-1">Número de Colegiado</p><p class="font-semibold">{{ user.collegiateNumber }}</p></div>
+          <div><p class="text-blue-100 text-sm mb-1">DNI</p><p class="font-semibold">{{ user.dni }}</p></div>
+          <div><p class="text-blue-100 text-sm mb-1">Colegio Provincial</p><p class="font-semibold">{{ user.college }}</p></div>
+          <div><p class="text-blue-100 text-sm mb-1">Especialidad</p><p class="font-semibold">{{ user.specialty }}</p></div>
+          <div><p class="text-blue-100 text-sm mb-1">Email</p><p class="font-semibold">{{ user.email }}</p></div>
+        </div>
+      </div>
+
+      <!-- Available Credentials -->
+      <div class="mb-12">
+        <h3 class="text-2xl font-bold text-gray-900 mb-6">Credenciales Disponibles para Emitir</h3>
+        <div class="grid md:grid-cols-2 gap-6">
+          @for (credential of availableCredentials; track credential.id) {
+            <div class="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border p-6 hover:shadow-lg transition-shadow">
+              <div class="flex items-start gap-4 mb-4">
+                <div class="w-14 h-14 rounded-lg flex items-center justify-center flex-shrink-0"
+                  [style.background-color]="credential.color + '20'">
+                  @if (credential.icon === 'shield') {
+                    <svg class="w-7 h-7" [style.color]="credential.color" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                  } @else {
+                    <svg class="w-7 h-7" [style.color]="credential.color" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  }
+                </div>
+                <div class="flex-1">
+                  <h4 class="font-bold text-gray-900 mb-1">{{ credential.name }}</h4>
+                  <p class="text-sm text-gray-600">{{ credential.description }}</p>
+                </div>
+              </div>
+              <div class="mb-4">
+                <p class="text-sm text-gray-600 mb-2"><strong>Emisor:</strong> {{ credential.issuer }}</p>
+                <p class="text-sm text-gray-600"><strong>Validez:</strong> {{ credential.validityYears }} año{{ credential.validityYears > 1 ? 's' : '' }}</p>
+              </div>
+              @if (isAlreadyIssued(credential.id)) {
+                <span class="inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium mb-4 bg-green-100 text-green-800 border-transparent">
+                  Ya tienes una credencial activa
+                </span>
+              }
+              <button
+                (click)="handleStartIssuance(credential)"
+                class="w-full inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium h-9 px-4 text-white transition-colors"
+                [style.background-color]="credential.color"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                {{ isAlreadyIssued(credential.id) ? 'Emitir Nueva' : 'Emitir Credencial' }}
+              </button>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+}
