@@ -1,9 +1,9 @@
 export const environment = {
   production: true,
-  certIdentifierUrl: 'https://cgcom.127.0.0.1.nip.io:4443/cert',
-  bootstrapApiUrl: 'https://cgcom.127.0.0.1.nip.io:4443/identify/api/bootstrap',
-  walletCallbackBase: 'https://cgcom.127.0.0.1.nip.io:4443/wallet/protocol/callback',
-  oidcAuthorizationEndpoint: 'https://cgcom.127.0.0.1.nip.io:4443/verifier/oidc/authorize',
-  oidcClientId: 'vc-auth-client-cgcom',
-  oidcPortalRedirectUri: 'https://cgcom.127.0.0.1.nip.io:4443/identify/portal',
+  certIdentifierUrl: window["env"]["cert_identifier_url"],
+  bootstrapApiUrl: window["env"]["bootstrap_api_url"],
+  walletCallbackBase: window["env"]["wallet_callback_base"],
+  oidcAuthorizationEndpoint: window["env"]["oidc_authorization_endpoint"],
+  oidcClientId: window["env"]["oidc_client_id"],
+  oidcPortalRedirectUri: window["env"]["oidc_portal_redirect_uri"],
 };
