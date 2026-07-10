@@ -1,50 +1,59 @@
-# eudistack-cgcom-mfe-issuance-portal
+# Angular
 
-Frontal del **Portal de Emisión** de CGCOM.
+This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.2.27.
 
-> ⚠️ **Material de demo.** Separado de `eudistack-platform-dev/dev-tools/demo-cgcom`
-> (vibecoding para demos, no producto). React 18 + Vite + Tailwind v4. Aún **no** migrado
-> a Angular ni alineado con el SDD de EUDIStack. Relacionado con la Épica
-> [EUDISTACK-621](https://eudistack.atlassian.net/browse/EUDISTACK-621).
+## Development server
 
-## Qué hace
-
-Flujo de emisión de credencial DoctorID (extraído de `demo-cgcom/src/portal.tsx`, sin la
-pantalla de autenticación, que vive ahora en `eudistack-cgcom-mfe-cert-identifier`):
-
-```
-landing ──▶ [identificación externa] ──▶ doctor-data ──▶ qr-credential ──▶ credential-success ──▶ portal
-```
-
-La emisión llama a `issuerService.bootstrap()` → backend → Credential Offer (OID4VCI).
-
-## Repos hermanos (separación de demo-cgcom)
-
-| Repo | Rol |
-|------|-----|
-| **eudistack-cgcom-mfe-issuance-portal** (este) | Portal de Emisión (flujo de credencial) |
-| `eudistack-cgcom-mfe-cert-identifier` | Frontal de identificación FNMT |
-| `eudistack-cgcom-cert-identifier-service` | Backend mTLS (cert-server) + bootstrap |
-
-## Ejecución local
+To start a local development server, run:
 
 ```bash
-npm install
-npm run dev      # http://localhost:3001
+ng serve
 ```
 
-Variables de entorno:
+Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
 
-| Var | Default | Uso |
-|-----|---------|-----|
-| `VITE_CERT_IDENTIFIER_URL` | `http://localhost:3000` | Portal de Identificación (inicio del handoff) |
-| `VITE_BOOTSTRAP_API_URL` | `https://localhost:3443/api/bootstrap` | Endpoint de bootstrap del backend |
+## Code scaffolding
 
-## ⚠️ Deuda conocida (heredada de la demo)
+Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
 
-- **Handoff de identidad = placeholder inseguro** (`src/App.tsx`): el usuario llega por
-  `sessionStorage` + `?identified=1`. Contrato real pendiente de `/define-architecture` (EUDISTACK-621/622).
-- **Tipos duplicados** con el repo de identificación (`src/types.ts`) — sin paquete de contrato.
-- `IssuancePortal` aún incluye atajos de demo (`handleQuickLogin`).
-- `ui/` (48 primitivas shadcn/Radix) y assets duplicados con el repo de identificación.
-- Sin tests, sin CI. Fuera de `repository-map.md` y del SDD.
+```bash
+ng generate component component-name
+```
+
+For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+
+```bash
+ng generate --help
+```
+
+## Building
+
+To build the project run:
+
+```bash
+ng build
+```
+
+This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+
+## Running unit tests
+
+To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
+
+```bash
+ng test
+```
+
+## Running end-to-end tests
+
+For end-to-end (e2e) testing, run:
+
+```bash
+ng e2e
+```
+
+Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+
+## Additional Resources
+
+For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.

@@ -1,0 +1,61 @@
+import { Routes } from '@angular/router';
+import { authGuard } from './core/guards/auth.guard';
+
+export const routes: Routes = [
+  { path: '', redirectTo: 'portal', pathMatch: 'full' },
+  {
+    path: 'portal',
+    loadComponent: () =>
+      import('./features/portal/landing/landing.component').then((m) => m.LandingComponent),
+  },
+  {
+    path: 'portal/doctor-data',
+    loadComponent: () =>
+      import('./features/portal/doctor-data/doctor-data.component').then(
+        (m) => m.DoctorDataComponent,
+      ),
+    canActivate: [authGuard],
+  },
+  {
+    path: 'portal/qr',
+    loadComponent: () =>
+      import('./features/portal/credential-qr/credential-qr.component').then(
+        (m) => m.CredentialQrComponent,
+      ),
+    canActivate: [authGuard],
+  },
+  {
+    path: 'portal/success',
+    loadComponent: () =>
+      import('./features/portal/credential-success/credential-success.component').then(
+        (m) => m.CredentialSuccessComponent,
+      ),
+  },
+  {
+    path: 'portal/incidents',
+    loadComponent: () =>
+      import('./features/portal/incidents/incidents.component').then((m) => m.IncidentsComponent),
+  },
+  {
+    path: 'portal/home',
+    loadComponent: () =>
+      import('./features/portal/issuance-portal/issuance-portal.component').then(
+        (m) => m.IssuancePortalComponent,
+      ),
+    canActivate: [authGuard],
+  },
+  {
+    path: 'cliente',
+    loadComponent: () =>
+      import('./features/acme/acme-landing/acme-landing.component').then(
+        (m) => m.AcmeLandingComponent,
+      ),
+  },
+  {
+    path: 'cliente/home',
+    loadComponent: () =>
+      import('./features/acme/acme-home/acme-home.component').then((m) => m.AcmeHomeComponent),
+    canActivate: [authGuard],
+  },
+  { path: '**', redirectTo: 'portal' },
+];

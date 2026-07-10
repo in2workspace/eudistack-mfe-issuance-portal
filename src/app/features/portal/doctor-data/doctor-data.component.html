@@ -1,0 +1,105 @@
+<div class="min-h-screen bg-gray-50">
+  <header class="bg-white border-b border-gray-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <div class="flex justify-between items-center">
+        <div class="flex items-center gap-6">
+          <button (click)="onCancel()" class="inline-flex items-center justify-center h-9 w-9 rounded-md text-gray-600 hover:bg-accent hover:text-accent-foreground transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+          </button>
+          <img src="cgcom-header-logo.svg" alt="CGCOM - Organización Médica Colegial" class="h-12 w-auto" />
+          <div class="border-l border-gray-300 pl-6">
+            <p class="text-sm font-medium text-gray-700">Cartera de Identidad Digital</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div class="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border p-8">
+      <div class="text-center mb-8">
+        <div class="w-20 h-20 bg-[#1A5276]/10 rounded-full flex items-center justify-center mx-auto mb-6">
+          <svg class="w-10 h-10 text-[#1A5276]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+        </div>
+        <h2 class="text-2xl font-bold text-gray-900 mb-2">Datos del Médico</h2>
+        <p class="text-gray-600">Confirma que tus datos son correctos antes de continuar</p>
+      </div>
+
+      <div class="bg-gray-50 rounded-lg p-6 mb-8">
+        <h3 class="font-bold text-gray-900 mb-4">Datos obtenidos del sistema CGCOM</h3>
+        <div class="grid md:grid-cols-2 gap-4">
+          @for (field of fields(); track field.label) {
+            <div class="flex items-start gap-3">
+              <svg class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div>
+                <p class="text-sm font-semibold text-gray-900">{{ field.label }}</p>
+                <p class="text-sm text-gray-600">{{ field.value }}</p>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Info alert -->
+      <div class="relative w-full rounded-lg border px-4 py-3 text-sm bg-blue-50 border-blue-200 mb-8" role="alert">
+        <div class="flex items-start gap-3">
+          <svg class="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p class="text-gray-700">
+            Estos datos han sido obtenidos del sistema de información de CGCOM.
+            Si detectas algún error, contacta con tu Colegio Provincial.
+          </p>
+        </div>
+      </div>
+
+      <!-- Error alert -->
+      @if (error()) {
+        <div class="relative w-full rounded-lg border px-4 py-3 text-sm text-red-700 bg-red-50 border-red-200 mb-6" role="alert">
+          <div class="flex items-start gap-3">
+            <svg class="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <p>{{ error() }}</p>
+          </div>
+        </div>
+      }
+
+      <div class="flex gap-4">
+        <button
+          (click)="onCancel()"
+          class="flex-1 inline-flex items-center justify-center rounded-md text-sm font-medium h-9 px-4 py-2 border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
+        >
+          Cancelar
+        </button>
+        <button
+          (click)="onContinue()"
+          [disabled]="isLoading()"
+          class="flex-1 inline-flex items-center justify-center rounded-md text-sm font-medium h-9 px-4 py-2 bg-[#E67E22] hover:bg-[#D35400] text-white disabled:opacity-70 disabled:pointer-events-none transition-colors"
+        >
+          @if (isLoading()) {
+            <svg class="mr-2 w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+            Enviando...
+          } @else {
+            Continuar
+            <svg class="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          }
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

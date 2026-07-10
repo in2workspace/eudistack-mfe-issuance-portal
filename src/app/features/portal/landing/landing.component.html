@@ -1,0 +1,258 @@
+<div class="min-h-screen bg-white">
+  <!-- Header -->
+  <header class="bg-white border-b border-gray-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <div class="flex justify-between items-center">
+        <div class="flex items-center gap-6">
+          <img src="cgcom-header-logo.svg" alt="CGCOM - Organización Médica Colegial" class="h-12 w-auto" />
+          <div class="border-l border-gray-300 pl-6">
+            <p class="text-sm font-medium text-gray-700">Cartera de Identidad Digital</p>
+          </div>
+        </div>
+        <button
+          (click)="startIdentification()"
+          class="inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium h-9 px-4 py-2 bg-[#E67E22] hover:bg-[#D35400] text-white transition-colors"
+        >
+          <!-- LogIn icon -->
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+          </svg>
+          Iniciar Sesión
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="bg-gradient-to-br from-[#1A5276] to-[#2874A6] text-white py-20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid lg:grid-cols-2 gap-12 items-center">
+        <div>
+          <h2 class="text-4xl lg:text-5xl font-bold mb-6">Tu Identidad Profesional Digital</h2>
+          <p class="text-xl mb-8 text-blue-100">
+            Sistema seguro de credenciales verificables para médicos colegiados.
+            Accede a servicios sanitarios con la máxima seguridad y confianza.
+          </p>
+          <div class="flex flex-col sm:flex-row gap-4">
+            <button
+              (click)="startIdentification()"
+              class="inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium h-10 px-6 bg-[#E67E22] hover:bg-[#D35400] text-white transition-colors"
+            >
+              Obtener mi DoctorID
+              <svg class="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+            <button
+              (click)="navigateToIncidents()"
+              class="inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium h-10 px-6 bg-white/10 border border-white text-white hover:bg-white/20 transition-colors"
+            >
+              <svg class="mr-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              Canal de Soporte
+            </button>
+          </div>
+        </div>
+        <div class="hidden lg:block">
+          <img src="doctor-hero.jpg" alt="Médico profesional" class="rounded-lg shadow-2xl w-full h-96 object-cover" />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section class="py-20 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-16">
+        <h3 class="text-3xl font-bold text-gray-900 mb-4">¿Qué es la Cartera de Identidad Digital?</h3>
+        <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+          Un sistema innovador que te permite gestionar tus credenciales profesionales
+          de forma segura y acceder a servicios sanitarios con un solo clic.
+        </p>
+      </div>
+
+      <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <!-- Shield -->
+        <div class="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border p-6 text-center hover:shadow-lg transition-shadow">
+          <div class="w-16 h-16 bg-[#E67E22]/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg class="w-8 h-8 text-[#E67E22]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+          </div>
+          <h4 class="font-bold text-gray-900 mb-2">Máxima Seguridad</h4>
+          <p class="text-gray-600">Credenciales verificables con tecnología blockchain y autenticación Cl&#64;ve</p>
+        </div>
+        <!-- Smartphone -->
+        <div class="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border p-6 text-center hover:shadow-lg transition-shadow">
+          <div class="w-16 h-16 bg-[#1A5276]/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg class="w-8 h-8 text-[#1A5276]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <h4 class="font-bold text-gray-900 mb-2">Acceso Móvil</h4>
+          <p class="text-gray-600">Usa tu smartphone para autenticarte en cualquier servicio sanitario</p>
+        </div>
+        <!-- Lock -->
+        <div class="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border p-6 text-center hover:shadow-lg transition-shadow">
+          <div class="w-16 h-16 bg-[#E67E22]/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg class="w-8 h-8 text-[#E67E22]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          </div>
+          <h4 class="font-bold text-gray-900 mb-2">Control Total</h4>
+          <p class="text-gray-600">Tú decides qué información compartir y con quién en cada momento</p>
+        </div>
+        <!-- FileCheck -->
+        <div class="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border p-6 text-center hover:shadow-lg transition-shadow">
+          <div class="w-16 h-16 bg-[#1A5276]/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg class="w-8 h-8 text-[#1A5276]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </div>
+          <h4 class="font-bold text-gray-900 mb-2">Credenciales Oficiales</h4>
+          <p class="text-gray-600">Emitidas y verificadas por el Consejo General de Colegios de Médicos</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How it Works -->
+  <section class="py-20 bg-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-16">
+        <h3 class="text-3xl font-bold text-gray-900 mb-4">Cómo Funciona</h3>
+        <p class="text-xl text-gray-600 max-w-3xl mx-auto">Obtén tus credenciales digitales en 3 sencillos pasos</p>
+      </div>
+      <div class="grid lg:grid-cols-3 gap-12">
+        <div class="text-center">
+          <div class="w-20 h-20 bg-[#E67E22] text-white rounded-full flex items-center justify-center mx-auto mb-6 text-2xl font-bold">1</div>
+          <h4 class="text-xl font-bold text-gray-900 mb-4">Autenticación con Cl&#64;ve</h4>
+          <p class="text-gray-600">Inicia sesión de forma segura usando tu eDNI, certificado digital o la app móvil de Cl&#64;ve</p>
+        </div>
+        <div class="text-center">
+          <div class="w-20 h-20 bg-[#1A5276] text-white rounded-full flex items-center justify-center mx-auto mb-6 text-2xl font-bold">2</div>
+          <h4 class="text-xl font-bold text-gray-900 mb-4">Verificación de Datos</h4>
+          <p class="text-gray-600">Confirmamos tu información con el registro oficial del CGCOM automáticamente</p>
+        </div>
+        <div class="text-center">
+          <div class="w-20 h-20 bg-[#E67E22] text-white rounded-full flex items-center justify-center mx-auto mb-6 text-2xl font-bold">3</div>
+          <h4 class="text-xl font-bold text-gray-900 mb-4">Emite tus Credenciales</h4>
+          <p class="text-gray-600">Genera tus credenciales digitales y descárgalas en tu dispositivo móvil</p>
+        </div>
+      </div>
+      <div class="text-center mt-12">
+        <button
+          (click)="startIdentification()"
+          class="inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium h-10 px-6 bg-[#E67E22] hover:bg-[#D35400] text-white transition-colors"
+        >
+          Comenzar Ahora
+          <svg class="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Use Cases -->
+  <section class="py-20 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-16">
+        <h3 class="text-3xl font-bold text-gray-900 mb-4">Casos de Uso</h3>
+        <p class="text-xl text-gray-600 max-w-3xl mx-auto">Accede a múltiples servicios sanitarios con una sola identidad digital</p>
+      </div>
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+        @for (useCase of useCases; track useCase.title) {
+          <div class="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border p-6 hover:shadow-lg transition-shadow">
+            <div class="flex items-start gap-3">
+              <svg class="w-6 h-6 text-green-600 flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div>
+                <h4 class="font-bold text-gray-900 mb-2">{{ useCase.title }}</h4>
+                <p class="text-gray-600">{{ useCase.description }}</p>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- Contact Section -->
+  <section class="py-20 bg-white">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="bg-gradient-to-br from-[#1A5276] to-[#2874A6] rounded-2xl p-12 text-center text-white">
+        <svg class="w-16 h-16 mx-auto mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+        </svg>
+        <h3 class="text-3xl font-bold mb-4">¿Necesitas Ayuda?</h3>
+        <p class="text-xl mb-8 text-blue-100">Nuestro equipo está disponible para resolver tus dudas y ayudarte en el proceso</p>
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+          <button
+            (click)="navigateToIncidents()"
+            class="inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium h-10 px-6 bg-white text-[#1A5276] hover:bg-gray-100 transition-colors"
+          >
+            <svg class="mr-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            Reportar Incidencia
+          </button>
+          <button
+            (click)="contactByEmail()"
+            class="inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium h-10 px-6 bg-white/10 border border-white text-white hover:bg-white/20 transition-colors"
+          >
+            Contactar por Email
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="bg-gray-900 text-gray-300 py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid md:grid-cols-3 gap-8">
+        <div>
+          <div class="flex items-center gap-2 mb-4">
+            <img src="cgcom-logo.png" alt="CGCOM" class="h-10 w-auto" />
+          </div>
+          <p class="text-sm">Consejo General de Colegios Oficiales de Médicos de España</p>
+        </div>
+        <div>
+          <h4 class="font-bold text-white mb-4">Enlaces Útiles</h4>
+          <ul class="space-y-2 text-sm">
+            <li><a href="#" class="hover:text-[#E67E22]">Aviso Legal</a></li>
+            <li><a href="#" class="hover:text-[#E67E22]">Política de Privacidad</a></li>
+            <li><a href="#" class="hover:text-[#E67E22]">Términos y Condiciones</a></li>
+            <li><a href="#" class="hover:text-[#E67E22]">Accesibilidad</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="font-bold text-white mb-4">Soporte</h4>
+          <ul class="space-y-2 text-sm">
+            <li>Email: soporte&#64;cgcom-identidad.es</li>
+            <li>Teléfono: 900 123 456</li>
+            <li>Horario: L-V 9:00-18:00</li>
+          </ul>
+        </div>
+      </div>
+      <div class="border-t border-gray-800 mt-8 pt-8 text-center text-sm">
+        <p>
+          &copy; {{ currentYear }} CGCOM - Todos los derechos reservados
+          <span class="mx-3">•</span>
+          Desarrollado por <span class="text-[#E67E22] font-semibold">Altia</span>
+        </p>
+      </div>
+    </div>
+  </footer>
+</div>
