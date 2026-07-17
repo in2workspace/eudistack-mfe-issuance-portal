@@ -31,7 +31,7 @@ export const DEFAULT_EUDISTACK_BRANDING: Readonly<TenantBranding> = Object.freez
   faviconUrl: 'assets/branding/eudistack-favicon.svg',
   appName: 'EUDIStack',
   defaultLanguage: 'es',
-  supportedLanguages: ['es', 'en'],
+  supportedLanguages: Object.freeze(['es', 'en']) as string[],
 });
 
 /**
