@@ -3,13 +3,12 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideHttpClient } from '@angular/common/http';
 import { TenantBrandingSource } from './tenant-branding.source';
 import { TenantBrandingResult } from './tenant-branding.model';
-import { environment } from '../../../environments/environment';
 
 describe('TenantBrandingSource', () => {
   let source: TenantBrandingSource;
   let httpMock: HttpTestingController;
 
-  const urlFor = (tenant: string): string => `${environment.assetsBaseUrl}/${tenant}/theme.json`;
+  const urlFor = (tenant: string): string => `/assets/tenants/${tenant}/theme.json`;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -23,14 +22,35 @@ describe('TenantBrandingSource', () => {
     httpMock.verify();
   });
 
-  it('returns ok:true with the raw descriptor on success', fakeAsync(() => {
+  it('loads the descriptor from the same-origin shared assets path (no external host config, SAD §8.8)', fakeAsync(() => {
     let emitted: TenantBrandingResult | undefined;
-    const descriptor = { appName: 'CGCOM' };
+    const descriptor = { branding: { name: 'CGCOM' } };
 
     source.load('cgcom').subscribe((result) => (emitted = result));
     httpMock.expectOne(urlFor('cgcom')).flush(descriptor);
 
     expect(emitted).toEqual({ ok: true, descriptor });
+  }));
+
+  it('rewrites the legacy /assets/tenant/* logo and favicon paths to the tenant-specific folder', fakeAsync(() => {
+    let emitted: TenantBrandingResult | undefined;
+    const descriptor = {
+      branding: { name: 'CGCOM', logoUrl: '/assets/tenant/logo.png', faviconUrl: 'assets/tenant/favicon.png' },
+    };
+
+    source.load('cgcom').subscribe((result) => (emitted = result));
+    httpMock.expectOne(urlFor('cgcom')).flush(descriptor);
+
+    expect(emitted).toEqual({
+      ok: true,
+      descriptor: {
+        branding: {
+          name: 'CGCOM',
+          logoUrl: '/assets/tenants/cgcom/logo.png',
+          faviconUrl: '/assets/tenants/cgcom/favicon.png',
+        },
+      },
+    });
   }));
 
   it('maps a 404 to a fail-safe absent result and logs a warning without exposing detail (ES-02)', fakeAsync(() => {

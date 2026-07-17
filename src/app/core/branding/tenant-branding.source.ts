@@ -1,13 +1,15 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, of, timeout, catchError, map, TimeoutError } from 'rxjs';
-import { environment } from '../../../environments/environment';
 import { TenantBrandingDescriptor, TenantBrandingResult } from './tenant-branding.model';
 
 /**
  * Carga en runtime el descriptor de branding/idioma de un tenant desde el
- * repositorio de assets compartido (`{assetsBaseUrl}/{tenant}/theme.json`,
- * SAD §8.8). Nunca lanza ni propaga el error al llamante (ES-01/ES-02/ES-04/
+ * repositorio de assets compartido, servido **same-origin** por nginx a
+ * partir de `eudistack-platform-assets` (volumen montado en
+ * `/assets/tenants/`, sin variable de entorno de host externo) — mismo
+ * mecanismo y misma ruta que ya usa `ThemeService` en la Wallet PWA (SAD
+ * §8.8). Nunca lanza ni propaga el error al llamante (ES-01/ES-02/ES-04/
  * ES-05): siempre emite un `TenantBrandingResult` fail-safe. La política de
  * fallback (a qué default caer) vive en `resolveTenantBranding()`, no aquí.
  */
@@ -19,20 +21,52 @@ export class TenantBrandingSource {
   private static readonly REQUEST_TIMEOUT_MS = 3_000;
 
   load(tenant: string): Observable<TenantBrandingResult> {
-    const url = `${environment.assetsBaseUrl}/${tenant}/theme.json`;
+    const url = `/assets/tenants/${tenant}/theme.json`;
 
     return this.http.get<unknown>(url).pipe(
       timeout(TenantBrandingSource.REQUEST_TIMEOUT_MS),
-      map((descriptor) => this.toResult(descriptor)),
+      map((descriptor) => this.toResult(descriptor, tenant)),
       catchError((err: unknown) => of(this.toErrorResult(err))),
     );
   }
 
-  private toResult(descriptor: unknown): TenantBrandingResult {
+  private toResult(descriptor: unknown, tenant: string): TenantBrandingResult {
     if (typeof descriptor !== 'object' || descriptor === null || Array.isArray(descriptor)) {
       return { ok: false, reason: 'invalid' };
     }
-    return { ok: true, descriptor: descriptor as TenantBrandingDescriptor };
+    return { ok: true, descriptor: this.rewriteAssetPaths(descriptor as TenantBrandingDescriptor, tenant) };
+  }
+
+  /**
+   * El `theme.json` real comparte rutas placeholder entre tenants
+   * (`/assets/tenant/logo.png`, singular genérico) — hay que normalizarlas a
+   * la carpeta real del tenant (`/assets/tenants/{tenant}/logo.png`, plural)
+   * antes de que lleguen al resolver. Mismo ajuste que hace
+   * `ThemeService.rewriteAssetPaths()` en la Wallet PWA.
+   */
+  private rewriteAssetPaths(descriptor: TenantBrandingDescriptor, tenant: string): TenantBrandingDescriptor {
+    if (!descriptor.branding || typeof descriptor.branding !== 'object') {
+      return descriptor;
+    }
+    return {
+      ...descriptor,
+      branding: {
+        ...descriptor.branding,
+        logoUrl: this.rewriteAssetPath(descriptor.branding.logoUrl, tenant),
+        faviconUrl: this.rewriteAssetPath(descriptor.branding.faviconUrl, tenant),
+      },
+    };
+  }
+
+  private rewriteAssetPath(rawPath: unknown, tenant: string): unknown {
+    if (typeof rawPath !== 'string' || rawPath.trim().length === 0) {
+      return rawPath;
+    }
+    const normalized = rawPath.startsWith('/') ? rawPath.slice(1) : rawPath;
+    if (normalized.startsWith('assets/tenant/')) {
+      return `/assets/tenants/${tenant}/${normalized.slice('assets/tenant/'.length)}`;
+    }
+    return rawPath;
   }
 
   private toErrorResult(err: unknown): TenantBrandingResult {

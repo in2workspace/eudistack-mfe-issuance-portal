@@ -29,9 +29,8 @@
   window["env"]["entry_point_target_with_validation"] = "${ENTRY_POINT_TARGET_WITH_VALIDATION}";
   window["env"]["entry_point_target_direct"] = "${ENTRY_POINT_TARGET_DIRECT}";
 
-  // Shared assets repository base URL (tenant branding/language, SAD §8.8)
-  window["env"]["assets_base_url"] = "${ASSETS_BASE_URL}";
-
-  // Dev/local tenant identity override (empty = resolve from subdomain)
-  window["env"]["tenant"] = "${TENANT}";
+  // Dev/local tenant identity override (empty = resolve from subdomain).
+  // Tenant branding/language assets are same-origin (/assets/tenants/{tenant}/theme.json,
+  // nginx-mounted from eudistack-platform-assets) — no base URL config needed.
+  window["env"]["tenant"] = "${ISSUANCE_PORTAL_TENANT}";
 })(this);

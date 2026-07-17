@@ -27,26 +27,37 @@ export const DEFAULT_EUDISTACK_BRANDING: Readonly<TenantBranding> = Object.freez
     '--brand-secondary': '#00BFA6',
     '--brand-secondary-contrast': '#ffffff',
   }),
-  logoUrl: 'assets/branding/eudistack-logo.svg',
-  faviconUrl: 'assets/branding/eudistack-favicon.svg',
+  logoUrl: '/assets/tenants/eudistack/logo.svg',
+  faviconUrl: '/assets/tenants/eudistack/favicon.svg',
   appName: 'EUDIStack',
   defaultLanguage: 'es',
   supportedLanguages: Object.freeze(['es', 'en']) as string[],
 });
 
 /**
- * Forma cruda del descriptor de branding tal como llega del origen de assets
- * (`{assetsBaseUrl}/{tenant}/theme.json`), antes de validar. Todos los campos
- * son `unknown`/opcionales: `resolveTenantBranding()` (task 3) valida y
- * sanitiza cada uno antes de aceptarlo — este tipo nunca se usa para renderizar.
+ * Forma cruda del descriptor de branding tal como lo publica el repositorio de
+ * assets compartido (`eudistack-platform-assets/tenants/{tenant}/theme.json`,
+ * servido same-origin por nginx — mismo contrato que consume `ThemeService` en
+ * la Wallet PWA, SAD §8.8). Todos los campos son `unknown`/opcionales:
+ * `resolveTenantBranding()` (task 3) valida y sanitiza cada uno antes de
+ * aceptarlo — este tipo nunca se usa para renderizar directamente. Solo se
+ * modelan los campos que EUD-166 consume; `content.*` y otros campos del
+ * theme.json real (links, footer, wallet URLs…) no son de interés aquí.
  */
 export type TenantBrandingDescriptor = {
-  tokens?: unknown;
-  logoUrl?: unknown;
-  faviconUrl?: unknown;
-  appName?: unknown;
-  defaultLanguage?: unknown;
-  supportedLanguages?: unknown;
+  branding?: {
+    name?: unknown;
+    primaryColor?: unknown;
+    primaryContrastColor?: unknown;
+    secondaryColor?: unknown;
+    secondaryContrastColor?: unknown;
+    logoUrl?: unknown;
+    faviconUrl?: unknown;
+  };
+  i18n?: {
+    defaultLang?: unknown;
+    available?: unknown;
+  };
 };
 
 /**

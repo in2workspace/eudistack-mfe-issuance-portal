@@ -40,7 +40,7 @@ describe('initializeBranding', () => {
 
   it('orchestrates identity → load → resolve → apply before the component tree bootstraps (AC-06)', async () => {
     setHostname('cgcom.eudistack.net');
-    const result: TenantBrandingResult = { ok: true, descriptor: { appName: 'CGCOM' } };
+    const result: TenantBrandingResult = { ok: true, descriptor: { branding: { name: 'CGCOM' } } };
     configure(of(result));
 
     await TestBed.runInInjectionContext(() => initializeBranding());

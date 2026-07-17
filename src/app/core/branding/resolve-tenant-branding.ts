@@ -5,8 +5,15 @@ import {
   TenantBrandingResult,
 } from './tenant-branding.model';
 
-/** Allow-list de CSS custom properties que un descriptor de tenant puede fijar (R-6). */
-const ALLOWED_TOKEN_KEYS = Object.keys(DEFAULT_EUDISTACK_BRANDING.tokens);
+type BrandingDescriptor = NonNullable<TenantBrandingDescriptor['branding']>;
+
+/** Mapea cada CSS custom property (allow-list, R-6) al campo del `theme.json` real que la alimenta. */
+const TOKEN_FIELD_MAP: Record<string, keyof BrandingDescriptor> = {
+  '--brand-primary': 'primaryColor',
+  '--brand-primary-contrast': 'primaryContrastColor',
+  '--brand-secondary': 'secondaryColor',
+  '--brand-secondary-contrast': 'secondaryContrastColor',
+};
 
 /** Mismo patrón de validación de color que `ThemeService` (Wallet PWA, SAD §8.8) — defensa en profundidad ante inyección de valores CSS (R-6). */
 const CSS_COLOR_PATTERN = /^#[0-9a-fA-F]{3,8}$/;
@@ -15,16 +22,15 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
 }
 
-function sanitizeTokens(raw: unknown): Record<string, string> {
+function sanitizeTokens(branding: BrandingDescriptor | undefined): Record<string, string> {
   const tokens: Record<string, string> = { ...DEFAULT_EUDISTACK_BRANDING.tokens };
-  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+  if (!branding || typeof branding !== 'object') {
     return tokens;
   }
-  const source = raw as Record<string, unknown>;
-  for (const key of ALLOWED_TOKEN_KEYS) {
-    const value = source[key];
+  for (const [token, field] of Object.entries(TOKEN_FIELD_MAP)) {
+    const value = branding[field];
     if (isNonEmptyString(value) && CSS_COLOR_PATTERN.test(value.trim())) {
-      tokens[key] = value.trim();
+      tokens[token] = value.trim();
     }
   }
   return tokens;
@@ -46,9 +52,11 @@ function sanitizeSupportedLanguages(raw: unknown): string[] {
  * Resuelve un `TenantBranding` completo y válido a partir del resultado fail-safe
  * de cargar el descriptor del tenant (o `null` cuando la identidad de tenant no
  * fue resoluble — ES-03). Nunca lanza (ES-01): valida y sanitiza cada campo por
- * separado; uno inválido cae al valor neutro correspondiente sin invalidar el
- * resto (EC-02). Sin descriptor válido → exactamente `DEFAULT_EUDISTACK_BRANDING`
- * (EC-01, ES-02/ES-03/ES-04/ES-05) — nunca el branding de un tenant previo (R-2).
+ * separado desde la forma anidada real (`descriptor.branding.*`,
+ * `descriptor.i18n.*` — mismo contrato que `theme.json` en la Wallet PWA); uno
+ * inválido cae al valor neutro correspondiente sin invalidar el resto (EC-02).
+ * Sin descriptor válido → exactamente `DEFAULT_EUDISTACK_BRANDING` (EC-01,
+ * ES-02/ES-03/ES-04/ES-05) — nunca el branding de un tenant previo (R-2).
  */
 export function resolveTenantBranding(result: TenantBrandingResult | null): TenantBranding {
   try {
@@ -57,14 +65,16 @@ export function resolveTenantBranding(result: TenantBrandingResult | null): Tena
     }
 
     const descriptor: TenantBrandingDescriptor = result.descriptor ?? {};
+    const branding = descriptor.branding;
+    const i18n = descriptor.i18n;
 
     return {
-      tokens: sanitizeTokens(descriptor.tokens),
-      logoUrl: sanitizeField(descriptor.logoUrl, DEFAULT_EUDISTACK_BRANDING.logoUrl),
-      faviconUrl: sanitizeField(descriptor.faviconUrl, DEFAULT_EUDISTACK_BRANDING.faviconUrl),
-      appName: sanitizeField(descriptor.appName, DEFAULT_EUDISTACK_BRANDING.appName),
-      defaultLanguage: sanitizeField(descriptor.defaultLanguage, DEFAULT_EUDISTACK_BRANDING.defaultLanguage),
-      supportedLanguages: sanitizeSupportedLanguages(descriptor.supportedLanguages),
+      tokens: sanitizeTokens(branding),
+      logoUrl: sanitizeField(branding?.logoUrl, DEFAULT_EUDISTACK_BRANDING.logoUrl),
+      faviconUrl: sanitizeField(branding?.faviconUrl, DEFAULT_EUDISTACK_BRANDING.faviconUrl),
+      appName: sanitizeField(branding?.name, DEFAULT_EUDISTACK_BRANDING.appName),
+      defaultLanguage: sanitizeField(i18n?.defaultLang, DEFAULT_EUDISTACK_BRANDING.defaultLanguage),
+      supportedLanguages: sanitizeSupportedLanguages(i18n?.available),
     };
   } catch {
     return DEFAULT_EUDISTACK_BRANDING;

@@ -20,7 +20,7 @@ describe('resolveTenantBranding', () => {
   it('merges present fields from the descriptor and falls back to default for absent ones (EC-02)', () => {
     const result: TenantBrandingResult = {
       ok: true,
-      descriptor: { appName: 'CGCOM' },
+      descriptor: { branding: { name: 'CGCOM' } },
     };
 
     const branding = resolveTenantBranding(result);
@@ -34,8 +34,8 @@ describe('resolveTenantBranding', () => {
   });
 
   it('resolves in runtime with no build-time branch: same function, different tenant descriptors (AC-04)', () => {
-    const tenantA = resolveTenantBranding({ ok: true, descriptor: { appName: 'Tenant A' } });
-    const tenantB = resolveTenantBranding({ ok: true, descriptor: { appName: 'Tenant B' } });
+    const tenantA = resolveTenantBranding({ ok: true, descriptor: { branding: { name: 'Tenant A' } } });
+    const tenantB = resolveTenantBranding({ ok: true, descriptor: { branding: { name: 'Tenant B' } } });
 
     expect(tenantA.appName).toBe('Tenant A');
     expect(tenantB.appName).toBe('Tenant B');
@@ -45,25 +45,24 @@ describe('resolveTenantBranding', () => {
     const brandNewTenant = resolveTenantBranding({
       ok: true,
       descriptor: {
-        appName: 'Brand New Tenant',
-        logoUrl: 'https://assets.eudistack.net/brand-new/logo.svg',
-        defaultLanguage: 'en',
-        supportedLanguages: ['en'],
+        branding: { name: 'Brand New Tenant', logoUrl: '/assets/tenants/brand-new/logo.svg' },
+        i18n: { defaultLang: 'en', available: ['en'] },
       },
     });
 
     expect(brandNewTenant.appName).toBe('Brand New Tenant');
-    expect(brandNewTenant.logoUrl).toBe('https://assets.eudistack.net/brand-new/logo.svg');
+    expect(brandNewTenant.logoUrl).toBe('/assets/tenants/brand-new/logo.svg');
     expect(brandNewTenant.defaultLanguage).toBe('en');
     expect(brandNewTenant.supportedLanguages).toEqual(['en']);
   });
 
   it('discards a malformed descriptor: no raw/partial tokens are applied (ES-01)', () => {
     const malformedDescriptor = {
-      tokens: 'not-an-object',
-      logoUrl: 42,
-      appName: {},
-      supportedLanguages: 'es',
+      branding: {
+        primaryColor: 42,
+        name: {},
+      },
+      i18n: 'not-an-object',
     };
     const result = { ok: true, descriptor: malformedDescriptor } as unknown as TenantBrandingResult;
 
@@ -72,14 +71,13 @@ describe('resolveTenantBranding', () => {
     expect(branding).toEqual(DEFAULT_EUDISTACK_BRANDING);
   });
 
-  it('sanitizes tokens field by field: drops unknown keys and invalid CSS color values', () => {
+  it('sanitizes tokens field by field: drops invalid CSS color values', () => {
     const result: TenantBrandingResult = {
       ok: true,
       descriptor: {
-        tokens: {
-          '--brand-primary': '#ABCDEF',
-          '--brand-secondary': 'javascript:alert(1)',
-          '--not-allow-listed': '#000000',
+        branding: {
+          primaryColor: '#ABCDEF',
+          secondaryColor: 'javascript:alert(1)',
         },
       },
     };
@@ -88,7 +86,6 @@ describe('resolveTenantBranding', () => {
 
     expect(branding.tokens['--brand-primary']).toBe('#ABCDEF');
     expect(branding.tokens['--brand-secondary']).toBe(DEFAULT_EUDISTACK_BRANDING.tokens['--brand-secondary']);
-    expect(branding.tokens).not.toHaveProperty('--not-allow-listed');
   });
 
   it('never throws even on a completely unexpected shape', () => {

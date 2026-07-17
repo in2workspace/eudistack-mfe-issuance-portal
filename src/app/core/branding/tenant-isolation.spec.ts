@@ -22,15 +22,17 @@ describe('Tenant isolation (no-bleed, R-2)', () => {
     return {
       ok: true,
       descriptor: {
-        tokens: {
-          '--brand-primary': tenant === 'A' ? '#111111' : '#222222',
-          '--brand-secondary': tenant === 'A' ? '#333333' : '#444444',
+        branding: {
+          primaryColor: tenant === 'A' ? '#111111' : '#222222',
+          secondaryColor: tenant === 'A' ? '#333333' : '#444444',
+          logoUrl: `/assets/tenants/tenant-${tenant.toLowerCase()}/logo.svg`,
+          faviconUrl: `/assets/tenants/tenant-${tenant.toLowerCase()}/favicon.svg`,
+          name: `Tenant ${tenant}`,
         },
-        logoUrl: `https://assets.eudistack.net/tenant-${tenant.toLowerCase()}/logo.svg`,
-        faviconUrl: `https://assets.eudistack.net/tenant-${tenant.toLowerCase()}/favicon.svg`,
-        appName: `Tenant ${tenant}`,
-        defaultLanguage: tenant === 'A' ? 'es' : 'en',
-        supportedLanguages: tenant === 'A' ? ['es'] : ['en'],
+        i18n: {
+          defaultLang: tenant === 'A' ? 'es' : 'en',
+          available: tenant === 'A' ? ['es'] : ['en'],
+        },
       },
     };
   }

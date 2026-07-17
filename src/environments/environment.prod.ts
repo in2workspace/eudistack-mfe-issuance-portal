@@ -10,6 +10,5 @@ export const environment = {
   issuanceEntryPoint: window["env"]["issuance_entry_point"] ?? '',
   entryPointTargetWithValidation: window["env"]["entry_point_target_with_validation"] ?? '',
   entryPointTargetDirect: window["env"]["entry_point_target_direct"] ?? '',
-  assetsBaseUrl: window["env"]["assets_base_url"],
   tenant: window["env"]["tenant"],
 };
