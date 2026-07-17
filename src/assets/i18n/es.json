@@ -1,0 +1,9 @@
+{
+  "issuanceInfo.title": "Solicita tu credencial digital",
+  "issuanceInfo.description": "Vamos a guiarte paso a paso para que obtengas tu credencial verificable en tu Wallet Digital. El proceso solo te llevará unos minutos.",
+  "issuanceInfo.cta": "Empezar",
+  "issuanceInfo.cta.ariaLabel": "Empezar el proceso de emisión de tu credencial",
+  "issuanceInfo.cannotContinue.title": "No se puede continuar en este momento",
+  "issuanceInfo.cannotContinue.description": "Ha ocurrido un problema al iniciar el proceso. Puedes intentarlo de nuevo.",
+  "issuanceInfo.cannotContinue.retry": "Reintentar"
+}
