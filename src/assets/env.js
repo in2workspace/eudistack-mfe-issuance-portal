@@ -28,4 +28,10 @@
   // Downstream targets per entry point (EUD-3 / EUD-4). Empty = safe no-op.
   window["env"]["entry_point_target_with_validation"] = "";
   window["env"]["entry_point_target_direct"] = "";
+
+  // Shared assets repository base URL (tenant branding/language, SAD §8.8)
+  window["env"]["assets_base_url"] = "https://assets.eudistack.net";
+
+  // Dev/local tenant identity override (empty = resolve from subdomain)
+  window["env"]["tenant"] = "";
 })(this);

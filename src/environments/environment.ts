@@ -10,4 +10,8 @@ export const environment = {
   issuanceEntryPoint: 'WITH_VALIDATION',
   entryPointTargetWithValidation: '',
   entryPointTargetDirect: '',
+  // Repositorio de assets compartido (branding/idioma por tenant, SAD §8.8).
+  assetsBaseUrl: 'https://assets.eudistack.net',
+  // Override de identidad de tenant para dev/local (AD-3). Vacío = resolver desde el subdominio.
+  tenant: '',
 };

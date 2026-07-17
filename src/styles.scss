@@ -1,3 +1,14 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+// Branding neutro de EUDIStack por defecto (AD-4/R-3): declarado aquí para que
+// aplique sin JS desde el primer paint. `BrandingService` los sobreescribe con
+// los del tenant en el `APP_INITIALIZER`, siempre antes del bootstrap (AC-06).
+// Debe mantenerse en sincronía con `DEFAULT_EUDISTACK_BRANDING` (tenant-branding.model.ts).
+:root {
+  --brand-primary: #0f2b5b;
+  --brand-primary-contrast: #ffffff;
+  --brand-secondary: #00bfa6;
+  --brand-secondary-contrast: #ffffff;
+}

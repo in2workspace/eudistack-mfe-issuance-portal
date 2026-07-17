@@ -15,9 +15,9 @@
  */
 export function resolveTenantIdentity(
   location: Pick<Location, 'hostname'>,
-  env: Record<string, string>,
+  env: { tenant?: string },
 ): string | null {
-  const override = env['tenant']?.trim();
+  const override = env.tenant?.trim();
   if (override) {
     return override;
   }
