@@ -6,7 +6,9 @@ export const routes: Routes = [
   {
     path: 'portal',
     loadComponent: () =>
-      import('./features/portal/landing/landing.component').then((m) => m.LandingComponent),
+      import('./features/issuance-start/issuance-info/issuance-info.component').then(
+        (m) => m.IssuanceInfoComponent,
+      ),
   },
   {
     path: 'portal/doctor-data',
