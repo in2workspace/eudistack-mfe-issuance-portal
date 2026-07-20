@@ -3,12 +3,10 @@ import { Router } from '@angular/router';
 import { IssuanceStateService } from '../../../core/services/issuance-state.service';
 import { IssuerService } from '../../../core/services/issuer.service';
 import { AuthenticatedUser } from '../../../core/models/issuance.model';
+import { IssuanceEntryPointService } from '../../issuance-entry-point/issuance-entry-point.service';
 import { CommonModule } from '@angular/common';
 
-/**
- * Muestra los datos del médico autenticado y solicita confirmación antes del bootstrap.
- * Equivalente a DoctorDataPage.tsx (React).
- */
+
 @Component({
   selector: 'app-doctor-data',
   imports: [CommonModule],
@@ -18,6 +16,7 @@ export class DoctorDataComponent implements OnInit {
   private state = inject(IssuanceStateService);
   private issuer = inject(IssuerService);
   private router = inject(Router);
+  private entryPoint = inject(IssuanceEntryPointService);
 
   user!: AuthenticatedUser;
 
@@ -39,6 +38,8 @@ export class DoctorDataComponent implements OnInit {
       return;
     }
     this.user = u;
+
+    void this.entryPoint.start({ correlated: true });
   }
 
   onCancel(): void {
