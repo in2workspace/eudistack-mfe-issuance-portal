@@ -1,0 +1,10 @@
+{
+  "issuanceEntryPoint.cannotContinue.title": "No se puede continuar",
+  "issuanceEntryPoint.cannotContinue.retry": "Reintentar",
+  "issuanceEntryPoint.cannotContinue.NOT_CORRELATED": "No hemos podido validar tu sesión. Vuelve a iniciar el proceso.",
+  "issuanceEntryPoint.cannotContinue.CONFIG_ABSENT": "No se puede continuar en este momento. Inténtalo de nuevo.",
+  "issuanceEntryPoint.cannotContinue.ENTRY_POINT_INVALID": "No se puede continuar en este momento. Inténtalo de nuevo.",
+  "issuanceEntryPoint.cannotContinue.ENTRY_POINT_START_FAILED": "No se ha podido iniciar el proceso. Inténtalo de nuevo.",
+  "issuanceEntryPoint.cannotContinue.ENTRY_POINT_TIMEOUT": "El proceso ha tardado demasiado. Inténtalo de nuevo.",
+  "issuanceEntryPoint.cannotContinue.UNKNOWN": "No se puede continuar en este momento. Inténtalo de nuevo."
+}
