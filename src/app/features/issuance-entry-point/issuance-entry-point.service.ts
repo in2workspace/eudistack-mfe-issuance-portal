@@ -71,11 +71,15 @@ export class IssuanceEntryPointService {
     this.starting = true;
     this._status.set('starting');
 
-    const result = await this.dispatcher.start(configResult.config.entryPoint);
-
-    this.rememberResult(sessionKey, result);
-    this.starting = false;
-    this.applyResult(result);
+    try {
+      const result = await this.dispatcher.start(configResult.config.entryPoint);
+      this.rememberResult(sessionKey, result);
+      this.applyResult(result);
+    } catch {
+      this.fail(CannotContinueReason.EntryPointStartFailed);
+    } finally {
+      this.starting = false;
+    }
   }
 
   async retry(options?: StartOptions): Promise<void> {
