@@ -9,6 +9,9 @@ export class IssuanceStartSessionStore {
     try {
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify(session));
     } catch {
+      // Intentionally ignored: if sessionStorage is disabled or the quota is
+      // exceeded (e.g. Safari private mode), EUD-165 falls back to the default
+      // return with no persisted session (EC-01). Not an error to propagate.
     }
   }
 
@@ -17,6 +20,9 @@ export class IssuanceStartSessionStore {
       const raw = sessionStorage.getItem(STORAGE_KEY);
       return raw ? (JSON.parse(raw) as IssuanceStartSession) : null;
     } catch {
+      // Intentionally ignored: an inaccessible storage or corrupt JSON is treated
+      // as "no session" (returns null), not a failure. The tenant resolver then
+      // falls back to the runtime config source (EC-01).
       return null;
     }
   }
