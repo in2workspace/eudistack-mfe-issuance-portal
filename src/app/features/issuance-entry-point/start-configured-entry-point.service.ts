@@ -23,13 +23,13 @@ export class StartConfiguredEntryPointService {
     entryPoint: IssuanceEntryPoint,
     options?: StartEntryPointOptions,
   ): Promise<StartEntryPointResult> {
-    const resolveTarget = options?.resolveTarget ?? resolveEntryPointTarget;
-    const handler = resolveTarget(entryPoint);
     const timeoutMs = options?.timeoutMs ?? REQUEST_TIMEOUT_MS;
 
     const controller = new AbortController();
 
     try {
+      const resolveTarget = options?.resolveTarget ?? resolveEntryPointTarget;
+      const handler = resolveTarget(entryPoint);
       await firstValueFrom(
         defer(() => handler({ signal: controller.signal })).pipe(
           timeout({ each: timeoutMs }),
