@@ -5,5 +5,22 @@
   "issuanceInfo.cta.ariaLabel": "Empezar el proceso de emisión de tu credencial",
   "issuanceInfo.cannotContinue.title": "No se puede continuar en este momento",
   "issuanceInfo.cannotContinue.description": "Ha ocurrido un problema al iniciar el proceso. Puedes intentarlo de nuevo.",
-  "issuanceInfo.cannotContinue.retry": "Reintentar"
+  "issuanceInfo.cannotContinue.retry": "Reintentar",
+  "issuanceInfo.whatIsIt.title": "¿Qué es la Cartera de Identidad Digital?",
+  "issuanceInfo.whatIsIt.description": "Una cartera de identidad digital te permite guardar y presentar tus credenciales verificables desde tu propio Wallet, sin depender de contraseñas ni papeles.",
+  "issuanceInfo.whatIsIt.feature1.title": "Máxima seguridad",
+  "issuanceInfo.whatIsIt.feature1.description": "Tus credenciales se verifican criptográficamente y solo tú decides cuándo compartirlas.",
+  "issuanceInfo.whatIsIt.feature2.title": "Acceso desde tu móvil",
+  "issuanceInfo.whatIsIt.feature2.description": "Guarda tu credencial en tu Wallet Digital y preséntala desde cualquier dispositivo.",
+  "issuanceInfo.whatIsIt.feature3.title": "Tú tienes el control",
+  "issuanceInfo.whatIsIt.feature3.description": "Decides qué información compartir y con quién, en cada momento.",
+  "issuanceInfo.whatIsIt.feature4.title": "Validez oficial",
+  "issuanceInfo.whatIsIt.feature4.description": "Credenciales emitidas y verificadas conforme a los estándares europeos de identidad digital.",
+  "issuanceInfo.howItWorks.title": "Cómo funciona",
+  "issuanceInfo.howItWorks.step1.title": "Verifica tu identidad",
+  "issuanceInfo.howItWorks.step1.description": "Confirma quién eres de forma segura para iniciar el proceso.",
+  "issuanceInfo.howItWorks.step2.title": "Recibe tu credencial",
+  "issuanceInfo.howItWorks.step2.description": "El sistema emite tu credencial digital verificable.",
+  "issuanceInfo.howItWorks.step3.title": "Guárdala en tu Wallet",
+  "issuanceInfo.howItWorks.step3.description": "Añádela a tu Wallet Digital y ya está lista para usar."
 }
