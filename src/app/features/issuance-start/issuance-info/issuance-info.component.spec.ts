@@ -87,4 +87,25 @@ describe('IssuanceInfoComponent', () => {
     expect(issuanceStartService.retry).toHaveBeenCalledTimes(1);
     expect(fixture.componentInstance.cannotContinue()).toBe(false);
   });
+
+  it('renders the explainer sections and footer only in the informative state, without adding a second CTA or h1 (AC-01, AC-03)', () => {
+    configure(null);
+
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(compiled.querySelector('footer')).not.toBeNull();
+    expect(compiled.querySelectorAll('h2').length).toBeGreaterThan(0);
+    // AC-01/AC-03 invariants must hold even with the extra sections present.
+    expect(compiled.querySelectorAll('h1').length).toBe(1);
+    expect(compiled.querySelectorAll('button').length).toBe(1);
+  });
+
+  it('does not render the explainer sections or footer in the "cannot continue" state', () => {
+    configure(CannotContinueReason.Unknown);
+
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(compiled.querySelector('footer')).toBeNull();
+    expect(compiled.querySelectorAll('h2').length).toBe(0);
+  });
 });
