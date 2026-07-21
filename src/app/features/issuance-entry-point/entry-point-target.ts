@@ -19,9 +19,6 @@ function buildNavigateHandler(targetUrl: string | undefined): EntryPointHandler 
   const url = targetUrl?.trim() ?? '';
   return async () => {
     if (NO_OP_TARGETS.has(url)) {
-      if (!environment.production) {
-        console.info('[issuance-entry-point] no-op: destino no configurado');
-      }
       return;
     }
     entryPointNavigation.assign(url);
