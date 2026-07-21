@@ -22,5 +22,10 @@
   "issuanceInfo.howItWorks.step2.title": "Recibe tu credencial",
   "issuanceInfo.howItWorks.step2.description": "El sistema emite tu credencial digital verificable.",
   "issuanceInfo.howItWorks.step3.title": "Guárdala en tu Wallet",
-  "issuanceInfo.howItWorks.step3.description": "Añádela a tu Wallet Digital y ya está lista para usar."
+  "issuanceInfo.howItWorks.step3.description": "Añádela a tu Wallet Digital y ya está lista para usar.",
+  "issuanceInfo.footer.legalNotice": "Aviso legal",
+  "issuanceInfo.footer.privacyPolicy": "Política de privacidad",
+  "issuanceInfo.footer.termsAndConditions": "Términos y condiciones",
+  "issuanceInfo.footer.accessibility": "Accesibilidad",
+  "issuanceInfo.footer.copyright": "Todos los derechos reservados"
 }

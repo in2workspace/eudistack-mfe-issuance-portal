@@ -25,6 +25,7 @@ export class IssuanceInfoComponent {
   private readonly issuanceStartService = inject(IssuanceStartService);
 
   readonly cannotContinue = computed(() => this.issuanceStartService.cannotContinueReason() !== null);
+  readonly currentYear = new Date().getFullYear();
 
   onStart(): void {
     this.issuanceStartService.start(TENANT);
