@@ -1,24 +1,51 @@
-<main class="flex min-h-screen flex-col items-center justify-center gap-6 px-6 text-center">
-  @if (!cannotContinue()) {
-    <h1 class="text-2xl font-semibold text-gray-900">{{ 'issuanceInfo.title' | translate }}</h1>
-    <p class="max-w-md text-gray-600">{{ 'issuanceInfo.description' | translate }}</p>
-    <button
-      type="button"
-      class="min-h-[44px] min-w-[44px] rounded-md bg-blue-600 px-6 py-3 font-medium text-white hover:bg-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
-      [attr.aria-label]="'issuanceInfo.cta.ariaLabel' | translate"
-      (click)="onStart()"
-    >
-      {{ 'issuanceInfo.cta' | translate }}
-    </button>
-  } @else {
-    <h1 class="text-2xl font-semibold text-gray-900">{{ 'issuanceInfo.cannotContinue.title' | translate }}</h1>
-    <p class="max-w-md text-gray-600">{{ 'issuanceInfo.cannotContinue.description' | translate }}</p>
-    <button
-      type="button"
-      class="min-h-[44px] min-w-[44px] rounded-md bg-blue-600 px-6 py-3 font-medium text-white hover:bg-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
-      (click)="onRetry()"
-    >
-      {{ 'issuanceInfo.cannotContinue.retry' | translate }}
-    </button>
-  }
+<main
+  class="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-700 to-slate-900 px-6 py-16 text-center text-white"
+>
+  <div class="flex max-w-lg flex-col items-center gap-6">
+    @if (!cannotContinue()) {
+      <div class="flex h-16 w-16 items-center justify-center rounded-full bg-white/10">
+        <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+          />
+        </svg>
+      </div>
+      <h1 class="text-3xl font-bold sm:text-4xl">{{ 'issuanceInfo.title' | translate }}</h1>
+      <p class="text-lg text-slate-200">{{ 'issuanceInfo.description' | translate }}</p>
+      <button
+        type="button"
+        class="inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-2 rounded-md bg-white px-6 py-3 text-base font-semibold text-slate-900 transition-colors hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+        [attr.aria-label]="'issuanceInfo.cta.ariaLabel' | translate"
+        (click)="onStart()"
+      >
+        {{ 'issuanceInfo.cta' | translate }}
+        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
+    } @else {
+      <div class="flex h-16 w-16 items-center justify-center rounded-full bg-white/10">
+        <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+          />
+        </svg>
+      </div>
+      <h1 class="text-3xl font-bold sm:text-4xl">{{ 'issuanceInfo.cannotContinue.title' | translate }}</h1>
+      <p class="text-lg text-slate-200">{{ 'issuanceInfo.cannotContinue.description' | translate }}</p>
+      <button
+        type="button"
+        class="inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-2 rounded-md bg-white px-6 py-3 text-base font-semibold text-slate-900 transition-colors hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+        (click)="onRetry()"
+      >
+        {{ 'issuanceInfo.cannotContinue.retry' | translate }}
+      </button>
+    }
+  </div>
 </main>
