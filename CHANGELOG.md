@@ -19,5 +19,6 @@ All notable changes to this project will be documented in this file.
 ### Changed
 
 - Migrado el test runner de Karma/Jasmine (default Angular CLI) a **Jest + jest-preset-angular + jest-axe**, alineando el repo con el resto de la flota Angular EUDIStack.
+- **EUD-162 (post-cierre, AD-5):** rediseño del estado informativo de `IssuanceInfoComponent` adoptando el lenguaje visual del Demo CGCOM (`features/portal/landing`) en versión neutra: hero con degradado + icono, secciones "¿Qué es la Cartera de Identidad Digital?" y "Cómo funciona", y footer con enlaces legales (texto plano, sin destino real todavía) + copyright. Añadida la ruta `demo` para mantener accesible el `LandingComponent` preexistente, huérfano tras re-apuntar `portal`. `DeterministicMissingTranslationHandler` extraído a fichero propio y cubierto por test (EC-03).
 
 [Unreleased]: https://github.com/in2workspace/eudistack-cgcom-mfe-issuance-portal/compare/main...HEAD
