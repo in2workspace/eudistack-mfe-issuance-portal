@@ -26,8 +26,8 @@ describe('StartConfiguredEntryPointService', () => {
     service = TestBed.inject(StartConfiguredEntryPointService);
   });
 
-  describe('camino feliz (AC-01, AC-02, EC-03)', () => {
-    it('AC-01: WITH_VALIDATION invoca el handler de validación previa y no el directo', async () => {
+  describe('happy path', () => {
+    it('WITH_VALIDATION invokes the prior-validation handler and not the direct one', async () => {
       const { withValidation, direct, resolveTarget } = spyResolver({
         WITH_VALIDATION: noop,
         DIRECT: noop,
@@ -40,7 +40,7 @@ describe('StartConfiguredEntryPointService', () => {
       expect(direct).not.toHaveBeenCalled();
     });
 
-    it('AC-02: DIRECT invoca el handler directo y no el de validación previa', async () => {
+    it('DIRECT invokes the direct handler and not the prior-validation one', async () => {
       const { withValidation, direct, resolveTarget } = spyResolver({
         WITH_VALIDATION: noop,
         DIRECT: noop,
@@ -53,7 +53,7 @@ describe('StartConfiguredEntryPointService', () => {
       expect(withValidation).not.toHaveBeenCalled();
     });
 
-    it('EC-03: si el destino de validación previa es un no-op, la selección se mantiene y no colapsa a directo', async () => {
+    it('when the prior-validation target is a no-op, the selection is kept and does not collapse to direct', async () => {
       const { withValidation, direct, resolveTarget } = spyResolver({
         WITH_VALIDATION: noop,
         DIRECT: noop,
@@ -67,8 +67,8 @@ describe('StartConfiguredEntryPointService', () => {
     });
   });
 
-  describe('enforcement FR-06 y fallos (AC-04, ES-04, ES-05)', () => {
-    it('AC-04: solo se invoca el handler del entryPoint configurado, nunca el otro (ambos con spy)', async () => {
+  describe('enforcement and failures (AC-04, ES-04, ES-05)', () => {
+    it('only the configured entryPoint handler is invoked, never the other one (both spied)', async () => {
       const first = spyResolver({ WITH_VALIDATION: noop, DIRECT: noop });
       await service.start('WITH_VALIDATION', { resolveTarget: first.resolveTarget });
       expect(first.withValidation).toHaveBeenCalledTimes(1);
@@ -80,7 +80,7 @@ describe('StartConfiguredEntryPointService', () => {
       expect(second.withValidation).not.toHaveBeenCalled();
     });
 
-    it('ES-04: el proceso aguas abajo falla al iniciarse → handler_failed, sin arrancar la otra rama', async () => {
+    it('the downstream process fails to start → handler_failed, without starting the other branch', async () => {
       const failing: EntryPointHandler = async () => {
         throw new Error('downstream down');
       };
@@ -96,7 +96,7 @@ describe('StartConfiguredEntryPointService', () => {
       expect(direct).not.toHaveBeenCalled();
     });
 
-    it('ES-05: la invocación excede el presupuesto de tiempo → timeout (fail-closed controlado)', async () => {
+    it('the invocation exceeds the time budget → timeout (controlled fail-closed)', async () => {
       const hangs: EntryPointHandler = (ctx: EntryPointHandlerContext) =>
         new Promise((_resolve, reject) => {
           ctx.signal?.addEventListener('abort', () =>

@@ -21,7 +21,7 @@ describe('resolveEntryPointTarget (EC-02)', () => {
     environment.entryPointTargetDirect = originalDirect;
   });
 
-  it('devuelve un handler que navega cuando el destino está configurado', async () => {
+  it('returns a handler that navigates when the target is configured', async () => {
     environment.entryPointTargetWithValidation = 'https://validacion.example/start';
     const handler = resolveEntryPointTarget('WITH_VALIDATION');
 
@@ -31,7 +31,7 @@ describe('resolveEntryPointTarget (EC-02)', () => {
     expect(assignSpy).toHaveBeenCalledWith('https://validacion.example/start');
   });
 
-  it('devuelve un no-op determinista (sin lanzar, sin navegar) cuando el destino no está configurado', async () => {
+  it('returns a deterministic no-op (no throw, no navigation) when the target is not configured', async () => {
     environment.entryPointTargetDirect = '';
     const handler = resolveEntryPointTarget('DIRECT');
 
@@ -39,7 +39,7 @@ describe('resolveEntryPointTarget (EC-02)', () => {
     expect(assignSpy).not.toHaveBeenCalled();
   });
 
-  it('el destino ausente de una rama no afecta a la otra (aislamiento por punto de entrada)', async () => {
+  it('a missing target on one branch does not affect the other (per-entry-point isolation)', async () => {
     environment.entryPointTargetWithValidation = '';
     environment.entryPointTargetDirect = 'https://directo.example/start';
 

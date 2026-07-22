@@ -49,7 +49,7 @@ function setup(overrides: SourceOverrides = {}) {
 describe('IssuanceEntryPointService', () => {
   afterEach(() => TestBed.resetTestingModule());
 
-  it('AC-05: evaluar el arranque más de una vez arranca el punto de entrada una sola vez, con resultado idéntico', async () => {
+  it('AC-05: evaluating the start more than once starts the entry point only once, with an identical result', async () => {
     const { service, dispatcher } = setup({ entryPoint: 'WITH_VALIDATION' });
     const session: IssuanceStartSession = {
       id: 's1',
@@ -68,7 +68,7 @@ describe('IssuanceEntryPointService', () => {
     expect(dispatcher.start).toHaveBeenCalledWith('WITH_VALIDATION');
   });
 
-  it('EC-01: sin IssuanceStartSession, resuelve el tenant desde la fuente de config y arranca igualmente', async () => {
+  it('EC-01: with no IssuanceStartSession, resolves the tenant from the config source and starts anyway', async () => {
     const { service, dispatcher, source } = setup({
       tenantId: 'cgcom',
       entryPoint: 'WITH_VALIDATION',
@@ -82,7 +82,7 @@ describe('IssuanceEntryPointService', () => {
     expect(dispatcher.start).toHaveBeenCalledTimes(1);
   });
 
-  it('ES-03: un retorno no correlacionado rechaza el arranque y fuerza CannotContinueReason', async () => {
+  it('ES-03: a non-correlated return rejects the start and forces a CannotContinueReason', async () => {
     const { service, dispatcher } = setup({ entryPoint: 'WITH_VALIDATION' });
 
     await service.start({
@@ -97,7 +97,7 @@ describe('IssuanceEntryPointService', () => {
     expect(dispatcher.start).not.toHaveBeenCalled();
   });
 
-  it('ES-02: configuración de tenant ausente → cannot_continue (ConfigAbsent), sin arrancar', async () => {
+  it('ES-02: missing tenant configuration → cannot_continue (ConfigAbsent), without starting', async () => {
     const { service, dispatcher } = setup({ hasConfig: false, tenantId: 'cgcom' });
 
     await service.start({ correlated: true, session: null });
@@ -107,7 +107,7 @@ describe('IssuanceEntryPointService', () => {
     expect(dispatcher.start).not.toHaveBeenCalled();
   });
 
-  it('ES-01: entryPoint inválido en config → cannot_continue (EntryPointInvalid), sin arrancar', async () => {
+  it('ES-01: invalid entryPoint in config → cannot_continue (EntryPointInvalid), without starting', async () => {
     const { service, dispatcher } = setup({ entryPoint: 'BOGUS', tenantId: 'cgcom' });
 
     await service.start({ correlated: true, session: null });
