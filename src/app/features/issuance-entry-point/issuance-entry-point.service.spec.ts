@@ -64,7 +64,7 @@ describe('IssuanceEntryPointService', () => {
 
     expect(first).toBe('started');
     expect(second).toBe('started');
-    expect(dispatcher.start).toHaveBeenCalledTimes(1); // idempotente por sesión
+    expect(dispatcher.start).toHaveBeenCalledTimes(1);
     expect(dispatcher.start).toHaveBeenCalledWith('WITH_VALIDATION');
   });
 
