@@ -16,10 +16,11 @@ module.exports = {
   moduleFileExtensions: ['ts', 'js', 'html'],
   collectCoverage: true,
   coverageDirectory: './coverage/app',
-  coverageReporters: ['lcov', 'text-summary', 'html'],
+  coverageReporters: ['lcov', 'text-summary', 'cobertura', 'html', 'json-summary', 'json'],
   collectCoverageFrom: [
     'src/app/**/*.ts',
     '!<rootDir>/node_modules/',
+    '!<rootDir>/test/',
     '!src/app/**/*.module.ts',
   ],
 };

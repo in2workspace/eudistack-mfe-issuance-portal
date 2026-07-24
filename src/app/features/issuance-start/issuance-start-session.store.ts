@@ -5,13 +5,19 @@ const STORAGE_KEY = 'issuance_start_session';
 
 @Injectable({ providedIn: 'root' })
 export class IssuanceStartSessionStore {
-  create(session: IssuanceStartSession): void {
+  /**
+   * Persiste la sesión. Devuelve `false` sin lanzar si `sessionStorage` no está
+   * disponible o la escritura falla (p.ej. cuota excedida en modo privado),
+   * de modo que el caller (`IssuanceStartService`, AC-02/ES-03) pueda decidir
+   * si necesita fail-closed. `IssuanceEntryPointService` (EUD-165) no depende
+   * de este valor de retorno: solo consume `read()`.
+   */
+  create(session: IssuanceStartSession): boolean {
     try {
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+      return true;
     } catch {
-      // Intentionally ignored: if sessionStorage is disabled or the quota is
-      // exceeded (e.g. Safari private mode), EUD-165 falls back to the default
-      // return with no persisted session (EC-01). Not an error to propagate.
+      return false;
     }
   }
 

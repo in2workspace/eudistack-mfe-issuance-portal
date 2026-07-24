@@ -6,6 +6,15 @@ export const routes: Routes = [
   {
     path: 'portal',
     loadComponent: () =>
+      import('./features/issuance-start/issuance-info/issuance-info.component').then(
+        (m) => m.IssuanceInfoComponent,
+      ),
+  },
+  {
+    // Pantalla demo CGCOM previa a EUD-162, huérfana tras re-apuntar 'portal' (R-4).
+    // Se mantiene accesible manualmente hasta que se aborde su limpieza formal.
+    path: 'demo',
+    loadComponent: () =>
       import('./features/portal/landing/landing.component').then((m) => m.LandingComponent),
   },
   {
