@@ -7,4 +7,7 @@ export const environment = {
   oidcAuthorizationEndpoint: 'https://cgcom.127.0.0.1.nip.io:4443/verifier/oidc/authorize',
   oidcClientId: 'vc-auth-client-cgcom',
   oidcPortalRedirectUri: 'https://cgcom.127.0.0.1.nip.io:4443/identify/portal',
+  issuanceEntryPoint: 'WITH_VALIDATION',
+  entryPointTargetWithValidation: '',
+  entryPointTargetDirect: '',
 };

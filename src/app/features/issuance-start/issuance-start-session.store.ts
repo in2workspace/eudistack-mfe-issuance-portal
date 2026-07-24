@@ -1,45 +1,35 @@
 import { Injectable } from '@angular/core';
-import { IssuanceStartSession } from './issuance-start-session.model';
+import type { IssuanceStartSession } from './issuance-start-session.model';
 
-const SESSION_KEY_ISSUANCE_START = 'issuance_start_session';
+const STORAGE_KEY = 'issuance_start_session';
 
-/**
- * Crea y persiste la sesión de arranque del titular (SRS §7, AD-3).
- *
- * `sessionStorage` fail-closed: si la escritura falla, `create()` devuelve
- * `null` sin lanzar, de modo que `IssuanceStartService` pueda forzar el
- * estado "no se puede continuar" en lugar de navegar sin sesión correlacionable.
- */
 @Injectable({ providedIn: 'root' })
 export class IssuanceStartSessionStore {
-  create(tenant: string): IssuanceStartSession | null {
-    const session: IssuanceStartSession = {
-      id: this.generarId(),
-      tenant,
-      state: 'iniciada',
-    };
-
+  /**
+   * Persiste la sesión. Devuelve `false` sin lanzar si `sessionStorage` no está
+   * disponible o la escritura falla (p.ej. cuota excedida en modo privado),
+   * de modo que el caller (`IssuanceStartService`, AC-02/ES-03) pueda decidir
+   * si necesita fail-closed. `IssuanceEntryPointService` (EUD-165) no depende
+   * de este valor de retorno: solo consume `read()`.
+   */
+  create(session: IssuanceStartSession): boolean {
     try {
-      sessionStorage.setItem(SESSION_KEY_ISSUANCE_START, JSON.stringify(session));
-    } catch (err) {
-      console.error(
-        '[EUD-162] Error al escribir en sessionStorage. Sesión de arranque no creada.',
-        err,
-      );
-      return null;
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+      return true;
+    } catch {
+      return false;
     }
-
-    return session;
   }
 
-  /** Genera un identificador de arranque único: 16 bytes aleatorios en Base64 URL-safe. */
-  private generarId(): string {
-    const bytes = new Uint8Array(16);
-    crypto.getRandomValues(bytes);
-    let binary = '';
-    for (let i = 0; i < bytes.length; i++) {
-      binary += String.fromCharCode(bytes[i]);
+  read(): IssuanceStartSession | null {
+    try {
+      const raw = sessionStorage.getItem(STORAGE_KEY);
+      return raw ? (JSON.parse(raw) as IssuanceStartSession) : null;
+    } catch {
+      // Intentionally ignored: an inaccessible storage or corrupt JSON is treated
+      // as "no session" (returns null), not a failure. The tenant resolver then
+      // falls back to the runtime config source (EC-01).
+      return null;
     }
-    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
   }
 }

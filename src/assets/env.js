@@ -21,4 +21,11 @@
 
   // OIDC redirect URI for this portal
   window["env"]["oidc_portal_redirect_uri"] = "https://cgcom.127.0.0.1.nip.io:4443/identify/portal";
+
+  // Issuance entry point configured for this tenant ('WITH_VALIDATION' | 'DIRECT')
+  window["env"]["issuance_entry_point"] = "WITH_VALIDATION";
+
+  // Downstream targets per entry point (EUD-3 / EUD-4). Empty = safe no-op.
+  window["env"]["entry_point_target_with_validation"] = "";
+  window["env"]["entry_point_target_direct"] = "";
 })(this);
