@@ -18,6 +18,7 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- **EUD-162 (post-cierre):** footer de `IssuanceInfoComponent` alineado con el de `/identify/demo` (columnas "Enlaces Útiles" y "Soporte" + copyright con "Desarrollado por Altia"), sin el logo CGCOM. Añadido botón "Canal de Soporte" en el hero y sección "¿Necesitas Ayuda?" (Reportar Incidencia -> `/portal/incidents`, Contactar por Email -> `mailto:`), reutilizando el email/teléfono ya usados en `incidents.component`. Textos vía i18n (`es.json`). Tests de `issuance-info.component.spec.ts` ajustados para verificar el CTA de arranque por `aria-label` en vez de contar el total de botones de la pantalla (ver nota de alcance en AC-01, `docs/EUD-23-portal-emision/EUD-162/acceptance-criteria.md`).
 - Migrado el test runner de Karma/Jasmine (default Angular CLI) a **Jest + jest-preset-angular + jest-axe**, alineando el repo con el resto de la flota Angular EUDIStack.
 - **EUD-162 (post-cierre, AD-5):** rediseño del estado informativo de `IssuanceInfoComponent` adoptando el lenguaje visual del Demo CGCOM (`features/portal/landing`) en versión neutra: hero con degradado + icono, secciones "¿Qué es la Cartera de Identidad Digital?" y "Cómo funciona", y footer con enlaces legales (texto plano, sin destino real todavía) + copyright. Añadida la ruta `demo` para mantener accesible el `LandingComponent` preexistente, huérfano tras re-apuntar `portal`. `DeterministicMissingTranslationHandler` extraído a fichero propio y cubierto por test (EC-03).
 

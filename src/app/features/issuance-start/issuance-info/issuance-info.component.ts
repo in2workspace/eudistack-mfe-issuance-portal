@@ -1,9 +1,13 @@
 import { Component, computed, inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { IssuanceStartService } from '../issuance-start.service';
 
 /** Tenant único servido por este portal (single-tenant CGCOM). */
 const TENANT = 'cgcom';
+
+/** Email de soporte CGCOM, alineado con el usado en incidents.component y en la pantalla demo. */
+const SUPPORT_EMAIL = 'soporte@cgcom-identidad.es';
 
 /**
  * Pantalla informativa de arranque de emisión (AC-01, FR-01, FR-11).
@@ -23,6 +27,7 @@ const TENANT = 'cgcom';
 })
 export class IssuanceInfoComponent {
   private readonly issuanceStartService = inject(IssuanceStartService);
+  private readonly router = inject(Router);
 
   readonly cannotContinue = computed(() => this.issuanceStartService.cannotContinueReason() !== null);
   readonly currentYear = new Date().getFullYear();
@@ -33,5 +38,13 @@ export class IssuanceInfoComponent {
 
   onRetry(): void {
     this.issuanceStartService.retry();
+  }
+
+  navigateToIncidents(): void {
+    this.router.navigate(['/portal/incidents']);
+  }
+
+  contactByEmail(): void {
+    window.location.href = `mailto:${SUPPORT_EMAIL}`;
   }
 }

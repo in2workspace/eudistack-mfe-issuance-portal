@@ -1,9 +1,15 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal, WritableSignal } from '@angular/core';
+import { provideRouter } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { IssuanceInfoComponent } from './issuance-info.component';
 import { IssuanceStartService } from '../issuance-start.service';
 import { CannotContinueReason } from '../cannot-continue-reason';
+
+/** Selects the single "arranque" CTA among the page's buttons (AC-01 targets this CTA specifically, not total button count — the hero support button and the "¿Necesitas Ayuda?" section add unrelated secondary actions). */
+function queryStartCta(compiled: HTMLElement): HTMLButtonElement | null {
+  return compiled.querySelector('button[aria-label="issuanceInfo.cta.ariaLabel"]');
+}
 
 describe('IssuanceInfoComponent', () => {
   let fixture: ComponentFixture<IssuanceInfoComponent>;
@@ -26,30 +32,30 @@ describe('IssuanceInfoComponent', () => {
 
     TestBed.configureTestingModule({
       imports: [IssuanceInfoComponent, TranslateModule.forRoot()],
-      providers: [{ provide: IssuanceStartService, useValue: issuanceStartService }],
+      providers: [{ provide: IssuanceStartService, useValue: issuanceStartService }, provideRouter([])],
     });
 
     fixture = TestBed.createComponent(IssuanceInfoComponent);
     fixture.detectChanges();
   }
 
-  it('default state renders info + a single visible CTA with clear action text (AC-01, AC-04)', () => {
+  it('default state renders info + a single visible start CTA with clear action text (AC-01, AC-04)', () => {
     configure(null);
 
     const compiled = fixture.nativeElement as HTMLElement;
     const headings = compiled.querySelectorAll('h1');
-    const buttons = compiled.querySelectorAll('button');
+    const startCtas = compiled.querySelectorAll('button[aria-label="issuanceInfo.cta.ariaLabel"]');
 
     expect(headings.length).toBe(1);
-    expect(buttons.length).toBe(1);
-    expect(buttons[0].textContent?.trim().length).toBeGreaterThan(0);
+    expect(startCtas.length).toBe(1);
+    expect(startCtas[0].textContent?.trim().length).toBeGreaterThan(0);
   });
 
   it('CTA invokes IssuanceStartService.start()', () => {
     configure(null);
 
     const compiled = fixture.nativeElement as HTMLElement;
-    compiled.querySelector('button')?.click();
+    queryStartCta(compiled)?.click();
 
     expect(issuanceStartService.start).toHaveBeenCalledTimes(1);
   });
@@ -88,7 +94,7 @@ describe('IssuanceInfoComponent', () => {
     expect(fixture.componentInstance.cannotContinue()).toBe(false);
   });
 
-  it('renders the explainer sections and footer only in the informative state, without adding a second CTA or h1 (AC-01, AC-03)', () => {
+  it('renders the explainer sections and footer only in the informative state, without adding a second start CTA or h1 (AC-01, AC-03)', () => {
     configure(null);
 
     const compiled = fixture.nativeElement as HTMLElement;
@@ -97,7 +103,7 @@ describe('IssuanceInfoComponent', () => {
     expect(compiled.querySelectorAll('h2').length).toBeGreaterThan(0);
     // AC-01/AC-03 invariants must hold even with the extra sections present.
     expect(compiled.querySelectorAll('h1').length).toBe(1);
-    expect(compiled.querySelectorAll('button').length).toBe(1);
+    expect(compiled.querySelectorAll('button[aria-label="issuanceInfo.cta.ariaLabel"]').length).toBe(1);
   });
 
   it('does not render the explainer sections or footer in the "cannot continue" state', () => {

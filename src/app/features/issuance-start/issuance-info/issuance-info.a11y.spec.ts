@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import { IssuanceInfoComponent } from './issuance-info.component';
@@ -17,6 +18,7 @@ describe('IssuanceInfoComponent a11y', () => {
           provide: IssuanceStartService,
           useValue: { start: jest.fn(), retry: jest.fn(), cannotContinueReason: () => null },
         },
+        provideRouter([]),
       ],
     });
 
