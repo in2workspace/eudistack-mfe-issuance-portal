@@ -57,7 +57,7 @@ describe('Tenant isolation (no-bleed, R-2)', () => {
     expect(brandingService.logoUrl()).toContain('tenant-b');
     expect(brandingService.logoUrl()).not.toContain('tenant-a');
     expect(brandingService.appName()).toBe('Tenant B');
-    expect(document.title).toBe('Tenant B');
+    expect(document.title).toBe('Tenant B — Portal de Emisión');
   });
 
   it('a tenant B without branding falls back to the neutral default, never to tenant A branding (EC-05)', () => {

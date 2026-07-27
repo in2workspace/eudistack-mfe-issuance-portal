@@ -53,6 +53,7 @@ export class TenantBrandingSource {
       branding: {
         ...descriptor.branding,
         logoUrl: this.rewriteAssetPath(descriptor.branding.logoUrl, tenant),
+        logoDarkUrl: this.rewriteAssetPath(descriptor.branding.logoDarkUrl, tenant),
         faviconUrl: this.rewriteAssetPath(descriptor.branding.faviconUrl, tenant),
       },
     };

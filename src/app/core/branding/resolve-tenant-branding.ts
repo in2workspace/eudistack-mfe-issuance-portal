@@ -68,9 +68,17 @@ export function resolveTenantBranding(result: TenantBrandingResult | null): Tena
     const branding = descriptor.branding;
     const i18n = descriptor.i18n;
 
+    // Todos los headers de este repo tienen fondo blanco (AD-2): se prioriza
+    // la variante oscura del logo (contraste sobre claro); si el tenant no
+    // la publica, se usa `logoUrl` tal cual (caso CGCOM, sin `logoDarkUrl`).
+    const logoDarkUrl = branding?.logoDarkUrl;
+    const logoUrl = isNonEmptyString(logoDarkUrl)
+      ? logoDarkUrl.trim()
+      : sanitizeField(branding?.logoUrl, DEFAULT_EUDISTACK_BRANDING.logoUrl);
+
     return {
       tokens: sanitizeTokens(branding),
-      logoUrl: sanitizeField(branding?.logoUrl, DEFAULT_EUDISTACK_BRANDING.logoUrl),
+      logoUrl,
       faviconUrl: sanitizeField(branding?.faviconUrl, DEFAULT_EUDISTACK_BRANDING.faviconUrl),
       appName: sanitizeField(branding?.name, DEFAULT_EUDISTACK_BRANDING.appName),
       defaultLanguage: sanitizeField(i18n?.defaultLang, DEFAULT_EUDISTACK_BRANDING.defaultLanguage),

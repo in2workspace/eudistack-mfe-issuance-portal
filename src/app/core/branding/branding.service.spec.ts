@@ -32,7 +32,7 @@ describe('BrandingService', () => {
 
     const link = document.querySelector<HTMLLinkElement>("link[rel~='icon']");
     expect(link?.href).toContain('favicon.svg');
-    expect(document.title).toBe('CGCOM');
+    expect(document.title).toBe('CGCOM — Portal de Emisión');
   });
 
   it('exposes logo and appName as signals (AC-01)', () => {

@@ -56,6 +56,29 @@ describe('resolveTenantBranding', () => {
     expect(brandNewTenant.supportedLanguages).toEqual(['en']);
   });
 
+  it('prefers logoDarkUrl over logoUrl (AD-2, headers here are white — logoUrl is meant for colored/dark backgrounds)', () => {
+    const branding = resolveTenantBranding({
+      ok: true,
+      descriptor: {
+        branding: {
+          logoUrl: '/assets/tenants/acme/logo.svg',
+          logoDarkUrl: '/assets/tenants/acme/logo-dark.svg',
+        },
+      },
+    });
+
+    expect(branding.logoUrl).toBe('/assets/tenants/acme/logo-dark.svg');
+  });
+
+  it('falls back to logoUrl when the tenant has no logoDarkUrl (e.g. CGCOM)', () => {
+    const branding = resolveTenantBranding({
+      ok: true,
+      descriptor: { branding: { logoUrl: '/assets/tenants/cgcom/logo.png' } },
+    });
+
+    expect(branding.logoUrl).toBe('/assets/tenants/cgcom/logo.png');
+  });
+
   it('discards a malformed descriptor: no raw/partial tokens are applied (ES-01)', () => {
     const malformedDescriptor = {
       branding: {

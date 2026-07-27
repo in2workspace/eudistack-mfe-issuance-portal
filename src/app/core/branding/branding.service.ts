@@ -19,7 +19,7 @@ export class BrandingService {
   apply(branding: TenantBranding): void {
     this.applyTokens(branding.tokens);
     this.setFavicon(branding.faviconUrl);
-    document.title = branding.appName;
+    document.title = `${branding.appName} — Portal de Emisión`;
     this._logoUrl.set(branding.logoUrl);
     this._appName.set(branding.appName);
   }

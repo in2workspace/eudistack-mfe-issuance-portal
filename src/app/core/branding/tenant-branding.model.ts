@@ -27,7 +27,10 @@ export const DEFAULT_EUDISTACK_BRANDING: Readonly<TenantBranding> = Object.freez
     '--brand-secondary': '#00BFA6',
     '--brand-secondary-contrast': '#ffffff',
   }),
-  logoUrl: '/assets/tenants/eudistack/logo.svg',
+  // Todos los headers de este repo tienen fondo blanco: se usa la variante
+  // oscura del logo (contraste sobre claro), nunca la clara `logo.svg`
+  // (pensada para fondos de color/oscuros — sería invisible aquí).
+  logoUrl: '/assets/tenants/eudistack/logo-dark.svg',
   faviconUrl: '/assets/tenants/eudistack/favicon.svg',
   appName: 'EUDIStack',
   defaultLanguage: 'es',
@@ -52,6 +55,8 @@ export type TenantBrandingDescriptor = {
     secondaryColor?: unknown;
     secondaryContrastColor?: unknown;
     logoUrl?: unknown;
+    /** Variante de logo con contraste sobre fondo claro (theme.json real: `branding.logoDarkUrl`). */
+    logoDarkUrl?: unknown;
     faviconUrl?: unknown;
   };
   i18n?: {
