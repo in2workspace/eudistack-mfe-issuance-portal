@@ -38,7 +38,7 @@
   "issuanceInfo.footer.copyright": "Todos los derechos reservados",
   "issuanceInfo.footer.usefulLinks": "Enlaces Útiles",
   "issuanceInfo.footer.support": "Soporte",
-  "issuanceInfo.footer.supportEmail": "Email: soporte@cgcom-identidad.es",
+  "issuanceInfo.footer.supportEmail": "Email: {{email}}",
   "issuanceInfo.footer.supportPhone": "Teléfono: 900 123 456",
   "issuanceInfo.footer.supportSchedule": "Horario: L-V 9:00-18:00",
   "issuanceInfo.footer.developedBy": "Desarrollado por",

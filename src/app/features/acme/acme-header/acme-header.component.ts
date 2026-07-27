@@ -19,7 +19,7 @@ import { BrandingService } from '../../../core/branding/branding.service';
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-6">
             <img [src]="branding.logoUrl()" [alt]="branding.appName()" class="h-10 w-auto" />
-            <span class="text-xl sm:text-2xl font-bold text-brand-primary leading-tight">{{ branding.appName() }}</span>
+            <span class="text-xl sm:text-2xl font-bold text-brand-secondary leading-tight">{{ branding.appName() }}</span>
           </div>
           <ng-content />
         </div>

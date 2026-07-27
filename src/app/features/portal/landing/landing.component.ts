@@ -1,5 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
+import { resolveSupportEmail } from '../../../core/branding/resolve-support-email';
 
 /**
  * Pantalla de inicio del Portal CGCOM.
@@ -14,6 +15,7 @@ export class LandingComponent {
   private router = inject(Router);
 
   readonly currentYear = new Date().getFullYear();
+  protected readonly supportEmail = resolveSupportEmail();
 
   readonly useCases = [
     { title: 'Receta Electrónica', description: 'Prescribe medicamentos de forma digital con tu credencial profesional' },
@@ -37,6 +39,6 @@ export class LandingComponent {
   }
 
   contactByEmail(): void {
-    window.location.href = 'mailto:soporte@cgcom-identidad.es';
+    window.location.href = `mailto:${this.supportEmail}`;
   }
 }

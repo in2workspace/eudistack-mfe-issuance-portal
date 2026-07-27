@@ -4,7 +4,14 @@ import { CommonModule } from '@angular/common';
 import QRCode from 'qrcode';
 import { IssuanceStateService } from '../../../core/services/issuance-state.service';
 import { CredentialOfferUrlBoxComponent } from '../../../shared/components/credential-offer-url-box/credential-offer-url-box.component';
+import { BrandingService } from '../../../core/branding/branding.service';
+import { resolveTenantIdentity } from '../../../core/branding/resolve-tenant-identity';
 import { environment } from '../../../../environments/environment';
+
+/** Único tenant con emisión DoctorID hoy; el resto emite una credencial genérica de empleado (mismo criterio que UserDataComponent). */
+function resolveCredentialLabel(): string {
+  return resolveTenantIdentity(window.location, environment) === 'cgcom' ? 'DoctorID' : 'EmployeeID';
+}
 
 /**
  * Muestra el QR real generado a partir de la Credential Offer URL del issuer.
@@ -22,10 +29,13 @@ import { environment } from '../../../../environments/environment';
 export class CredentialQrComponent implements OnInit {
   private state = inject(IssuanceStateService);
   private router = inject(Router);
+  protected readonly branding = inject(BrandingService);
 
   readonly credentialOfferUrl = this.state.credentialOfferUrl;
   readonly qrDataUrl = signal<string | null>(null);
   walletUrl: string | null = null;
+
+  protected readonly credentialLabel = resolveCredentialLabel();
 
   ngOnInit(): void {
     const offerUrl = this.credentialOfferUrl();
@@ -55,9 +65,15 @@ export class CredentialQrComponent implements OnInit {
   /**
    * Construye la URL del wallet web a partir de la Credential Offer URL del issuer.
    * Extrae el param `credential_offer_uri` y lo recompone como URL de callback.
+   *
+   * URL absoluta same-origin (AD-2): el QR lo escanea un dispositivo externo
+   * (sin contexto de página), así que no vale una ruta relativa — pero se
+   * construye desde `window.location.origin` en vez de un host cgcom fijo,
+   * ya que nginx sirve `/wallet/` igual bajo cualquier subdominio de tenant
+   * (bug R-5).
    */
   private buildWalletUrl(credentialOfferUrl: string): string {
-    const base = environment.walletCallbackBase;
+    const base = `${window.location.origin}/wallet/protocol/callback`;
     try {
       const parsed = new URL(credentialOfferUrl);
       const credentialOfferUri = parsed.searchParams.get('credential_offer_uri');

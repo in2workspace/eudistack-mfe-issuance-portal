@@ -1,9 +1,6 @@
 (function(window) {
   window.env = window.env || {};
 
-  // Wallet protocol callback base URL
-  window["env"]["wallet_callback_base"] = "https://cgcom.127.0.0.1.nip.io:4443/wallet/protocol/callback";
-
   // OIDC authorization endpoint (Verifier as IdP)
   window["env"]["oidc_authorization_endpoint"] = "https://cgcom.127.0.0.1.nip.io:4443/verifier/oidc/authorize";
 

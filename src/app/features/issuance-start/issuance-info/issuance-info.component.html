@@ -1,10 +1,20 @@
 @if (!cannotContinue()) {
   <div class="min-h-screen bg-white">
+    <!-- Header -->
+    <header class="border-b border-gray-200 bg-white">
+      <div class="mx-auto flex max-w-7xl items-center gap-6 px-4 py-4 sm:px-6 lg:px-8">
+        <img [src]="branding.logoUrl()" [alt]="branding.appName()" class="h-12 w-auto" />
+        <div class="border-l border-gray-300 pl-6">
+          <p class="text-sm font-medium text-gray-700">Portal de Emisión</p>
+        </div>
+      </div>
+    </header>
+
     <!-- Hero -->
-    <section class="bg-gradient-to-br from-slate-700 to-slate-900 px-6 py-20 text-center text-white">
+    <section class="bg-brand-secondary px-6 py-20 text-center text-brand-secondary-contrast">
       <div class="mx-auto flex max-w-lg flex-col items-center gap-6">
-        <div class="flex h-16 w-16 items-center justify-center rounded-full bg-white/10">
-          <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <div class="flex h-16 w-16 items-center justify-center rounded-full bg-white">
+          <svg class="h-8 w-8 text-brand-secondary-contrast" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path
               stroke-linecap="round"
               stroke-linejoin="round"
@@ -14,11 +24,11 @@
           </svg>
         </div>
         <h1 class="text-3xl font-bold sm:text-4xl">{{ 'issuanceInfo.title' | translate }}</h1>
-        <p class="text-lg text-slate-200">{{ 'issuanceInfo.description' | translate }}</p>
+        <p class="text-lg text-brand-secondary-contrast/80">{{ 'issuanceInfo.description' | translate }}</p>
         <div class="flex flex-col gap-4 sm:flex-row">
           <button
             type="button"
-            class="inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-2 rounded-md bg-white px-6 py-3 text-base font-semibold text-slate-900 transition-colors hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+            class="inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-2 rounded-md bg-white px-6 py-3 text-base font-semibold text-brand-secondary transition-colors hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
             [attr.aria-label]="'issuanceInfo.cta.ariaLabel' | translate"
             (click)="onStart()"
           >
@@ -29,7 +39,7 @@
           </button>
           <button
             type="button"
-            class="inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-2 rounded-md border border-white bg-white/10 px-6 py-3 text-base font-semibold text-white transition-colors hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+            class="inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-2 rounded-md border border-brand-secondary-contrast bg-brand-secondary-contrast/10 px-6 py-3 text-base font-semibold text-brand-secondary-contrast transition-colors hover:bg-brand-secondary-contrast/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-secondary-contrast"
             [attr.aria-label]="'issuanceInfo.hero.supportChannel.ariaLabel' | translate"
             (click)="navigateToIncidents()"
           >
@@ -58,8 +68,8 @@
         </p>
         <div class="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           <div class="rounded-xl border bg-white p-6 text-center shadow-sm">
-            <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
-              <svg class="h-7 w-7 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-brand-secondary/10">
+              <svg class="h-7 w-7 text-brand-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path
                   stroke-linecap="round"
                   stroke-linejoin="round"
@@ -76,8 +86,8 @@
             </p>
           </div>
           <div class="rounded-xl border bg-white p-6 text-center shadow-sm">
-            <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
-              <svg class="h-7 w-7 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-brand-secondary/10">
+              <svg class="h-7 w-7 text-brand-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path
                   stroke-linecap="round"
                   stroke-linejoin="round"
@@ -94,8 +104,8 @@
             </p>
           </div>
           <div class="rounded-xl border bg-white p-6 text-center shadow-sm">
-            <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
-              <svg class="h-7 w-7 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-brand-secondary/10">
+              <svg class="h-7 w-7 text-brand-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path
                   stroke-linecap="round"
                   stroke-linejoin="round"
@@ -112,8 +122,8 @@
             </p>
           </div>
           <div class="rounded-xl border bg-white p-6 text-center shadow-sm">
-            <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
-              <svg class="h-7 w-7 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-brand-secondary/10">
+              <svg class="h-7 w-7 text-brand-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path
                   stroke-linecap="round"
                   stroke-linejoin="round"
@@ -141,7 +151,7 @@
         </h2>
         <div class="mt-12 grid gap-10 sm:grid-cols-3">
           <div class="flex flex-col items-center">
-            <div class="flex h-14 w-14 items-center justify-center rounded-full bg-slate-800 text-xl font-bold text-white">
+            <div class="flex h-14 w-14 items-center justify-center rounded-full bg-brand-secondary text-xl font-bold text-brand-secondary-contrast">
               1
             </div>
             <h3 class="mt-4 font-semibold text-gray-900">
@@ -152,7 +162,7 @@
             </p>
           </div>
           <div class="flex flex-col items-center">
-            <div class="flex h-14 w-14 items-center justify-center rounded-full bg-slate-800 text-xl font-bold text-white">
+            <div class="flex h-14 w-14 items-center justify-center rounded-full bg-brand-secondary text-xl font-bold text-brand-secondary-contrast">
               2
             </div>
             <h3 class="mt-4 font-semibold text-gray-900">
@@ -163,7 +173,7 @@
             </p>
           </div>
           <div class="flex flex-col items-center">
-            <div class="flex h-14 w-14 items-center justify-center rounded-full bg-slate-800 text-xl font-bold text-white">
+            <div class="flex h-14 w-14 items-center justify-center rounded-full bg-brand-secondary text-xl font-bold text-brand-secondary-contrast">
               3
             </div>
             <h3 class="mt-4 font-semibold text-gray-900">
@@ -179,7 +189,7 @@
 
     <!-- ¿Necesitas Ayuda? -->
     <section class="bg-white px-6 py-16">
-      <div class="mx-auto max-w-3xl rounded-2xl bg-gradient-to-br from-slate-700 to-slate-900 p-12 text-center text-white">
+      <div class="mx-auto max-w-3xl rounded-2xl bg-brand-secondary p-12 text-center text-brand-secondary-contrast">
         <svg class="mx-auto h-16 w-16" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
           <path
             stroke-linecap="round"
@@ -189,11 +199,11 @@
           />
         </svg>
         <h2 class="mt-6 text-2xl font-bold sm:text-3xl">{{ 'issuanceInfo.help.title' | translate }}</h2>
-        <p class="mt-4 text-lg text-slate-200">{{ 'issuanceInfo.help.description' | translate }}</p>
+        <p class="mt-4 text-lg text-brand-secondary-contrast/80">{{ 'issuanceInfo.help.description' | translate }}</p>
         <div class="mt-8 flex flex-col justify-center gap-4 sm:flex-row">
           <button
             type="button"
-            class="inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-2 rounded-md bg-white px-6 py-3 text-base font-semibold text-slate-900 transition-colors hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+            class="inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-2 rounded-md bg-white px-6 py-3 text-base font-semibold text-brand-secondary transition-colors hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
             [attr.aria-label]="'issuanceInfo.help.reportIncident.ariaLabel' | translate"
             (click)="navigateToIncidents()"
           >
@@ -209,7 +219,7 @@
           </button>
           <button
             type="button"
-            class="inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-2 rounded-md border border-white bg-white/10 px-6 py-3 text-base font-semibold text-white transition-colors hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+            class="inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-2 rounded-md border border-brand-secondary-contrast bg-brand-secondary-contrast/10 px-6 py-3 text-base font-semibold text-brand-secondary-contrast transition-colors hover:bg-brand-secondary-contrast/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-secondary-contrast"
             [attr.aria-label]="'issuanceInfo.help.contactEmail.ariaLabel' | translate"
             (click)="contactByEmail()"
           >
@@ -235,7 +245,7 @@
           <div>
             <h3 class="mb-4 font-bold text-white">{{ 'issuanceInfo.footer.support' | translate }}</h3>
             <ul class="space-y-2 text-sm">
-              <li>{{ 'issuanceInfo.footer.supportEmail' | translate }}</li>
+              <li>{{ 'issuanceInfo.footer.supportEmail' | translate: { email: supportEmail } }}</li>
               <li>{{ 'issuanceInfo.footer.supportPhone' | translate }}</li>
               <li>{{ 'issuanceInfo.footer.supportSchedule' | translate }}</li>
             </ul>

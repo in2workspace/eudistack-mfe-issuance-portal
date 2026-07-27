@@ -1,9 +1,6 @@
 (function(window) {
   window.env = window.env || {};
 
-  // Wallet protocol callback base URL
-  window["env"]["wallet_callback_base"] = "${WALLET_CALLBACK_BASE}";
-
   // OIDC authorization endpoint (Verifier as IdP)
   window["env"]["oidc_authorization_endpoint"] = "${OIDC_AUTHORIZATION_ENDPOINT}";
 
