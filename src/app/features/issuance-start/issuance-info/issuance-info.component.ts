@@ -2,12 +2,10 @@ import { Component, computed, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { IssuanceStartService } from '../issuance-start.service';
-
-/** Tenant único servido por este portal (single-tenant CGCOM). */
-const TENANT = 'cgcom';
-
-/** Email de soporte CGCOM, alineado con el usado en incidents.component y en la pantalla demo. */
-const SUPPORT_EMAIL = 'soporte@cgcom-identidad.es';
+import { BrandingService } from '../../../core/branding/branding.service';
+import { resolveTenantIdentity } from '../../../core/branding/resolve-tenant-identity';
+import { resolveSupportEmail } from '../../../core/branding/resolve-support-email';
+import { environment } from '../../../../environments/environment';
 
 /**
  * Pantalla informativa de arranque de emisión (AC-01, FR-01, FR-11).
@@ -28,12 +26,15 @@ const SUPPORT_EMAIL = 'soporte@cgcom-identidad.es';
 export class IssuanceInfoComponent {
   private readonly issuanceStartService = inject(IssuanceStartService);
   private readonly router = inject(Router);
+  protected readonly branding = inject(BrandingService);
 
   readonly cannotContinue = computed(() => this.issuanceStartService.cannotContinueReason() !== null);
   readonly currentYear = new Date().getFullYear();
+  protected readonly supportEmail = resolveSupportEmail();
 
   onStart(): void {
-    this.issuanceStartService.start(TENANT);
+    const tenant = resolveTenantIdentity(window.location, environment) ?? 'cgcom';
+    this.issuanceStartService.start(tenant);
   }
 
   onRetry(): void {
@@ -45,6 +46,6 @@ export class IssuanceInfoComponent {
   }
 
   contactByEmail(): void {
-    window.location.href = `mailto:${SUPPORT_EMAIL}`;
+    window.location.href = `mailto:${this.supportEmail}`;
   }
 }

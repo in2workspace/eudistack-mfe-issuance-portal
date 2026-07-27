@@ -2,8 +2,15 @@ import { Component, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { IssuanceStateService } from '../../../core/services/issuance-state.service';
-import { AuthenticatedUser } from '../../../core/models/issuance.model';
+import { BrandingService } from '../../../core/branding/branding.service';
+import { resolveTenantIdentity } from '../../../core/branding/resolve-tenant-identity';
+import { resolveSupportEmail } from '../../../core/branding/resolve-support-email';
+import { environment } from '../../../../environments/environment';
+
+/** Único tenant con emisión DoctorID hoy; el resto ve el copy/datos genéricos de empleado. */
+function resolveIsDoctorTenant(): boolean {
+  return resolveTenantIdentity(window.location, environment) === 'cgcom';
+}
 
 type IncidentType = 'technical' | 'access' | 'credentials' | 'other' | '';
 
@@ -26,8 +33,10 @@ interface IncidentForm {
   templateUrl: './incidents.component.html',
 })
 export class IncidentsComponent {
-  private state = inject(IssuanceStateService);
   private router = inject(Router);
+  protected readonly branding = inject(BrandingService);
+  protected readonly isDoctorTenant = resolveIsDoctorTenant();
+  protected readonly supportEmail = resolveSupportEmail();
 
   readonly submitted = signal(false);
   readonly ticketNumber = `INC-${Date.now().toString().slice(-8)}`;
@@ -50,23 +59,6 @@ export class IncidentsComponent {
 
   onBack(): void {
     this.router.navigate(['/portal']);
-  }
-
-  onLogin(): void {
-    // Quick login para demo (equivale a onLogin en React)
-    const mockUser: AuthenticatedUser = {
-      id: 'DR-12345',
-      name: 'Dra. María García López',
-      collegiateNumber: '282912345',
-      dni: '12345678A',
-      email: 'maria.garcia@ejemplo.com',
-      phone: '+34 600 123 456',
-      college: 'Colegio Oficial de Médicos de Madrid',
-      specialty: 'Medicina Familiar y Comunitaria',
-      authMethod: 'claveMobile',
-    };
-    this.state.setUser(mockUser);
-    this.router.navigate(['/portal/home']);
   }
 
   onSubmit(): void {

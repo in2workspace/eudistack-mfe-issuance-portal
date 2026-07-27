@@ -4,8 +4,16 @@ import { CommonModule } from '@angular/common';
 import { IssuanceStateService } from '../../../core/services/issuance-state.service';
 import { CredentialQrCodeComponent } from '../../../shared/components/credential-qr-code/credential-qr-code.component';
 import { AuthenticatedUser, CredentialTemplate, IssuedCredential } from '../../../core/models/issuance.model';
+import { BrandingService } from '../../../core/branding/branding.service';
+import { resolveTenantIdentity } from '../../../core/branding/resolve-tenant-identity';
+import { environment } from '../../../../environments/environment';
 
 type IssuanceStep = 'list' | 'confirm' | 'qr' | 'success';
+
+/** Único tenant con emisión DoctorID hoy; el resto emite/gestiona una credencial genérica de empleado. */
+function resolveIsDoctorTenant(): boolean {
+  return resolveTenantIdentity(window.location, environment) === 'cgcom';
+}
 
 /**
  * Portal de credenciales con máquina de estados interna (list → confirm → qr → success).
@@ -20,23 +28,40 @@ type IssuanceStep = 'list' | 'confirm' | 'qr' | 'success';
 export class IssuancePortalComponent implements OnInit {
   private state = inject(IssuanceStateService);
   private router = inject(Router);
+  protected readonly branding = inject(BrandingService);
+
+  protected readonly isDoctorTenant = resolveIsDoctorTenant();
 
   user!: AuthenticatedUser;
 
   readonly issuanceStep = signal<IssuanceStep>('list');
   readonly selectedCredential = signal<CredentialTemplate | null>(null);
 
-  issuedCredentials = signal<IssuedCredential[]>([
-    {
-      id: 'issued-1',
-      templateId: 'doctor-id',
-      name: 'Credencial de Identificación Médica (DoctorID)',
-      issueDate: '2024-01-15',
-      expiryDate: '2026-01-15',
-      status: 'active',
-      credentialId: 'CGCOM-DR-12345-2024',
-    },
-  ]);
+  issuedCredentials = signal<IssuedCredential[]>(
+    this.isDoctorTenant
+      ? [
+          {
+            id: 'issued-1',
+            templateId: 'doctor-id',
+            name: 'Credencial de Identificación Médica (DoctorID)',
+            issueDate: '2024-01-15',
+            expiryDate: '2026-01-15',
+            status: 'active',
+            credentialId: 'DOCTORID-12345-2024',
+          },
+        ]
+      : [
+          {
+            id: 'issued-1',
+            templateId: 'employee-id',
+            name: 'Credencial de Identificación de Empleado (EmployeeID)',
+            issueDate: '2024-01-15',
+            expiryDate: '2026-01-15',
+            status: 'active',
+            credentialId: 'EMPLOYEEID-12345-2024',
+          },
+        ],
+  );
 
   availableCredentials: CredentialTemplate[] = [];
 
@@ -52,43 +77,64 @@ export class IssuancePortalComponent implements OnInit {
       return;
     }
     this.user = u;
-    this.availableCredentials = [
-      {
-        id: 'doctor-id',
-        name: 'Credencial de Identificación Médica (DoctorID)',
-        description: 'Credencial principal que te identifica como médico colegiado en España',
-        issuer: 'CGCOM',
-        type: 'DoctorID',
-        status: 'available',
-        validityYears: 2,
-        attributes: [
-          { key: 'Nombre completo',     value: u.name },
-          { key: 'Número de colegiado', value: u.collegiateNumber },
-          { key: 'DNI',                 value: u.dni },
-          { key: 'Colegio Provincial',  value: u.college },
-          { key: 'Especialidad',        value: u.specialty },
-        ],
-        icon: 'shield',
-        color: '#E67E22',
-      },
-      {
-        id: 'ecip',
-        name: 'Tarjeta Profesional Europea (eCIP)',
-        description: 'Credencial para ejercer temporalmente en otros países de la UE',
-        issuer: 'CGCOM',
-        type: 'eCIP',
-        status: 'available',
-        validityYears: 1,
-        attributes: [
-          { key: 'Nombre completo',     value: u.name },
-          { key: 'Número de colegiado', value: u.collegiateNumber },
-          { key: 'País de origen',      value: 'España' },
-          { key: 'Especialidad',        value: u.specialty },
-        ],
-        icon: 'file-check',
-        color: '#1A5276',
-      },
-    ];
+    this.availableCredentials = this.isDoctorTenant
+      ? [
+          {
+            id: 'doctor-id',
+            name: 'Credencial de Identificación Médica (DoctorID)',
+            description: 'Credencial principal que te identifica como médico colegiado en España',
+            issuer: 'CGCOM',
+            type: 'DoctorID',
+            status: 'available',
+            validityYears: 2,
+            attributes: [
+              { key: 'Nombre completo',     value: u.name },
+              { key: 'Número de colegiado', value: u.collegiateNumber },
+              { key: 'DNI',                 value: u.dni },
+              { key: 'Colegio Provincial',  value: u.college },
+              { key: 'Especialidad',        value: u.specialty },
+            ],
+            icon: 'shield',
+            color: '#E67E22',
+          },
+          {
+            id: 'ecip',
+            name: 'Tarjeta Profesional Europea (eCIP)',
+            description: 'Credencial para ejercer temporalmente en otros países de la UE',
+            issuer: 'CGCOM',
+            type: 'eCIP',
+            status: 'available',
+            validityYears: 1,
+            attributes: [
+              { key: 'Nombre completo',     value: u.name },
+              { key: 'Número de colegiado', value: u.collegiateNumber },
+              { key: 'País de origen',      value: 'España' },
+              { key: 'Especialidad',        value: u.specialty },
+            ],
+            icon: 'file-check',
+            color: '#1A5276',
+          },
+        ]
+      : [
+          {
+            id: 'employee-id',
+            name: 'Credencial de Identificación de Empleado (EmployeeID)',
+            description: 'Credencial principal que te identifica como empleado de tu organización',
+            issuer: this.branding.appName(),
+            type: 'EmployeeID',
+            status: 'available',
+            validityYears: 2,
+            attributes: [
+              { key: 'Nombre completo',   value: u.name },
+              { key: 'Número de empleado', value: u.collegiateNumber },
+              { key: 'DNI',               value: u.dni },
+              { key: 'Empresa',           value: u.college },
+              { key: 'Puesto',            value: u.specialty },
+            ],
+            icon: 'shield',
+            color: 'var(--brand-secondary)',
+          },
+        ];
   }
 
   isAlreadyIssued(templateId: string): boolean {
@@ -118,7 +164,7 @@ export class IssuancePortalComponent implements OnInit {
         issueDate: now.toISOString().split('T')[0],
         expiryDate: expiry.toISOString().split('T')[0],
         status: 'active',
-        credentialId: `CGCOM-${cred.type.toUpperCase()}-${Math.random().toString(36).substring(2, 11).toUpperCase()}`,
+        credentialId: `${cred.type.toUpperCase()}-${Math.random().toString(36).substring(2, 11).toUpperCase()}`,
       };
       this.issuedCredentials.update((list) => [...list, newCredential]);
       this.successCredentialId = newCredential.credentialId;

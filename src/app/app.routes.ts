@@ -18,10 +18,10 @@ export const routes: Routes = [
       import('./features/portal/landing/landing.component').then((m) => m.LandingComponent),
   },
   {
-    path: 'portal/doctor-data',
+    path: 'portal/user-data',
     loadComponent: () =>
-      import('./features/portal/doctor-data/doctor-data.component').then(
-        (m) => m.DoctorDataComponent,
+      import('./features/portal/user-data/user-data.component').then(
+        (m) => m.UserDataComponent,
       ),
     canActivate: [authGuard],
   },

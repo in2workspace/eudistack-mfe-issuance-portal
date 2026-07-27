@@ -1,6 +1,5 @@
 import { Injectable, signal } from '@angular/core';
 import { AuthenticatedUser } from '../models/issuance.model';
-import { environment } from '../../../environments/environment';
 
 /**
  * Estado compartido entre rutas del flujo de emisión CGCOM.
@@ -14,12 +13,6 @@ export class IssuanceStateService {
   readonly credentialOfferUrl = signal<string | null>(null);
   readonly bootstrapLoading = signal(false);
   readonly bootstrapError = signal<string | null>(null);
-
-  /**
-   * URL del Portal de Identificación con certificado FNMT.
-   * Placeholder de paridad con la demo (EUDISTACK-621/622).
-   */
-  readonly certIdentifierUrl = environment.certIdentifierUrl;
 
   setUser(user: AuthenticatedUser): void {
     this.authenticatedUser.set(user);

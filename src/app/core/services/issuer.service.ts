@@ -2,7 +2,6 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, of, timeout, catchError, map } from 'rxjs';
 import { AuthenticatedUser, BootstrapResult } from '../models/issuance.model';
-import { environment } from '../../../environments/environment';
 
 /**
  * Cliente del endpoint /api/bootstrap del backend (cert-server.mjs).
@@ -10,11 +9,14 @@ import { environment } from '../../../environments/environment';
  * Porta issuerService.ts (React/fetch) a HttpClient de Angular.
  * Timeout de 10 s (RNF-001). Devuelve un discriminated union BootstrapResult
  * para que el componente llamante gestione siempre ambos casos.
+ *
+ * Ruta same-origin (AD-2): nginx enruta `/identify/api/bootstrap` al mismo
+ * `cert-server` bajo cualquier subdominio de tenant — sin host hardcodeado.
  */
 @Injectable({ providedIn: 'root' })
 export class IssuerService {
   private http = inject(HttpClient);
-  private backendUrl = environment.bootstrapApiUrl;
+  private backendUrl = '/identify/api/bootstrap';
 
   /** Timeout en milisegundos para la petición al backend (RNF-001). */
   private static readonly REQUEST_TIMEOUT_MS = 10_000;
