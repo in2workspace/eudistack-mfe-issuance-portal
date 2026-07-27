@@ -29,7 +29,7 @@ export class AppComponent implements OnInit {
       if (identifiedUser) {
         window.history.replaceState(null, '', window.location.pathname);
         this.state.setUser(identifiedUser);
-        this.router.navigate(['/portal/doctor-data']);
+        this.router.navigate(['/portal/user-data']);
         return;
       }
     }

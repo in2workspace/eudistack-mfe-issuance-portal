@@ -8,7 +8,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
           </button>
-          <img src="cgcom-header-logo.svg" alt="CGCOM - Organización Médica Colegial" class="h-12 w-auto" />
+          <img [src]="branding.logoUrl()" [alt]="branding.appName()" class="h-12 w-auto" />
           <div class="border-l border-gray-300 pl-6">
             <p class="text-sm font-medium text-gray-700">Cartera de Identidad Digital</p>
           </div>
@@ -20,18 +20,18 @@
   <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
     <div class="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border p-8">
       <div class="text-center mb-8">
-        <div class="w-20 h-20 bg-[#1A5276]/10 rounded-full flex items-center justify-center mx-auto mb-6">
-          <svg class="w-10 h-10 text-[#1A5276]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <div class="w-20 h-20 bg-brand-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
+          <svg class="w-10 h-10 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
           </svg>
         </div>
-        <h2 class="text-2xl font-bold text-gray-900 mb-2">Datos del Médico</h2>
+        <h2 class="text-2xl font-bold text-gray-900 mb-2">{{ copy.title }}</h2>
         <p class="text-gray-600">Confirma que tus datos son correctos antes de continuar</p>
       </div>
 
       <div class="bg-gray-50 rounded-lg p-6 mb-8">
-        <h3 class="font-bold text-gray-900 mb-4">Datos obtenidos del sistema CGCOM</h3>
+        <h3 class="font-bold text-gray-900 mb-4">{{ copy.sectionTitle }}</h3>
         <div class="grid md:grid-cols-2 gap-4">
           @for (field of fields(); track field.label) {
             <div class="flex items-start gap-3">
@@ -54,10 +54,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <p class="text-gray-700">
-            Estos datos han sido obtenidos del sistema de información de CGCOM.
-            Si detectas algún error, contacta con tu Colegio Provincial.
-          </p>
+          <p class="text-gray-700">{{ copy.infoText }}</p>
         </div>
       </div>
 
@@ -84,7 +81,7 @@
         <button
           (click)="onContinue()"
           [disabled]="isLoading()"
-          class="flex-1 inline-flex items-center justify-center rounded-md text-sm font-medium h-9 px-4 py-2 bg-[#E67E22] hover:bg-[#D35400] text-white disabled:opacity-70 disabled:pointer-events-none transition-colors"
+          class="flex-1 inline-flex items-center justify-center rounded-md text-sm font-medium h-9 px-4 py-2 bg-brand-secondary hover:opacity-90 text-brand-secondary-contrast disabled:opacity-70 disabled:pointer-events-none transition-colors"
         >
           @if (isLoading()) {
             <svg class="mr-2 w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">

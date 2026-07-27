@@ -49,7 +49,7 @@ export class CredentialQrComponent implements OnInit {
   onRetry(): void {
     this.state.setCredentialOfferUrl('');
     this.state.setBootstrapError(null);
-    this.router.navigate(['/portal/doctor-data']);
+    this.router.navigate(['/portal/user-data']);
   }
 
   /**
