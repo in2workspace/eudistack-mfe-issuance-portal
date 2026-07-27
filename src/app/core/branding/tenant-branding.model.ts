@@ -26,6 +26,11 @@ export const DEFAULT_EUDISTACK_BRANDING: Readonly<TenantBranding> = Object.freez
     '--brand-primary-contrast': '#ffffff',
     '--brand-secondary': '#00BFA6',
     '--brand-secondary-contrast': '#ffffff',
+    // Color de acento seguro sobre fondo blanco (icono/texto de botón) —
+    // ver deriveAccentTokens() en resolve-tenant-branding.ts. El default
+    // navy nunca es "casi blanco", así que coincide con --brand-primary.
+    '--brand-accent': '#0F2B5B',
+    '--brand-accent-contrast': '#ffffff',
   }),
   // Todos los headers de este repo tienen fondo blanco: se usa la variante
   // oscura del logo (contraste sobre claro), nunca la clara `logo.svg`

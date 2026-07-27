@@ -56,6 +56,40 @@ describe('resolveTenantBranding', () => {
     expect(brandNewTenant.supportedLanguages).toEqual(['en']);
   });
 
+  it('derives --brand-accent from primaryColor when it is not near-white (typical tenant)', () => {
+    const branding = resolveTenantBranding({
+      ok: true,
+      descriptor: {
+        branding: {
+          primaryColor: '#003057',
+          primaryContrastColor: '#ffffff',
+          secondaryColor: '#ffd100',
+          secondaryContrastColor: '#003057',
+        },
+      },
+    });
+
+    expect(branding.tokens['--brand-accent']).toBe('#003057');
+    expect(branding.tokens['--brand-accent-contrast']).toBe('#ffffff');
+  });
+
+  it('falls back to secondaryColor for --brand-accent when primaryColor is near-white (CGCOM)', () => {
+    const branding = resolveTenantBranding({
+      ok: true,
+      descriptor: {
+        branding: {
+          primaryColor: '#ffffff',
+          primaryContrastColor: '#46484C',
+          secondaryColor: '#F9B000',
+          secondaryContrastColor: '#46484C',
+        },
+      },
+    });
+
+    expect(branding.tokens['--brand-accent']).toBe('#F9B000');
+    expect(branding.tokens['--brand-accent-contrast']).toBe('#46484C');
+  });
+
   it('prefers logoDarkUrl over logoUrl (AD-2, headers here are white — logoUrl is meant for colored/dark backgrounds)', () => {
     const branding = resolveTenantBranding({
       ok: true,

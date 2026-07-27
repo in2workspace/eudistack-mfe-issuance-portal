@@ -32,13 +32,13 @@
                 <div>
                   <label for="name" class="flex items-center gap-2 text-sm leading-none font-medium mb-2">Nombre completo *</label>
                   <input id="name" name="name" type="text" required [(ngModel)]="formData.name"
-                    class="flex h-9 w-full min-w-0 rounded-md border border-gray-300 px-3 py-1 text-sm bg-white mt-2 focus:outline-none focus:ring-2 focus:ring-brand-secondary/30 focus:border-brand-secondary"
+                    class="flex h-9 w-full min-w-0 rounded-md border border-gray-300 px-3 py-1 text-sm bg-white mt-2 focus:outline-none focus:ring-2 focus:ring-brand-accent/30 focus:border-brand-accent"
                     placeholder="Tu nombre" />
                 </div>
                 <div>
                   <label for="email" class="flex items-center gap-2 text-sm leading-none font-medium mb-2">Email *</label>
                   <input id="email" name="email" type="email" required [(ngModel)]="formData.email"
-                    class="flex h-9 w-full min-w-0 rounded-md border border-gray-300 px-3 py-1 text-sm bg-white mt-2 focus:outline-none focus:ring-2 focus:ring-brand-secondary/30 focus:border-brand-secondary"
+                    class="flex h-9 w-full min-w-0 rounded-md border border-gray-300 px-3 py-1 text-sm bg-white mt-2 focus:outline-none focus:ring-2 focus:ring-brand-accent/30 focus:border-brand-accent"
                     placeholder="tu@email.com" />
                 </div>
               </div>
@@ -47,13 +47,13 @@
                 <div>
                   <label for="phone" class="flex items-center gap-2 text-sm leading-none font-medium mb-2">Teléfono</label>
                   <input id="phone" name="phone" type="tel" [(ngModel)]="formData.phone"
-                    class="flex h-9 w-full min-w-0 rounded-md border border-gray-300 px-3 py-1 text-sm bg-white mt-2 focus:outline-none focus:ring-2 focus:ring-brand-secondary/30 focus:border-brand-secondary"
+                    class="flex h-9 w-full min-w-0 rounded-md border border-gray-300 px-3 py-1 text-sm bg-white mt-2 focus:outline-none focus:ring-2 focus:ring-brand-accent/30 focus:border-brand-accent"
                     placeholder="+34 600 000 000" />
                 </div>
                 <div>
                   <label for="incidentType" class="flex items-center gap-2 text-sm leading-none font-medium mb-2">Tipo de incidencia *</label>
                   <select id="incidentType" name="incidentType" required [(ngModel)]="formData.incidentType"
-                    class="mt-2 w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-brand-secondary/30 bg-white">
+                    class="mt-2 w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-brand-accent/30 bg-white">
                     <option value="">Selecciona un tipo</option>
                     @for (type of incidentTypes; track type.value) {
                       <option [value]="type.value">{{ type.label }}</option>
@@ -65,14 +65,14 @@
               <div>
                 <label for="subject" class="flex items-center gap-2 text-sm leading-none font-medium mb-2">Asunto *</label>
                 <input id="subject" name="subject" type="text" required [(ngModel)]="formData.subject"
-                  class="flex h-9 w-full min-w-0 rounded-md border border-gray-300 px-3 py-1 text-sm bg-white mt-2 focus:outline-none focus:ring-2 focus:ring-brand-secondary/30 focus:border-brand-secondary"
+                  class="flex h-9 w-full min-w-0 rounded-md border border-gray-300 px-3 py-1 text-sm bg-white mt-2 focus:outline-none focus:ring-2 focus:ring-brand-accent/30 focus:border-brand-accent"
                   placeholder="Resume tu consulta" />
               </div>
 
               <div>
                 <label for="description" class="flex items-center gap-2 text-sm leading-none font-medium mb-2">Descripción del problema *</label>
                 <textarea id="description" name="description" required [(ngModel)]="formData.description" rows="6"
-                  class="flex w-full min-w-0 rounded-md border border-gray-300 px-3 py-2 text-sm bg-white mt-2 focus:outline-none focus:ring-2 focus:ring-brand-secondary/30 focus:border-brand-secondary"
+                  class="flex w-full min-w-0 rounded-md border border-gray-300 px-3 py-2 text-sm bg-white mt-2 focus:outline-none focus:ring-2 focus:ring-brand-accent/30 focus:border-brand-accent"
                   placeholder="Describe detalladamente el problema que estás experimentando...">
                 </textarea>
               </div>
@@ -132,7 +132,7 @@
           <h3 class="font-bold text-gray-900 mb-4">Otros Canales de Contacto</h3>
           <div class="space-y-4">
             <div class="flex items-start gap-3">
-              <svg class="w-5 h-5 text-brand-secondary flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <svg class="w-5 h-5 text-brand-accent flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
               </svg>
@@ -143,7 +143,7 @@
               </div>
             </div>
             <div class="flex items-start gap-3">
-              <svg class="w-5 h-5 text-brand-secondary flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <svg class="w-5 h-5 text-brand-accent flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
@@ -153,7 +153,7 @@
               </div>
             </div>
             <div class="flex items-start gap-3">
-              <svg class="w-5 h-5 text-brand-secondary flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <svg class="w-5 h-5 text-brand-accent flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -170,15 +170,15 @@
           <h4 class="font-bold text-gray-900 mb-3">Antes de contactar</h4>
           <ul class="space-y-2 text-sm text-gray-700">
             <li class="flex items-start gap-2">
-              <span class="text-brand-secondary mt-1">•</span>
-              <span>Consulta nuestras <a href="#" class="text-brand-secondary font-semibold hover:underline">Preguntas Frecuentes</a></span>
+              <span class="text-brand-accent mt-1">•</span>
+              <span>Consulta nuestras <a href="#" class="text-brand-accent font-semibold hover:underline">Preguntas Frecuentes</a></span>
             </li>
             <li class="flex items-start gap-2">
-              <span class="text-brand-secondary mt-1">•</span>
-              <span>Revisa la <a href="#" class="text-brand-secondary font-semibold hover:underline">Guía de Usuario</a></span>
+              <span class="text-brand-accent mt-1">•</span>
+              <span>Revisa la <a href="#" class="text-brand-accent font-semibold hover:underline">Guía de Usuario</a></span>
             </li>
             <li class="flex items-start gap-2">
-              <span class="text-brand-secondary mt-1">•</span>
+              <span class="text-brand-accent mt-1">•</span>
               <span>Ten a mano tu {{ isDoctorTenant ? 'número de colegiado' : 'número de empleado' }}</span>
             </li>
           </ul>
