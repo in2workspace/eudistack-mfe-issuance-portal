@@ -1,6 +1,5 @@
 import { Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { IssuanceStateService } from '../../../core/services/issuance-state.service';
 
 /**
  * Pantalla de inicio del Portal CGCOM.
@@ -12,7 +11,6 @@ import { IssuanceStateService } from '../../../core/services/issuance-state.serv
   templateUrl: './landing.component.html',
 })
 export class LandingComponent {
-  private state = inject(IssuanceStateService);
   private router = inject(Router);
 
   readonly currentYear = new Date().getFullYear();
@@ -26,9 +24,12 @@ export class LandingComponent {
     { title: 'Servicios del Colegio', description: 'Accede a todos los servicios de tu colegio oficial de médicos' },
   ];
 
-  /** Inicia identificación → redirige al Portal de Identificación con certificado FNMT. */
+  /**
+   * Inicia identificación → redirige al Portal de Identificación con certificado FNMT.
+   * Ruta same-origin (nginx sirve `/cert/` igual bajo cualquier subdominio de tenant).
+   */
   startIdentification(): void {
-    window.location.href = `${this.state.certIdentifierUrl}/`;
+    window.location.href = '/cert/';
   }
 
   navigateToIncidents(): void {
