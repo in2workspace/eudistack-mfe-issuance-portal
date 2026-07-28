@@ -34,6 +34,7 @@ export class IssuerService {
         email: user.email,
         collegiateNumber: user.collegiateNumber,
         dni: user.dni,
+        specialty: user.specialty,
       })
       .pipe(
         timeout(IssuerService.REQUEST_TIMEOUT_MS),
