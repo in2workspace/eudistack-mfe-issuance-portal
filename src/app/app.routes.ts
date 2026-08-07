@@ -18,6 +18,16 @@ export const routes: Routes = [
       import('./features/portal/landing/landing.component').then((m) => m.LandingComponent),
   },
   {
+    // Selección de método de identificación — extraída del paso 'select' de
+    // ClaveAuthComponent (eudistack-cgcom-mfe-cert-identifier). Al elegir un
+    // método redirige a /cert/?method=<id>, que entra directo en 'authenticate'.
+    path: 'portal/identify',
+    loadComponent: () =>
+      import('./features/portal/identify-methods/identify-methods.component').then(
+        (m) => m.IdentifyMethodsComponent,
+      ),
+  },
+  {
     path: 'portal/user-data',
     loadComponent: () =>
       import('./features/portal/user-data/user-data.component').then(
