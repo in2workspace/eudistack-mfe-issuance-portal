@@ -24,12 +24,4 @@ describe('routes', () => {
 
     expect((loaded as { name: string }).name).toBe('IssuanceInfoComponent');
   });
-
-  it('"demo" lazy-loads the pre-existing LandingComponent (kept reachable per R-4)', async () => {
-    const demo = findRoute('demo');
-
-    const loaded = await (demo.loadComponent as () => Promise<unknown>)();
-
-    expect((loaded as { name: string }).name).toBe('LandingComponent');
-  });
 });

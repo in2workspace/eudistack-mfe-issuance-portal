@@ -11,13 +11,6 @@ export const routes: Routes = [
       ),
   },
   {
-    // Pantalla demo CGCOM previa a EUD-162, huérfana tras re-apuntar 'portal' (R-4).
-    // Se mantiene accesible manualmente hasta que se aborde su limpieza formal.
-    path: 'demo',
-    loadComponent: () =>
-      import('./features/portal/landing/landing.component').then((m) => m.LandingComponent),
-  },
-  {
     path: 'portal/user-data',
     loadComponent: () =>
       import('./features/portal/user-data/user-data.component').then(
