@@ -34,9 +34,13 @@ export class AppComponent implements OnInit {
       }
     }
 
-    // Si la URL trae ?code= en /portal, el portal CGCOM lo maneja internamente
-    // (compatibilidad con el flujo OIDC heredado de la demo; no es el diseño final).
-    const isPortalRoute = window.location.pathname.startsWith('/portal');
+    // Si la URL trae ?code= exactamente en /portal (redirect_uri real del
+    // flujo OIDC ACME), el portal CGCOM lo maneja internamente aquí
+    // (compatibilidad con el flujo heredado de la demo; no es el diseño
+    // final). Coincidencia EXACTA, no startsWith: 'portal/identify' tiene
+    // su propio callback OIDC real (DoctorID, IdentifyMethodsComponent) —
+    // un match por prefijo lo secuestraría antes de que se procese ahí.
+    const isPortalRoute = window.location.pathname === '/portal';
     if (isPortalRoute && urlParams.get('code')) {
       window.history.replaceState(null, '', window.location.pathname);
       const mockUser: AuthenticatedUser = {

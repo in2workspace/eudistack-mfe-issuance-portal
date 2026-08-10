@@ -40,7 +40,7 @@ export interface AuthenticatedUser {
   phone: string;
   college: string;
   specialty: string;
-  authMethod: 'eDNI' | 'certificate' | 'claveMobile';
+  authMethod: 'eDNI' | 'certificate' | 'claveMobile' | 'doctorId' | 'video';
   certificateData?: CertificateData;
 }
 
