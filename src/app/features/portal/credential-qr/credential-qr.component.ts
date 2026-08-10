@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import QRCode from 'qrcode';
 import { IssuanceStateService } from '../../../core/services/issuance-state.service';
+import { navigateBackToOrigin } from '../../../core/config/issuance-return';
 import { CredentialOfferUrlBoxComponent } from '../../../shared/components/credential-offer-url-box/credential-offer-url-box.component';
 import { BrandingService } from '../../../core/branding/branding.service';
 import { resolveTenantIdentity } from '../../../core/branding/resolve-tenant-identity';
@@ -49,13 +50,14 @@ export class CredentialQrComponent implements OnInit {
 
   onComplete(): void {
     // No hay otra pantalla "home" real en issuance-portal — /portal/success
-    // y /portal/home se retiraron (movidos/duplicados en otro sitio).
-    this.router.navigate(['/portal']);
+    // y /portal/home se retiraron (movidos/duplicados en otro sitio). Si el
+    // flujo se inició desde una app externa (p.ej. demo), vuelve allí.
+    navigateBackToOrigin(this.router, '/portal');
   }
 
   onCancel(): void {
     this.state.clearUser();
-    this.router.navigate(['/portal']);
+    navigateBackToOrigin(this.router, '/portal');
   }
 
   onRetry(): void {

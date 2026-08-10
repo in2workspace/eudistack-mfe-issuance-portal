@@ -2,6 +2,7 @@ import { Component, inject, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { IssuanceStateService } from '../../../core/services/issuance-state.service';
 import { IssuerService } from '../../../core/services/issuer.service';
+import { navigateBackToOrigin } from '../../../core/config/issuance-return';
 import { AuthenticatedUser } from '../../../core/models/issuance.model';
 import { IssuanceEntryPointService } from '../../issuance-entry-point/issuance-entry-point.service';
 import { CommonModule } from '@angular/common';
@@ -81,7 +82,7 @@ export class UserDataComponent implements OnInit {
 
   onCancel(): void {
     this.state.clearUser();
-    this.router.navigate(['/portal']);
+    navigateBackToOrigin(this.router, '/portal');
   }
 
   onContinue(): void {
