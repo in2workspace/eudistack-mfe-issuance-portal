@@ -37,24 +37,9 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {
-    path: 'portal/success',
-    loadComponent: () =>
-      import('./features/portal/credential-success/credential-success.component').then(
-        (m) => m.CredentialSuccessComponent,
-      ),
-  },
-  {
     path: 'portal/incidents',
     loadComponent: () =>
       import('./features/portal/incidents/incidents.component').then((m) => m.IncidentsComponent),
-  },
-  {
-    path: 'portal/home',
-    loadComponent: () =>
-      import('./features/portal/issuance-portal/issuance-portal.component').then(
-        (m) => m.IssuancePortalComponent,
-      ),
-    canActivate: [authGuard],
   },
   {
     path: 'cliente',

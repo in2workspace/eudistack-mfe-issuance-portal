@@ -48,7 +48,9 @@ export class CredentialQrComponent implements OnInit {
   }
 
   onComplete(): void {
-    this.router.navigate(['/portal/success']);
+    // No hay otra pantalla "home" real en issuance-portal — /portal/success
+    // y /portal/home se retiraron (movidos/duplicados en otro sitio).
+    this.router.navigate(['/portal']);
   }
 
   onCancel(): void {

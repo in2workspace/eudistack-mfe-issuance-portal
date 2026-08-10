@@ -55,7 +55,9 @@ export class AppComponent implements OnInit {
         authMethod: 'claveMobile',
       };
       this.state.setUser(mockUser);
-      this.router.navigate(['/portal/home']);
+      // /portal/home se retiró (movido/duplicado en eudistack-cgcom-mfe-demo);
+      // no hay otro "home" real en esta app.
+      this.router.navigate(['/portal']);
     }
   }
 
