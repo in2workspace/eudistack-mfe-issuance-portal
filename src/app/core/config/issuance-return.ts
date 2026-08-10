@@ -5,7 +5,7 @@ import { Router } from '@angular/router';
  * desde una app externa (p.ej. eudistack-cgcom-mfe-demo, CTA "Obtener mi
  * DoctorID"/"Comenzar Ahora"), esa app deja aquí la URL a la que debe
  * volver el usuario al terminar. Mismo origin (AD-2): sessionStorage se
- * comparte entre /demo/ y /identify/ bajo el mismo host de tenant.
+ * comparte entre /demo/ y /issuance-portal/ bajo el mismo host de tenant.
  */
 const KEY = 'issuance_return_to';
 

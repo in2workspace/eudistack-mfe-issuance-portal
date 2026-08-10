@@ -31,7 +31,7 @@ describe('IssuanceStartService', () => {
     expect(sessionStore.create).toHaveBeenCalledWith(
       expect.objectContaining({ tenant: 'cgcom', state: 'iniciada', id: expect.any(String) }),
     );
-    expect(router.navigate).toHaveBeenCalledWith(['/portal/identify']);
+    expect(router.navigate).toHaveBeenCalledWith(['/identify']);
     expect(service.cannotContinueReason()).toBeNull();
   });
 

@@ -29,18 +29,22 @@ export class AppComponent implements OnInit {
       if (identifiedUser) {
         window.history.replaceState(null, '', window.location.pathname);
         this.state.setUser(identifiedUser);
-        this.router.navigate(['/portal/user-data']);
+        this.router.navigate(['/user-data']);
         return;
       }
     }
 
-    // Si la URL trae ?code= exactamente en /portal (redirect_uri real del
-    // flujo OIDC ACME), el portal CGCOM lo maneja internamente aquí
+    // Si la URL trae ?code= exactamente en la raíz de la app (redirect_uri
+    // real del flujo OIDC ACME), el portal CGCOM lo maneja internamente aquí
     // (compatibilidad con el flujo heredado de la demo; no es el diseño
-    // final). Coincidencia EXACTA, no startsWith: 'portal/identify' tiene
-    // su propio callback OIDC real (DoctorID, IdentifyMethodsComponent) —
-    // un match por prefijo lo secuestraría antes de que se procese ahí.
-    const isPortalRoute = window.location.pathname === '/portal';
+    // final). window.location.pathname es una API nativa del DOM — NO la
+    // afecta el <base href> de Angular, así que hay que comparar contra el
+    // path real completo (incluye el SPA_PREFIX de despliegue), no contra
+    // la ruta relativa de Angular. Coincidencia EXACTA, no un prefijo:
+    // 'identify' tiene su propio callback OIDC real (DoctorID,
+    // IdentifyMethodsComponent) — un match por prefijo lo secuestraría
+    // antes de que se procese ahí.
+    const isPortalRoute = window.location.pathname === '/issuance-portal/';
     if (isPortalRoute && urlParams.get('code')) {
       window.history.replaceState(null, '', window.location.pathname);
       const mockUser: AuthenticatedUser = {
@@ -57,7 +61,7 @@ export class AppComponent implements OnInit {
       this.state.setUser(mockUser);
       // /portal/home se retiró (movido/duplicado en eudistack-cgcom-mfe-demo);
       // no hay otro "home" real en esta app.
-      this.router.navigate(['/portal']);
+      this.router.navigate(['/']);
     }
   }
 

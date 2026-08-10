@@ -72,7 +72,7 @@ export class UserDataComponent implements OnInit {
   ngOnInit(): void {
     const u = this.state.authenticatedUser();
     if (!u) {
-      this.router.navigate(['/portal']);
+      this.router.navigate(['/']);
       return;
     }
     this.user = u;
@@ -82,7 +82,7 @@ export class UserDataComponent implements OnInit {
 
   onCancel(): void {
     this.state.clearUser();
-    navigateBackToOrigin(this.router, '/portal');
+    navigateBackToOrigin(this.router, '/');
   }
 
   onContinue(): void {
@@ -93,7 +93,7 @@ export class UserDataComponent implements OnInit {
       this.state.setBootstrapLoading(false);
       if (result.success) {
         this.state.setCredentialOfferUrl(result.credentialOfferUrl);
-        this.router.navigate(['/portal/qr']);
+        this.router.navigate(['/qr']);
       } else {
         this.state.setBootstrapError(result.error);
       }

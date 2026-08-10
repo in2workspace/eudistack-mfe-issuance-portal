@@ -25,8 +25,8 @@ export class DoctorIdOidcService {
   private readonly authorizationEndpoint = `${window.location.origin}/verifier/oidc/authorize`;
   private readonly tokenEndpoint = `${window.location.origin}/verifier/oidc/token`;
   private readonly clientId = `vc-auth-client-${this.tenant}`;
-  /** Ruta interna de esta SPA (SPA_PREFIX /identify/ + 'portal/identify') — equivalente a la raíz propia que usaba cert-identifier (`${origin}/cert`). */
-  private readonly redirectUri = `${window.location.origin}/identify/portal/identify`;
+  /** Ruta interna de esta SPA (SPA_PREFIX /issuance-portal/ + 'identify') — equivalente a la raíz propia que usaba cert-identifier (`${origin}/cert`). */
+  private readonly redirectUri = `${window.location.origin}/issuance-portal/identify`;
   private readonly scope = this.tenant === 'cgcom' ? 'openid doctorid' : 'openid learcredential';
 
   /** Convierte un ArrayBuffer o Uint8Array a Base64-URL-safe sin padding. */

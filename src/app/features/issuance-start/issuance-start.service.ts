@@ -48,7 +48,7 @@ export class IssuanceStartService {
       return;
     }
 
-    this.router.navigate(['/portal/identify']);
+    this.router.navigate(['/identify']);
   }
 
   /** Descarta la señal de error y vuelve al estado informativo por defecto (AC-06). */

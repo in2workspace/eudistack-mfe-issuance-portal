@@ -52,18 +52,18 @@ export class CredentialQrComponent implements OnInit {
     // No hay otra pantalla "home" real en issuance-portal — /portal/success
     // y /portal/home se retiraron (movidos/duplicados en otro sitio). Si el
     // flujo se inició desde una app externa (p.ej. demo), vuelve allí.
-    navigateBackToOrigin(this.router, '/portal');
+    navigateBackToOrigin(this.router, '/');
   }
 
   onCancel(): void {
     this.state.clearUser();
-    navigateBackToOrigin(this.router, '/portal');
+    navigateBackToOrigin(this.router, '/');
   }
 
   onRetry(): void {
     this.state.setCredentialOfferUrl('');
     this.state.setBootstrapError(null);
-    this.router.navigate(['/portal/user-data']);
+    this.router.navigate(['/user-data']);
   }
 
   /**

@@ -130,7 +130,7 @@ export class IdentifyMethodsComponent implements OnInit {
   }
 
   onBack(): void {
-    this.router.navigate(['/portal']);
+    this.router.navigate(['/']);
   }
 
   /**
@@ -211,6 +211,6 @@ export class IdentifyMethodsComponent implements OnInit {
    */
   private onAuthenticated(user: AuthenticatedUser): void {
     this.issuanceState.setUser(user);
-    this.router.navigate(['/portal/user-data']);
+    this.router.navigate(['/user-data']);
   }
 }

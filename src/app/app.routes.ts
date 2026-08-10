@@ -2,9 +2,8 @@ import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
-  { path: '', redirectTo: 'portal', pathMatch: 'full' },
   {
-    path: 'portal',
+    path: '',
     loadComponent: () =>
       import('./features/issuance-start/issuance-info/issuance-info.component').then(
         (m) => m.IssuanceInfoComponent,
@@ -14,14 +13,14 @@ export const routes: Routes = [
     // Selección de método de identificación — extraída del paso 'select' de
     // ClaveAuthComponent (eudistack-cgcom-mfe-cert-identifier). Al elegir un
     // método redirige a /cert/?method=<id>, que entra directo en 'authenticate'.
-    path: 'portal/identify',
+    path: 'identify',
     loadComponent: () =>
       import('./features/portal/identify-methods/identify-methods.component').then(
         (m) => m.IdentifyMethodsComponent,
       ),
   },
   {
-    path: 'portal/user-data',
+    path: 'user-data',
     loadComponent: () =>
       import('./features/portal/user-data/user-data.component').then(
         (m) => m.UserDataComponent,
@@ -29,7 +28,7 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {
-    path: 'portal/qr',
+    path: 'qr',
     loadComponent: () =>
       import('./features/portal/credential-qr/credential-qr.component').then(
         (m) => m.CredentialQrComponent,
@@ -37,7 +36,7 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {
-    path: 'portal/incidents',
+    path: 'incidents',
     loadComponent: () =>
       import('./features/portal/incidents/incidents.component').then((m) => m.IncidentsComponent),
   },
@@ -54,5 +53,5 @@ export const routes: Routes = [
       import('./features/acme/acme-home/acme-home.component').then((m) => m.AcmeHomeComponent),
     canActivate: [authGuard],
   },
-  { path: '**', redirectTo: 'portal' },
+  { path: '**', redirectTo: '' },
 ];
