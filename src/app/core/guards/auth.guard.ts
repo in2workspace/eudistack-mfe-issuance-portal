@@ -13,5 +13,5 @@ export const authGuard: CanActivateFn = () => {
   if (state.authenticatedUser() !== null) {
     return true;
   }
-  return router.createUrlTree(['/portal']);
+  return router.createUrlTree(['/']);
 };

@@ -1,8 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { IssuanceStartSession } from './issuance-start-session.model';
 import { IssuanceStartSessionStore } from './issuance-start-session.store';
-import { ExternalNavigator } from '../../core/services/external-navigator.service';
-import { resolveIssuanceStartUrl } from '../../core/config/issuance.config';
 import { CannotContinueReason } from './cannot-continue-reason';
 
 /** Genera un identificador de arranque único: 16 bytes aleatorios en Base64 URL-safe. */
@@ -20,13 +19,14 @@ function generateSessionId(): string {
  * Orquesta el arranque de la emisión desde la pantalla informativa (AC-02).
  *
  * Crea la sesión de arranque, aplica un guard de double-submit (EC-02) y
- * delega la navegación externa. Si la sesión no puede crearse (ES-03),
+ * navega a la pantalla de selección de método de identificación
+ * ('portal/identify', misma SPA). Si la sesión no puede crearse (ES-03),
  * fuerza el estado "no se puede continuar" sin navegar (fail-closed).
  */
 @Injectable({ providedIn: 'root' })
 export class IssuanceStartService {
   private readonly sessionStore = inject(IssuanceStartSessionStore);
-  private readonly navigator = inject(ExternalNavigator);
+  private readonly router = inject(Router);
 
   private readonly _isStarting = signal(false);
   readonly isStarting = this._isStarting.asReadonly();
@@ -48,7 +48,7 @@ export class IssuanceStartService {
       return;
     }
 
-    this.navigator.redirect(resolveIssuanceStartUrl());
+    this.router.navigate(['/identify']);
   }
 
   /** Descarta la señal de error y vuelve al estado informativo por defecto (AC-06). */

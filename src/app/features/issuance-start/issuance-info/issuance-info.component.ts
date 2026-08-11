@@ -42,7 +42,7 @@ export class IssuanceInfoComponent {
   }
 
   navigateToIncidents(): void {
-    this.router.navigate(['/portal/incidents']);
+    this.router.navigate(['/incidents']);
   }
 
   contactByEmail(): void {

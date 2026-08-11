@@ -2,23 +2,25 @@ import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
-  { path: '', redirectTo: 'portal', pathMatch: 'full' },
   {
-    path: 'portal',
+    path: '',
     loadComponent: () =>
       import('./features/issuance-start/issuance-info/issuance-info.component').then(
         (m) => m.IssuanceInfoComponent,
       ),
   },
   {
-    // Pantalla demo CGCOM previa a EUD-162, huérfana tras re-apuntar 'portal' (R-4).
-    // Se mantiene accesible manualmente hasta que se aborde su limpieza formal.
-    path: 'demo',
+    // Selección de método de identificación — extraída del paso 'select' de
+    // ClaveAuthComponent (eudistack-cgcom-mfe-cert-identifier). Al elegir un
+    // método redirige a /cert/?method=<id>, que entra directo en 'authenticate'.
+    path: 'identify',
     loadComponent: () =>
-      import('./features/portal/landing/landing.component').then((m) => m.LandingComponent),
+      import('./features/portal/identify-methods/identify-methods.component').then(
+        (m) => m.IdentifyMethodsComponent,
+      ),
   },
   {
-    path: 'portal/user-data',
+    path: 'user-data',
     loadComponent: () =>
       import('./features/portal/user-data/user-data.component').then(
         (m) => m.UserDataComponent,
@@ -26,7 +28,7 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {
-    path: 'portal/qr',
+    path: 'qr',
     loadComponent: () =>
       import('./features/portal/credential-qr/credential-qr.component').then(
         (m) => m.CredentialQrComponent,
@@ -34,24 +36,9 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {
-    path: 'portal/success',
-    loadComponent: () =>
-      import('./features/portal/credential-success/credential-success.component').then(
-        (m) => m.CredentialSuccessComponent,
-      ),
-  },
-  {
-    path: 'portal/incidents',
+    path: 'incidents',
     loadComponent: () =>
       import('./features/portal/incidents/incidents.component').then((m) => m.IncidentsComponent),
-  },
-  {
-    path: 'portal/home',
-    loadComponent: () =>
-      import('./features/portal/issuance-portal/issuance-portal.component').then(
-        (m) => m.IssuancePortalComponent,
-      ),
-    canActivate: [authGuard],
   },
   {
     path: 'cliente',
@@ -66,5 +53,5 @@ export const routes: Routes = [
       import('./features/acme/acme-home/acme-home.component').then((m) => m.AcmeHomeComponent),
     canActivate: [authGuard],
   },
-  { path: '**', redirectTo: 'portal' },
+  { path: '**', redirectTo: '' },
 ];

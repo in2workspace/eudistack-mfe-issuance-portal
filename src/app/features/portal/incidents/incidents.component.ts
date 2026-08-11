@@ -58,7 +58,7 @@ export class IncidentsComponent {
   ];
 
   onBack(): void {
-    this.router.navigate(['/portal']);
+    this.router.navigate(['/']);
   }
 
   onSubmit(): void {

@@ -1,0 +1,365 @@
+<div class="min-h-screen bg-gray-50">
+  <!-- Header -->
+  <header class="bg-white border-b border-gray-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <div class="flex items-center gap-6">
+        <button (click)="onBack()" class="inline-flex items-center justify-center h-9 w-9 rounded-md text-gray-600 hover:bg-gray-100 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+        </button>
+        <img [src]="branding.logoUrl()" [alt]="branding.appName()" class="h-12 w-auto" />
+        <div class="border-l border-gray-300 pl-6">
+          <p class="text-sm font-medium text-gray-700">Cartera de Identidad Digital</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+
+    <!-- ── Lista de métodos ───────────────────────────────────────────── -->
+    @if (!selectedMethod()) {
+      <div>
+        <div class="text-center mb-12">
+          <div class="w-20 h-20 bg-brand-secondary rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg class="w-10 h-10 text-brand-secondary-contrast" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+          </div>
+          <h2 class="text-3xl font-bold text-gray-900 mb-4">Autenticación Segura</h2>
+          <p class="text-xl text-gray-600 max-w-2xl mx-auto">
+            Selecciona tu método preferido de autenticación. Todos los métodos son igualmente seguros.
+          </p>
+        </div>
+
+        <div class="grid gap-6 mb-8">
+          @for (method of authMethods; track method.id) {
+            <button
+              type="button"
+              (click)="selectMethod(method.id)"
+              class="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border p-6 text-left cursor-pointer hover:shadow-lg transition-all hover:border-brand-accent relative"
+            >
+              @if (method.recommended) {
+                <div class="absolute top-4 right-4">
+                  <span class="bg-green-100 text-green-800 text-xs font-semibold px-3 py-1 rounded-full">
+                    Recomendado
+                  </span>
+                </div>
+              }
+              <div class="flex items-start gap-4">
+                <div class="w-14 h-14 bg-brand-secondary rounded-lg flex items-center justify-center flex-shrink-0">
+                  @if (method.id === 'certificate' || method.id === 'doctorId') {
+                    <svg class="w-7 h-7 text-brand-secondary-contrast" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                  }
+                  @if (method.id === 'eDNI') {
+                    <svg class="w-7 h-7 text-brand-secondary-contrast" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M2 10h20M6 15h2m3 0h5M4 6h16a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2z" />
+                    </svg>
+                  }
+                  @if (method.id === 'claveMobile') {
+                    <svg class="w-7 h-7 text-brand-secondary-contrast" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    </svg>
+                  }
+                  @if (method.id === 'video') {
+                    <svg class="w-7 h-7 text-brand-secondary-contrast" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                  }
+                </div>
+                <div class="flex-1">
+                  <h3 class="font-bold text-gray-900 mb-2">{{ method.title }}</h3>
+                  <p class="text-gray-600 mb-4">{{ method.description }}</p>
+                  <div class="flex items-center gap-2 text-brand-accent">
+                    <span class="font-semibold">Seleccionar este método</span>
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </button>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- ── Autenticación (eDNI / Cl@ve Móvil / DoctorID / Video) ────────── -->
+    <!-- 'certificate' no entra aquí — redirige a cert-identifier (/cert/). -->
+    @if (selectedMethod()) {
+      <div>
+        <button type="button" (click)="goToSelection()" class="mb-6 inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          Cambiar método
+        </button>
+
+        <div class="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border p-8 max-w-2xl mx-auto">
+
+          <!-- Method icon + title -->
+          <div class="text-center mb-2">
+            <div class="w-20 h-20 bg-brand-secondary rounded-full flex items-center justify-center mx-auto mb-6">
+              @if (selectedMethod() === 'eDNI') {
+                <svg class="w-10 h-10 text-brand-secondary-contrast" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M2 10h20M6 15h2m3 0h5M4 6h16a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2z" />
+                </svg>
+              }
+              @if (selectedMethod() === 'claveMobile') {
+                <svg class="w-10 h-10 text-brand-secondary-contrast" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+              }
+              @if (selectedMethod() === 'doctorId') {
+                <svg class="w-10 h-10 text-brand-secondary-contrast" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+              }
+              @if (selectedMethod() === 'video') {
+                <svg class="w-10 h-10 text-brand-secondary-contrast" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              }
+            </div>
+            <h3 class="text-2xl font-bold text-gray-900 mb-2">
+              @if (selectedMethod() === 'eDNI') { Autenticación con DNI Electrónico }
+              @if (selectedMethod() === 'claveMobile') { Autenticación con Cl&#64;ve Móvil }
+              @if (selectedMethod() === 'doctorId') { Autenticación con {{ credentialLabel }} }
+              @if (selectedMethod() === 'video') { Video Identificación }
+            </h3>
+            <p class="text-gray-600">
+              @if (selectedMethod() === 'eDNI') { Introduce tu DNI y conecta tu lector de tarjetas }
+              @if (selectedMethod() === 'claveMobile') { Escanea el código QR con la app Cl&#64;ve }
+              @if (selectedMethod() === 'doctorId') { Procesando tu credencial {{ credentialLabel }} desde la cartera digital }
+              @if (selectedMethod() === 'video') { Conecta con un agente verificador en tiempo real }
+            </p>
+          </div>
+
+          <!-- ─── eDNI Method ─── -->
+          @if (selectedMethod() === 'eDNI') {
+            <div class="space-y-6">
+              <div>
+                <label for="dni" class="block text-sm font-medium mb-2">Número de DNI</label>
+                <input id="dni" type="text" placeholder="12345678A" [value]="dni()" (input)="dni.set($any($event.target).value)"
+                  class="flex h-9 w-full rounded-md border border-gray-300 px-3 py-1 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-accent/30 focus:border-brand-accent" />
+              </div>
+              <div>
+                <label for="pin" class="block text-sm font-medium mb-2">PIN del DNI electrónico</label>
+                <input id="pin" type="password" placeholder="****" [value]="pin()" (input)="pin.set($any($event.target).value)"
+                  class="flex h-9 w-full rounded-md border border-gray-300 px-3 py-1 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-accent/30 focus:border-brand-accent" />
+                <p class="text-sm text-gray-500 mt-2">
+                  Es el PIN de 4 dígitos que estableciste al obtener tu DNI electrónico
+                </p>
+              </div>
+              <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <p class="text-sm text-gray-700">
+                  <strong>Nota de demostración:</strong> Este es un entorno de prueba.
+                  En producción, la autenticación se realizará mediante el sistema oficial Cl&#64;ve.
+                </p>
+              </div>
+            </div>
+          }
+
+          <!-- ─── Cl@ve Móvil Method ─── -->
+          @if (selectedMethod() === 'claveMobile') {
+            <div class="space-y-6">
+              <div class="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
+                <div class="w-48 h-48 bg-white border-4 border-gray-900 rounded-lg mx-auto mb-4 flex items-center justify-center">
+                  <div class="grid grid-cols-3 gap-1 p-4">
+                    @for (item of [0,1,2,3,4,5,6,7,8]; track item) {
+                      <div class="w-4 h-4 bg-gray-900 rounded-sm"></div>
+                    }
+                  </div>
+                </div>
+                <p class="text-gray-600 mb-2">
+                  Escanea este código QR con tu app Cl&#64;ve Móvil
+                </p>
+                <p class="text-sm text-gray-500">
+                  Código: 4829-3847-2938-4756
+                </p>
+              </div>
+              <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <p class="text-sm text-gray-700">
+                  <strong>Nota de demostración:</strong> Este es un entorno de prueba.
+                  En producción, se generará un código QR real para autenticación.
+                </p>
+              </div>
+            </div>
+          }
+
+          <!-- ─── DoctorID Method ─── -->
+          @if (selectedMethod() === 'doctorId') {
+            <div class="space-y-6">
+
+              @if (doctorIdLoading()) {
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
+                  <svg class="w-12 h-12 text-brand-accent mx-auto mb-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                  </svg>
+                  <p class="text-gray-700 font-semibold mb-1">Procesando credencial {{ credentialLabel }}...</p>
+                  <p class="text-gray-500 text-sm">Verificando tu identidad con el sistema {{ credentialLabel }}</p>
+                </div>
+              }
+
+              @if (doctorIdError() && !doctorIdLoading()) {
+                <div class="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+                  <svg class="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <div>
+                    <p class="text-sm font-semibold text-red-800">Error de autenticación</p>
+                    <p class="text-sm text-red-700">{{ doctorIdError() }}</p>
+                  </div>
+                </div>
+                <div class="text-center">
+                  <button type="button" (click)="goToSelection()"
+                    class="inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium h-9 px-4 py-2 bg-brand-secondary hover:opacity-90 text-brand-secondary-contrast transition-opacity">
+                    Volver a intentarlo
+                  </button>
+                </div>
+              }
+
+              @if (!doctorIdLoading() && !doctorIdError()) {
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start gap-3">
+                  <svg class="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                  <p class="text-sm text-blue-700">
+                    Serás redirigido al verificador de {{ branding.appName() }} para presentar tu credencial {{ credentialLabel }} desde tu cartera digital.
+                  </p>
+                </div>
+              }
+
+            </div>
+          }
+
+          <!-- ─── Video Method ─── -->
+          @if (selectedMethod() === 'video') {
+            <div class="space-y-6">
+
+              <!-- Simulated video call area -->
+              <div class="relative bg-gray-900 rounded-xl overflow-hidden" style="aspect-ratio: 16/9;">
+
+                <!-- Agent camera placeholder -->
+                <div class="absolute inset-0 flex flex-col items-center justify-center gap-3">
+                  <div class="w-20 h-20 bg-gray-700 rounded-full flex items-center justify-center">
+                    <svg class="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
+                  <p class="text-gray-400 text-sm font-medium">Agente Verificador</p>
+                </div>
+
+                <!-- Self-view thumbnail (bottom-right) -->
+                <div class="absolute bottom-3 right-3 w-24 h-16 bg-gray-700 rounded-lg flex items-center justify-center border-2 border-gray-600">
+                  <svg class="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+
+                <!-- Status badge (top-left) -->
+                <div class="absolute top-3 left-3 flex items-center gap-2 bg-black/60 rounded-full px-3 py-1.5">
+                  <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                  <span class="text-white text-xs font-medium">Conectando con agente verificador...</span>
+                </div>
+
+                <!-- Duration badge (top-right) -->
+                <div class="absolute top-3 right-3 bg-black/60 rounded-full px-3 py-1.5">
+                  <span class="text-white text-xs font-mono">00:00</span>
+                </div>
+
+              </div>
+
+              <!-- Call controls -->
+              <div class="flex items-center justify-center gap-4">
+                <button type="button" title="Silenciar micrófono"
+                  class="w-12 h-12 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center transition-colors">
+                  <svg class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
+                  </svg>
+                </button>
+                <button type="button" title="Desactivar cámara"
+                  class="w-12 h-12 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center transition-colors">
+                  <svg class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                </button>
+                <button type="button" title="Colgar" (click)="goToSelection()"
+                  class="w-14 h-14 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center transition-colors">
+                  <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3l18 18" />
+                  </svg>
+                </button>
+              </div>
+
+              <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <p class="text-sm text-gray-700">
+                  <strong>Nota de demostración:</strong> Esta es una simulación de la interfaz de Video Identificación.
+                  En producción, se establecerá una videollamada real con un agente verificador acreditado.
+                </p>
+              </div>
+
+            </div>
+          }
+
+          <!-- ─── Action buttons ─── -->
+          @if (selectedMethod() !== 'doctorId') {
+            <div class="mt-2 flex gap-4">
+              <button type="button" [disabled]="isAuthenticating()" (click)="goToSelection()"
+                class="inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium h-9 px-4 py-2 flex-1 border border-gray-300 hover:bg-gray-50 disabled:opacity-50 transition-colors">
+                Cancelar
+              </button>
+              <button type="button" [disabled]="isAuthenticating()" (click)="handleAuthenticate()"
+                class="inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium h-9 px-4 py-2 flex-1 bg-brand-secondary hover:opacity-90 text-brand-secondary-contrast disabled:opacity-50 transition-opacity">
+                @if (isAuthenticating()) {
+                  <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                  </svg>
+                  Autenticando...
+                } @else {
+                  Autenticar
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                  </svg>
+                }
+              </button>
+            </div>
+          }
+
+        </div>
+
+        <div class="mt-8 text-center">
+          <p class="text-sm text-gray-600">
+            ¿Problemas con la autenticación?&nbsp;
+            <a href="#" class="text-brand-accent font-semibold hover:underline">
+              Ver guía de ayuda
+            </a>
+          </p>
+        </div>
+      </div>
+    }
+
+  </div>
+</div>
