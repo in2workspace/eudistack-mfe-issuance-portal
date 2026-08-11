@@ -1,7 +1,6 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { IssuanceStateService } from '../../../core/services/issuance-state.service';
-import { IssuerService } from '../../../core/services/issuer.service';
 import { navigateBackToOrigin } from '../../../core/config/issuance-return';
 import { AuthenticatedUser } from '../../../core/models/issuance.model';
 import { IssuanceEntryPointService } from '../../issuance-entry-point/issuance-entry-point.service';
@@ -53,15 +52,11 @@ const EMPLOYEE_COPY: UserDataCopy = {
 })
 export class UserDataComponent implements OnInit {
   private state = inject(IssuanceStateService);
-  private issuer = inject(IssuerService);
   private router = inject(Router);
   private entryPoint = inject(IssuanceEntryPointService);
   protected readonly branding = inject(BrandingService);
 
   user!: AuthenticatedUser;
-
-  readonly isLoading = this.state.bootstrapLoading;
-  readonly error = this.state.bootstrapError;
 
   /** Único tenant con emisión DoctorID hoy; el resto ve el copy genérico de empleado (R-5/AD-2, mismo criterio que EUD-166). */
   protected readonly copy: UserDataCopy =
@@ -85,18 +80,12 @@ export class UserDataComponent implements OnInit {
     navigateBackToOrigin(this.router, '/');
   }
 
+  /**
+   * EUD-163 (AD-1): ya no llama a `IssuerService.bootstrap()` ni fija
+   * estado global — la obtención de la oferta vive en `CredentialOfferService`,
+   * invocada desde la propia pantalla `/offer`.
+   */
   onContinue(): void {
-    this.state.setBootstrapLoading(true);
-    this.state.setBootstrapError(null);
-
-    this.issuer.bootstrap(this.user).subscribe((result) => {
-      this.state.setBootstrapLoading(false);
-      if (result.success) {
-        this.state.setCredentialOfferUrl(result.credentialOfferUrl);
-        this.router.navigate(['/qr']);
-      } else {
-        this.state.setBootstrapError(result.error);
-      }
-    });
+    this.router.navigate(['/offer']);
   }
 }

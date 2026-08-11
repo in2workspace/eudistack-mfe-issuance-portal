@@ -17,4 +17,18 @@ describe('routes', () => {
 
     expect((loaded as { name: string }).name).toBe('IssuanceInfoComponent');
   });
+
+  it('"offer" lazy-loads CredentialOfferComponent and is protected by authGuard (EUD-163, AD-5)', async () => {
+    const offer = findRoute('offer');
+
+    const loaded = await (offer.loadComponent as () => Promise<unknown>)();
+
+    expect((loaded as { name: string }).name).toBe('CredentialOfferComponent');
+    expect(offer.canActivate).toBeDefined();
+    expect(offer.canActivate?.length).toBeGreaterThan(0);
+  });
+
+  it('"qr" (ruta demo retirada por AD-5) ya no existe', () => {
+    expect(routes.find((r) => r.path === 'qr')).toBeUndefined();
+  });
 });

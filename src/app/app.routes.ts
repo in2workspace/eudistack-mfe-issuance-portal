@@ -28,10 +28,12 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {
-    path: 'qr',
+    // EUD-163: sustituye la ruta demo 'qr' (AD-5) — presenta la oferta real
+    // como QR + deeplink, con caducidad y timeout reales.
+    path: 'offer',
     loadComponent: () =>
-      import('./features/portal/credential-qr/credential-qr.component').then(
-        (m) => m.CredentialQrComponent,
+      import('./features/credential-offer/credential-offer.component').then(
+        (m) => m.CredentialOfferComponent,
       ),
     canActivate: [authGuard],
   },
