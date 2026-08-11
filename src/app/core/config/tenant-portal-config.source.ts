@@ -17,16 +17,18 @@ export class TenantPortalConfigSource {
 
   read(tenant: string): { entryPoint?: unknown; credentialOfferUrl?: unknown; credentialOfferLinkBase?: unknown } | null {
     void tenant;
-    const entryPoint = environment.issuanceEntryPoint;
-    if (typeof entryPoint !== 'string' || !entryPoint.trim()) {
-      return null;
-    }
-    // EUD-163: campos aditivos — entryPoint y su comportamiento fail-closed
-    // (FR-06, EUD-165) quedan intactos; se leen tal cual del runtime env,
-    // sin validar aquí (la validación/allow-list vive en
-    // resolveCredentialOfferConfig, AD-2).
+    // EUD-163: entryPoint y credentialOffer* son campos independientes del
+    // mismo runtime env — un tenant sin issuance_entry_point configurado
+    // (safe no-op, FR-06/EUD-165) no debe bloquear la disponibilidad de la
+    // oferta de credencial, ni viceversa. Cada consumidor valida el campo
+    // que le interesa (resolveTenantPortalConfig -> isIssuanceEntryPoint;
+    // resolveCredentialOfferConfig -> validateCredentialOfferEndpoint/Base,
+    // AD-2) — este método ya no decide fail-closed por ninguno de los dos;
+    // el tipo de retorno conserva `| null` por compatibilidad con la
+    // interfaz (`CredentialOfferConfigSource`, `TenantPortalConfigSource`),
+    // pero esta implementación real siempre devuelve el objeto.
     return {
-      entryPoint,
+      entryPoint: environment.issuanceEntryPoint,
       credentialOfferUrl: environment.credentialOfferUrl,
       credentialOfferLinkBase: environment.credentialOfferLinkBase,
     };
