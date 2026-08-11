@@ -10,6 +10,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **EUD-163** — Presentar la oferta de credencial al titular: QR + deeplink (US-02).
+  - `CredentialOfferComponent` (ruta `offer`, protegida por `authGuard`): cuatro estados — `loading` (AC-04), `ready` con QR + enlace visibles a la vez (AC-01, AC-02), `ready-without-qr` cuando la URL supera 1200 caracteres codificados (ES-06), y `unavailable` con aviso genérico + Reintentar, sin causa técnica ni identificador interno (AC-05). QR generado con `qrcode` a partir de un único cálculo (`resolveWalletInvocationUrl`) que también alimenta el enlace. Accesible: alternativa textual del QR, nombre accesible del enlace, cambios de estado anunciados (AC-08, WCAG 2.1 AA).
+  - `CredentialOfferService`: orquesta la petición con guard single-flight y memoización por clave de proceso — una oferta ya presentada nunca se solicita ni se sustituye dos veces (AC-07); `retry()` disponible tras un fallo o expiración; temporizador de caducidad de 10 min sin renovación deslizante (NFR-S-163-01).
+  - `CredentialOfferSource`: `HttpClient.post` con timeout de 15 s (NFR-P-163-01) y validación de la referencia en la frontera; nunca propaga `status`/`error`/`url` de la respuesta ni los registra (NFR-S-163-03).
+  - Config runtime nueva y **obligatoria por despliegue** (fail-closed, sin default embebido): `credential_offer_url` y `credential_offer_link_base` en `env.js`/`env.template.js` (`environment.ts`/`.prod.ts` en dev/prod) — sin poblarlas, la pantalla siempre presenta "oferta no disponible" (ES-02).
+  - `CredentialOfferUrlBoxComponent`: literales externalizados a i18n, color CGCOM hardcodeado `#1A5276` sustituido por el token de branding `brand-accent` (EUD-166); comportamiento de copia sin cambios (EC-05).
+  - `CannotContinueReason`: extensión aditiva con `OFFER_UNAVAILABLE` y `OFFER_TIMEOUT`.
 - **EUD-162** — Pantalla informativa de arranque de emisión con CTA self-service (US-01).
   - `IssuanceInfoComponent`: estado informativo (info + CTA) y estado "no se puede continuar" (aviso genérico + Reintentar), sin fugar detalle interno (AC-01, AC-04, AC-05, AC-06).
   - `IssuanceStartSession` + `IssuanceStartSessionStore`: sesión de arranque del titular persistida en `sessionStorage`, fail-closed si la escritura falla (AC-02, ES-03).
@@ -26,6 +33,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   set.
 - **EUD-166 US-05 — Branding and language resolved per tenant at runtime**: the portal now resolves tenant identity from the subdomain (`resolveTenantIdentity`, with a `window.env.tenant` override for dev/local), loads the tenant's branding/language descriptor from the shared assets repository (`TenantBrandingSource`, `{assetsBaseUrl}/{tenant}/theme.json`, SAD §8.8), and applies it via a fail-safe resolver (`resolveTenantBranding`) before the component tree bootstraps (`APP_INITIALIZER`, AC-06 — no flash). Logo, theme tokens (CSS custom properties consumed by Tailwind), favicon, app name and language are exposed through `BrandingService`/`TenantLanguageService`. A tenant without branding configured, with a partial/malformed descriptor, or hit by a network failure or timeout always falls back to the neutral `DEFAULT_EUDISTACK_BRANDING` — never to another tenant's branding (AC-01 to AC-06, EC-01 to EC-05, ES-01 to ES-05).
 - **EUD-166 — `@ngx-translate` wiring kept on the `provideTranslateService` API**: EUD-162 and EUD-166 independently wired `@ngx-translate` (`TranslateModule.forRoot` vs. `provideTranslateService`); the rebase onto `main` converges on EUD-166's `provideTranslateService` setup (`defaultLanguage: 'es'`, `useDefaultLang: true`, deterministic `AppMissingTranslationHandler`) since it is a strict superset — it additionally drives tenant language resolution (`TenantLanguageService`) from the branding pipeline above.
+
+### Removed
+
+- **EUD-163 (AD-5) — Retirada de material demo CGCOM superado por la feature real:** `IssuerService`, `CredentialQrComponent` y la ruta `qr` se eliminan (sin consumidores tras la feature nueva). `IssuanceStateService` pierde las señales `credentialOfferUrl`/`bootstrapLoading`/`bootstrapError` y sus setters (`authenticatedUser` intacto). `UserDataComponent.onContinue()` deja de invocar `IssuerService.bootstrap()` y navega directamente a `/offer`, donde la obtención de la oferta pasa a vivir.
 
 ### Changed
 
