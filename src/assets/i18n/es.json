@@ -50,6 +50,20 @@
   "issuanceEntryPoint.cannotContinue.ENTRY_POINT_START_FAILED": "No se ha podido iniciar el proceso. Inténtalo de nuevo.",
   "issuanceEntryPoint.cannotContinue.ENTRY_POINT_TIMEOUT": "El proceso ha tardado demasiado. Inténtalo de nuevo.",
   "issuanceEntryPoint.cannotContinue.UNKNOWN": "No se puede continuar en este momento. Inténtalo de nuevo.",
+  "issuanceEntryPoint.cannotContinue.OFFER_UNAVAILABLE": "No se puede continuar en este momento. Inténtalo de nuevo.",
+  "issuanceEntryPoint.cannotContinue.OFFER_TIMEOUT": "El proceso ha tardado demasiado. Inténtalo de nuevo.",
+  "credentialOffer.title": "Tu credencial está lista",
+  "credentialOffer.loading": "Estamos preparando tu credencial…",
+  "credentialOffer.loading.ariaLabel": "Preparando tu credencial, por favor espera",
+  "credentialOffer.instructions": "Escanea el código QR con tu Wallet Digital o pulsa el enlace si ya estás en tu móvil",
+  "credentialOffer.qr.alt": "Código QR con la oferta de tu credencial digital",
+  "credentialOffer.deeplink.label": "Abrir en mi Wallet",
+  "credentialOffer.deeplink.ariaLabel": "Abrir la oferta de credencial en tu Wallet Digital",
+  "credentialOffer.qrUnavailable": "El código no se puede mostrar. Usa el enlace o copia la URL.",
+  "credentialOffer.urlBox.label": "URL de la oferta de credencial",
+  "credentialOffer.urlBox.copy": "Copiar URL",
+  "credentialOffer.urlBox.copied": "Copiado",
+  "credentialOffer.urlBox.copiedAnnouncement": "URL copiada al portapapeles",
   "portal": {
     "app_name": "Portal de Emisión"
   }

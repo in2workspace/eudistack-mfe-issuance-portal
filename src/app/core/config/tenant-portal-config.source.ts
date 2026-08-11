@@ -15,13 +15,21 @@ export class TenantPortalConfigSource {
    * `resolveTenantPortalConfig()` already threads `tenant` through to here.
    */
 
-  read(tenant: string): { entryPoint?: unknown } | null {
+  read(tenant: string): { entryPoint?: unknown; credentialOfferUrl?: unknown; credentialOfferLinkBase?: unknown } | null {
     void tenant;
     const entryPoint = environment.issuanceEntryPoint;
     if (typeof entryPoint !== 'string' || !entryPoint.trim()) {
       return null;
     }
-    return { entryPoint };
+    // EUD-163: campos aditivos — entryPoint y su comportamiento fail-closed
+    // (FR-06, EUD-165) quedan intactos; se leen tal cual del runtime env,
+    // sin validar aquí (la validación/allow-list vive en
+    // resolveCredentialOfferConfig, AD-2).
+    return {
+      entryPoint,
+      credentialOfferUrl: environment.credentialOfferUrl,
+      credentialOfferLinkBase: environment.credentialOfferLinkBase,
+    };
   }
 
   currentTenant(): string | null {

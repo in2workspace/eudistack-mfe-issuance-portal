@@ -6,5 +6,7 @@ export const environment = {
   issuanceEntryPoint: window["env"]["issuance_entry_point"] ?? '',
   entryPointTargetWithValidation: window["env"]["entry_point_target_with_validation"] ?? '',
   entryPointTargetDirect: window["env"]["entry_point_target_direct"] ?? '',
+  credentialOfferUrl: window["env"]["credential_offer_url"],
+  credentialOfferLinkBase: window["env"]["credential_offer_link_base"],
   tenant: window["env"]["tenant"],
 };
