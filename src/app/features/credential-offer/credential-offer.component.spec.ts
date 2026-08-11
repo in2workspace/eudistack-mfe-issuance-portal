@@ -106,6 +106,13 @@ describe('CredentialOfferComponent', () => {
     const link = compiled.querySelector('a[href]') as HTMLAnchorElement;
     // Un <a href> normal: si nada lo atiende, el navegador no notifica a la SPA — no hay handler que reaccionar.
     expect(link.onclick).toBeNull();
+    // target="_blank" (+ rel="noopener noreferrer"): el enlace abre en una
+    // pestaña nueva para que la pantalla de la oferta (QR + enlace + URL box)
+    // siga visible en la pestaña original, tanto si walletInvocationBase es
+    // una ruta same-origin (navega en la misma pestaña sin esto) como si es
+    // el esquema openid-credential-offer:// (delegado al SO en cualquier caso).
+    expect(link.target).toBe('_blank');
+    expect(link.rel).toBe('noopener noreferrer');
     expect(compiled.querySelector('img[width="280"]')).not.toBeNull();
     expect(compiled.querySelector('app-credential-offer-url-box')).not.toBeNull();
   });
