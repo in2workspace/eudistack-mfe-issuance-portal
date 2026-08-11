@@ -10,13 +10,14 @@ import { AuthenticatedUser, BootstrapResult } from '../models/issuance.model';
  * Timeout de 10 s (RNF-001). Devuelve un discriminated union BootstrapResult
  * para que el componente llamante gestione siempre ambos casos.
  *
- * Ruta same-origin (AD-2): nginx enruta `/identify/api/bootstrap` al mismo
- * `cert-server` bajo cualquier subdominio de tenant — sin host hardcodeado.
+ * Ruta same-origin (AD-2): nginx enruta `/issuance-portal/api/bootstrap` al
+ * mismo `cert-server` bajo cualquier subdominio de tenant — sin host
+ * hardcodeado.
  */
 @Injectable({ providedIn: 'root' })
 export class IssuerService {
   private http = inject(HttpClient);
-  private backendUrl = '/identify/api/bootstrap';
+  private backendUrl = '/issuance-portal/api/bootstrap';
 
   /** Timeout en milisegundos para la petición al backend (RNF-001). */
   private static readonly REQUEST_TIMEOUT_MS = 10_000;

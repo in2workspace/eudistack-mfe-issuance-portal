@@ -2,6 +2,7 @@ import { Component, inject, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { IssuanceStateService } from '../../../core/services/issuance-state.service';
 import { IssuerService } from '../../../core/services/issuer.service';
+import { navigateBackToOrigin } from '../../../core/config/issuance-return';
 import { AuthenticatedUser } from '../../../core/models/issuance.model';
 import { IssuanceEntryPointService } from '../../issuance-entry-point/issuance-entry-point.service';
 import { CommonModule } from '@angular/common';
@@ -71,7 +72,7 @@ export class UserDataComponent implements OnInit {
   ngOnInit(): void {
     const u = this.state.authenticatedUser();
     if (!u) {
-      this.router.navigate(['/portal']);
+      this.router.navigate(['/']);
       return;
     }
     this.user = u;
@@ -81,7 +82,7 @@ export class UserDataComponent implements OnInit {
 
   onCancel(): void {
     this.state.clearUser();
-    this.router.navigate(['/portal']);
+    navigateBackToOrigin(this.router, '/');
   }
 
   onContinue(): void {
@@ -92,7 +93,7 @@ export class UserDataComponent implements OnInit {
       this.state.setBootstrapLoading(false);
       if (result.success) {
         this.state.setCredentialOfferUrl(result.credentialOfferUrl);
-        this.router.navigate(['/portal/qr']);
+        this.router.navigate(['/qr']);
       } else {
         this.state.setBootstrapError(result.error);
       }

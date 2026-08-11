@@ -1,29 +1,29 @@
 import { TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
 import { IssuanceStartService } from './issuance-start.service';
 import { IssuanceStartSessionStore } from './issuance-start-session.store';
-import { ExternalNavigator } from '../../core/services/external-navigator.service';
 import { CannotContinueReason } from './cannot-continue-reason';
 
 describe('IssuanceStartService', () => {
   let service: IssuanceStartService;
   let sessionStore: jest.Mocked<IssuanceStartSessionStore>;
-  let navigator: jest.Mocked<ExternalNavigator>;
+  let router: jest.Mocked<Router>;
 
   beforeEach(() => {
     sessionStore = { create: jest.fn(), read: jest.fn() } as unknown as jest.Mocked<IssuanceStartSessionStore>;
-    navigator = { redirect: jest.fn() } as unknown as jest.Mocked<ExternalNavigator>;
+    router = { navigate: jest.fn() } as unknown as jest.Mocked<Router>;
 
     TestBed.configureTestingModule({
       providers: [
         IssuanceStartService,
         { provide: IssuanceStartSessionStore, useValue: sessionStore },
-        { provide: ExternalNavigator, useValue: navigator },
+        { provide: Router, useValue: router },
       ],
     });
     service = TestBed.inject(IssuanceStartService);
   });
 
-  it('happy path: creates a session and navigates via ExternalNavigator (AC-02)', () => {
+  it('happy path: creates a session and navigates to the identification method screen (AC-02)', () => {
     sessionStore.create.mockReturnValue(true);
 
     service.start('cgcom');
@@ -31,7 +31,7 @@ describe('IssuanceStartService', () => {
     expect(sessionStore.create).toHaveBeenCalledWith(
       expect.objectContaining({ tenant: 'cgcom', state: 'iniciada', id: expect.any(String) }),
     );
-    expect(navigator.redirect).toHaveBeenCalledTimes(1);
+    expect(router.navigate).toHaveBeenCalledWith(['/identify']);
     expect(service.cannotContinueReason()).toBeNull();
   });
 
@@ -42,7 +42,7 @@ describe('IssuanceStartService', () => {
     service.start('cgcom');
 
     expect(sessionStore.create).toHaveBeenCalledTimes(1);
-    expect(navigator.redirect).toHaveBeenCalledTimes(1);
+    expect(router.navigate).toHaveBeenCalledTimes(1);
   });
 
   it('forces the fail-closed state without navigating when session persistence fails (ES-03)', () => {
@@ -50,7 +50,7 @@ describe('IssuanceStartService', () => {
 
     service.start('cgcom');
 
-    expect(navigator.redirect).not.toHaveBeenCalled();
+    expect(router.navigate).not.toHaveBeenCalled();
     expect(service.cannotContinueReason()).toBe(CannotContinueReason.Unknown);
   });
 
