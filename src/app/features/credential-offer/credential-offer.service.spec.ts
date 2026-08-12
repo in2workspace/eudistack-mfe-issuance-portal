@@ -89,7 +89,12 @@ describe('CredentialOfferService', () => {
     expect(service.cannotContinueReason()).toBe(CannotContinueReason.OfferUnavailable);
   });
 
-  it('EC-03: la respuesta del adapter mapea timeout a CannotContinueReason.OfferTimeout, el resto a OfferUnavailable', () => {
+  // Relabeled (auditoría EUD-163, hallazgo W3): esto prueba el mapeo de
+  // razones de fallo, no el escenario EC-03 ("respuesta que llega justo
+  // antes de vencer el plazo") — esa evidencia real vive en
+  // credential-offer.source.spec.ts ("a 14999 ms la respuesta resuelve
+  // normalmente", etiquetado NFR-P-163-01).
+  it('mapea "malformed"/otras razones a OfferUnavailable — solo "timeout" mapea a OfferTimeout (ver EC-03 real en credential-offer.source.spec.ts)', () => {
     service.request(context);
     fetch$.next({ ok: false, reason: 'malformed' });
 
