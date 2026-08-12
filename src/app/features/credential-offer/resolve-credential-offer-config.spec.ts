@@ -49,6 +49,15 @@ describe('resolveCredentialOfferConfig', () => {
     });
   });
 
+  it('allow-list rechaza el bypass vía tabulador en credentialOfferUrl (auditoría EUD-163, F1)', () => {
+    const result = resolveCredentialOfferConfig(
+      'cgcom',
+      sourceReturning({ credentialOfferUrl: '/\t/evil.example/bootstrap', credentialOfferLinkBase: '/wallet/protocol/callback' }),
+    );
+
+    expect(result).toEqual({ ok: false, reason: 'endpoint_invalid' });
+  });
+
   it('config válida con el esquema openid-credential-offer:// como base también resuelve ok', () => {
     const result = resolveCredentialOfferConfig(
       'cgcom',

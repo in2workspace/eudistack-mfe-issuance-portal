@@ -1,9 +1,19 @@
 /**
  * Allow-list de destinos admitidos para configuración con implicación de
  * seguridad (NFR-S-163-02, AD-2). Nunca un host absoluto: solo ruta
- * same-origin (empieza por `/`, nunca por `//` ni `/\`, que el navegador
- * podría interpretar como protocol-relative). Sin default — la ausencia de
- * config válida se resuelve fail-closed en `resolveCredentialOfferConfig`.
+ * same-origin. Sin default — la ausencia de config válida se resuelve
+ * fail-closed en `resolveCredentialOfferConfig`.
+ *
+ * Fix de seguridad (auditoría EUD-163, hallazgo F1): la comprobación
+ * anterior por prefijos de string (`startsWith('/') && !startsWith('//') &&
+ * !startsWith('/\\')`) es bypasseable con un tabulador/salto de línea al
+ * principio — el parser WHATWG de URL los elimina ANTES de resolver, así
+ * que `"/\t/evil.example/x"` pasaba el chequeo de prefijos y resolvía a
+ * `https://evil.example/x`. Se sustituye por resolución real con `URL`
+ * contra una base fija arbitraria (no depende de `window.location`, la
+ * función sigue siendo pura/testeable sin DOM): si el valor smuggleó su
+ * propio host (`//`, o `/<TAB>/host`), el origin resultante difiere de la
+ * base y se rechaza — si no, siempre coincide, sea cual sea la base.
  */
 export function validateCredentialOfferEndpoint(value: unknown): value is string {
   return isSameOriginPath(value);
@@ -20,12 +30,16 @@ export function validateWalletInvocationBase(value: unknown): value is string {
   return isSameOriginPath(value);
 }
 
+/** Base arbitraria y fija — solo para detectar si `value` cambia de origin al resolverse, nunca se usa como origin real. */
+const DUMMY_BASE = 'http://eudistack-same-origin.invalid';
+
 function isSameOriginPath(value: unknown): value is string {
-  return (
-    typeof value === 'string' &&
-    value.length > 0 &&
-    value.startsWith('/') &&
-    !value.startsWith('//') &&
-    !value.startsWith('/\\')
-  );
+  if (typeof value !== 'string' || value.length === 0 || !value.startsWith('/')) {
+    return false;
+  }
+  try {
+    return new URL(value, DUMMY_BASE).origin === DUMMY_BASE;
+  } catch {
+    return false;
+  }
 }
