@@ -64,6 +64,9 @@
   "credentialOffer.urlBox.copy": "Copiar URL",
   "credentialOffer.urlBox.copied": "Copiado",
   "credentialOffer.urlBox.copiedAnnouncement": "URL copiada al portapapeles",
+  "credentialOffer.validity.notice": "Este código QR es válido por {{minutes}} minutos. Si necesitas más tiempo, puedes generar uno nuevo",
+  "credentialOffer.actions.cancel": "Cancelar",
+  "credentialOffer.actions.complete": "Marcar como completado",
   "portal": {
     "app_name": "Portal de Emisión"
   }

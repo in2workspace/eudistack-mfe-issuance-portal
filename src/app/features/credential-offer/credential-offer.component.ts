@@ -7,6 +7,8 @@ import { CredentialOfferRequestContext } from './credential-offer.source';
 import { IssuanceStateService } from '../../core/services/issuance-state.service';
 import { BrandingService } from '../../core/branding/branding.service';
 import { CredentialOfferUrlBoxComponent } from '../../shared/components/credential-offer-url-box/credential-offer-url-box.component';
+import { navigateBackToOrigin } from '../../core/config/issuance-return';
+import { CREDENTIAL_OFFER_PRESENTATION_TTL_MS } from './credential-offer-expiry';
 
 /**
  * Pantalla de presentación de la oferta de credencial (EUD-163).
@@ -31,6 +33,8 @@ export class CredentialOfferComponent implements OnInit, OnDestroy {
   protected readonly cannotContinueReason = this.service.cannotContinueReason;
   protected readonly qrDataUrl = signal<string | null>(null);
   protected readonly walletInvocationUrlValue = computed(() => this.service.walletInvocationUrl()?.url ?? null);
+  /** Minutos de la ventana de presentación real (AD-6/NFR-S-163-01) — el aviso de validez refleja el TTL de código, no un texto decorativo independiente. */
+  protected readonly validityMinutes = CREDENTIAL_OFFER_PRESENTATION_TTL_MS / 60_000;
 
   constructor() {
     // Genera el QR solo en 'ready' (no en 'ready-without-qr', ES-06) —
@@ -69,6 +73,23 @@ export class CredentialOfferComponent implements OnInit, OnDestroy {
       return;
     }
     this.service.retry(context);
+  }
+
+  /**
+   * Recuperados del material demo retirado (AD-5) a petición del usuario —
+   * mismo comportamiento que el `CredentialQrComponent` original: vuelve al
+   * origen externo (cross-app, p.ej. eudistack-mfe-demo) si el flujo se
+   * inició desde fuera, o al `fallbackPath` dentro de esta SPA si no.
+   * `fallbackPath` pasa de '/portal' a '/' — la ruta se aplanó tras el
+   * rename /identify/ -> /issuance-portal/ (2ee94a7), '/portal' ya no existe.
+   */
+  onComplete(): void {
+    navigateBackToOrigin(this.router, '/');
+  }
+
+  onCancel(): void {
+    this.state.clearUser();
+    navigateBackToOrigin(this.router, '/');
   }
 
   private buildContext(): CredentialOfferRequestContext | null {

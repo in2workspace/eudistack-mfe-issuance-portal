@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { signal } from '@angular/core';
 import { TranslateModule } from '@ngx-translate/core';
 import { CredentialOfferComponent } from './credential-offer.component';
@@ -22,6 +22,7 @@ describe('CredentialOfferComponent', () => {
   let walletInvocationUrl: ReturnType<typeof signal<{ url: string; length: number } | null>>;
   let cannotContinueReason: ReturnType<typeof signal<CannotContinueReason | null>>;
   let serviceMock: { request: jest.Mock; retry: jest.Mock; cancelPendingWork: jest.Mock };
+  let stateMock: { authenticatedUser: () => typeof user | null; clearUser: jest.Mock };
 
   const user = { name: 'Dra. García', email: 'a@b.com', collegiateNumber: '123', dni: '12345678A' };
 
@@ -30,6 +31,7 @@ describe('CredentialOfferComponent', () => {
     walletInvocationUrl = signal(initialUrl);
     cannotContinueReason = signal(initialStatus === 'unavailable' ? CannotContinueReason.OfferUnavailable : null);
     serviceMock = { request: jest.fn(), retry: jest.fn(), cancelPendingWork: jest.fn() };
+    stateMock = { authenticatedUser: () => user, clearUser: jest.fn() };
 
     TestBed.configureTestingModule({
       imports: [CredentialOfferComponent, TranslateModule.forRoot()],
@@ -38,7 +40,7 @@ describe('CredentialOfferComponent', () => {
           provide: CredentialOfferService,
           useValue: { ...serviceMock, status, offer: signal(null), walletInvocationUrl, cannotContinueReason },
         },
-        { provide: IssuanceStateService, useValue: { authenticatedUser: () => user } },
+        { provide: IssuanceStateService, useValue: stateMock },
         provideRouter([]),
       ],
     });
@@ -124,6 +126,40 @@ describe('CredentialOfferComponent', () => {
     expect(compiled.querySelector('img[width="280"]')).toBeNull();
     expect(compiled.querySelector('a[href]')).not.toBeNull();
     expect(compiled.querySelector('app-credential-offer-url-box')).not.toBeNull();
+  });
+
+  it('presenta el aviso de validez (10 min, AD-6/NFR-S-163-01) junto al QR y enlace', () => {
+    configure('ready', { url: 'https://o.example/w?credential_offer_uri=r', length: 40 });
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const notice = compiled.querySelector('[role="status"]');
+    expect(notice?.textContent).toContain('credentialOffer.validity.notice');
+  });
+
+  it('Cancelar limpia el usuario autenticado y vuelve al origen/raíz (recuperado del material demo, AD-5)', () => {
+    configure('ready', { url: 'https://o.example/w?credential_offer_uri=r', length: 40 });
+    const router = TestBed.inject(Router);
+    const navigateSpy = jest.spyOn(router, 'navigate').mockResolvedValue(true);
+
+    const buttons = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button'));
+    const cancelButton = buttons.find((b) => b.textContent?.includes('credentialOffer.actions.cancel'));
+    cancelButton?.dispatchEvent(new Event('click'));
+
+    expect(stateMock.clearUser).toHaveBeenCalled();
+    expect(navigateSpy).toHaveBeenCalledWith(['/']);
+  });
+
+  it('Marcar como completado vuelve al origen/raíz sin limpiar el usuario (recuperado del material demo, AD-5)', () => {
+    configure('ready', { url: 'https://o.example/w?credential_offer_uri=r', length: 40 });
+    const router = TestBed.inject(Router);
+    const navigateSpy = jest.spyOn(router, 'navigate').mockResolvedValue(true);
+
+    const buttons = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button'));
+    const completeButton = buttons.find((b) => b.textContent?.includes('credentialOffer.actions.complete'));
+    completeButton?.dispatchEvent(new Event('click'));
+
+    expect(stateMock.clearUser).not.toHaveBeenCalled();
+    expect(navigateSpy).toHaveBeenCalledWith(['/']);
   });
 
   it('ngOnDestroy cancela el trabajo pendiente del service (temporizador de caducidad)', () => {
