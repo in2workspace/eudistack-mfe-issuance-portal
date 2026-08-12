@@ -1,4 +1,4 @@
-import { CREDENTIAL_OFFER_PRESENTATION_TTL_MS, isCredentialOfferExpired } from './credential-offer-expiry';
+import { CREDENTIAL_OFFER_PRESENTATION_TTL_MS, isCredentialOfferExpired, msUntilCredentialOfferExpiry } from './credential-offer-expiry';
 
 describe('isCredentialOfferExpired', () => {
   const obtainedAt = 1_000_000;
@@ -23,5 +23,24 @@ describe('isCredentialOfferExpired', () => {
 
   it('la ventana es de 10 minutos exactos', () => {
     expect(CREDENTIAL_OFFER_PRESENTATION_TTL_MS).toBe(10 * 60 * 1000);
+  });
+});
+
+// Auditoría EUD-163 (code-reviewer, hallazgo B1): única fuente de la resta
+// TTL/elapsed, compartida por isCredentialOfferExpired y por el temporizador
+// real de credential-offer.service.ts (armExpiryTimer) — antes duplicada.
+describe('msUntilCredentialOfferExpiry', () => {
+  const obtainedAt = 1_000_000;
+
+  it('a 599 s quedan 1000 ms', () => {
+    expect(msUntilCredentialOfferExpiry({ reference: 'ref', obtainedAt }, obtainedAt + 599_000)).toBe(1000);
+  });
+
+  it('a 601 s el remanente es negativo', () => {
+    expect(msUntilCredentialOfferExpiry({ reference: 'ref', obtainedAt }, obtainedAt + 601_000)).toBe(-1000);
+  });
+
+  it('exactamente en el límite (600 s) el remanente es 0', () => {
+    expect(msUntilCredentialOfferExpiry({ reference: 'ref', obtainedAt }, obtainedAt + CREDENTIAL_OFFER_PRESENTATION_TTL_MS)).toBe(0);
   });
 });

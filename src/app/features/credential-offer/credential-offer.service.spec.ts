@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+import { TestBed, fakeAsync, tick, discardPeriodicTasks } from '@angular/core/testing';
 import { Subject } from 'rxjs';
 import { CredentialOfferService } from './credential-offer.service';
 import { CredentialOfferSource } from './credential-offer.source';
@@ -143,5 +143,86 @@ describe('CredentialOfferService', () => {
 
     expect(service.status()).toBe('loading');
     expect(source.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  // Auditoría de código EUD-163 (code-reviewer, hallazgo B1): el temporizador
+  // de caducidad real (armExpiryTimer/cancelPendingWork/guard W-2) no tenía
+  // ningún test que lo ejerciera de verdad — solo se probaba la función pura
+  // `isCredentialOfferExpired`, que además nunca se llamaba desde producción.
+  describe('temporizador de caducidad real (ES-03, NFR-S-163-01, B1)', () => {
+    it('a los 601 s (pasado el límite de 10 min), retira la oferta y muestra el aviso de indisponibilidad', fakeAsync(() => {
+      service.request(context);
+      fetch$.next({ ok: true, offer: { reference: 'ref-1', obtainedAt: Date.now() } });
+      expect(service.status()).toBe('ready');
+
+      tick(601 * 1000);
+
+      // La UI oculta QR/enlace por `status()` (credential-offer.component.html
+      // solo los renderiza en 'ready'/'ready-without-qr'), no por el valor de
+      // offer()/walletInvocationUrl() — retención interna de esos signals tras
+      // fail() es el hallazgo F10 (LOW, auditoría EUD-163), fuera de alcance aquí.
+      expect(service.status()).toBe('unavailable');
+      expect(service.cannotContinueReason()).toBe(CannotContinueReason.OfferUnavailable);
+    }));
+
+    it('a los 599 s todavía no ha caducado — la oferta sigue presentada', fakeAsync(() => {
+      service.request(context);
+      fetch$.next({ ok: true, offer: { reference: 'ref-1', obtainedAt: Date.now() } });
+
+      tick(599 * 1000);
+
+      expect(service.status()).toBe('ready');
+      discardPeriodicTasks();
+    }));
+
+    it('cancelPendingWork() cancela el temporizador pendiente — no caduca tras destruir el componente', fakeAsync(() => {
+      service.request(context);
+      fetch$.next({ ok: true, offer: { reference: 'ref-1', obtainedAt: Date.now() } });
+
+      service.cancelPendingWork();
+      tick(601 * 1000);
+
+      // Sin el temporizador cancelado, esto habría pasado a 'unavailable' (ver test anterior).
+      expect(service.status()).toBe('ready');
+    }));
+
+    it('retry() antes de que expire descarta el temporizador anterior — no dispara el fail() viejo', fakeAsync(() => {
+      service.request(context);
+      fetch$.next({ ok: true, offer: { reference: 'ref-1', obtainedAt: Date.now() } });
+
+      tick(5 * 60 * 1000); // a media ventana
+
+      const fetch2$ = new Subject<CredentialOfferResult>();
+      source.fetch.mockReturnValueOnce(fetch2$.asObservable());
+      service.retry(context);
+      fetch2$.next({ ok: true, offer: { reference: 'ref-2', obtainedAt: Date.now() } });
+      expect(service.status()).toBe('ready');
+
+      // Si el temporizador viejo (armado a los 10 min de ref-1, ya a punto de
+      // disparar) no se hubiera cancelado en retry(), esto lo dispararía.
+      tick(5 * 60 * 1000 + 1000);
+
+      expect(service.status()).toBe('ready');
+      expect(service.offer()?.reference).toBe('ref-2');
+      discardPeriodicTasks();
+    }));
+
+    it('W-2: una respuesta tardía de una petición ya descartada por retry() no sobreescribe el estado de la nueva', fakeAsync(() => {
+      service.request(context);
+      // No se resuelve fetch$ todavía — la primera petición queda en vuelo.
+
+      const fetch2$ = new Subject<CredentialOfferResult>();
+      source.fetch.mockReturnValueOnce(fetch2$.asObservable());
+      service.retry(context);
+      fetch2$.next({ ok: true, offer: { reference: 'ref-nueva', obtainedAt: Date.now() } });
+      expect(service.status()).toBe('ready');
+      expect(service.offer()?.reference).toBe('ref-nueva');
+
+      // La petición vieja (fetch$, todavía suscrita) responde tarde — debe descartarse (requestId ya no coincide).
+      fetch$.next({ ok: true, offer: { reference: 'ref-vieja-tardía', obtainedAt: Date.now() } });
+
+      expect(service.offer()?.reference).toBe('ref-nueva');
+      discardPeriodicTasks();
+    }));
   });
 });

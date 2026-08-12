@@ -2,7 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { CredentialOfferSource, CredentialOfferRequestContext } from './credential-offer.source';
 import { resolveCredentialOfferConfig } from './resolve-credential-offer-config';
 import { resolveWalletInvocationUrl, WalletInvocationUrl } from './resolve-wallet-invocation-url';
-import { CREDENTIAL_OFFER_PRESENTATION_TTL_MS } from './credential-offer-expiry';
+import { msUntilCredentialOfferExpiry } from './credential-offer-expiry';
 import { CredentialOffer, CredentialOfferFailureReason } from './credential-offer.model';
 import { CannotContinueReason } from '../issuance-start/cannot-continue-reason';
 import { IssuanceStartSessionStore } from '../issuance-start/issuance-start-session.store';
@@ -120,7 +120,11 @@ export class CredentialOfferService {
 
   private armExpiryTimer(offer: CredentialOffer, key: string, requestId: number): void {
     this.clearExpiryTimer();
-    const msRemaining = CREDENTIAL_OFFER_PRESENTATION_TTL_MS - (Date.now() - offer.obtainedAt);
+    // Auditoría EUD-163 (code-reviewer, hallazgo B1): msRemaining se deriva
+    // de `msUntilCredentialOfferExpiry` (mismo cálculo que usa
+    // `isCredentialOfferExpired`, credential-offer-expiry.ts) en vez de
+    // reimplementar la resta TTL/elapsed aquí — única fuente de verdad.
+    const msRemaining = msUntilCredentialOfferExpiry(offer, Date.now());
     this.expiryTimer = setTimeout(() => {
       if (requestId !== this.currentRequestId) {
         return; // W-4: no-op si ya no es la petición vigente (recargado/reintentado).
