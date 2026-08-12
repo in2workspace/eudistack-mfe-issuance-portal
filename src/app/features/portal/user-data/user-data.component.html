@@ -58,19 +58,6 @@
         </div>
       </div>
 
-      <!-- Error alert -->
-      @if (error()) {
-        <div class="relative w-full rounded-lg border px-4 py-3 text-sm text-red-700 bg-red-50 border-red-200 mb-6" role="alert">
-          <div class="flex items-start gap-3">
-            <svg class="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-            <p>{{ error() }}</p>
-          </div>
-        </div>
-      }
-
       <div class="flex gap-4">
         <button
           (click)="onCancel()"
@@ -80,21 +67,12 @@
         </button>
         <button
           (click)="onContinue()"
-          [disabled]="isLoading()"
-          class="flex-1 inline-flex items-center justify-center rounded-md text-sm font-medium h-9 px-4 py-2 bg-brand-secondary hover:opacity-90 text-brand-secondary-contrast disabled:opacity-70 disabled:pointer-events-none transition-colors"
+          class="flex-1 inline-flex items-center justify-center rounded-md text-sm font-medium h-9 px-4 py-2 bg-brand-secondary hover:opacity-90 text-brand-secondary-contrast transition-colors"
         >
-          @if (isLoading()) {
-            <svg class="mr-2 w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-            </svg>
-            Enviando...
-          } @else {
-            Continuar
-            <svg class="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-            </svg>
-          }
+          Continuar
+          <svg class="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
         </button>
       </div>
     </div>

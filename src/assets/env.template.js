@@ -17,6 +17,10 @@
   window["env"]["entry_point_target_with_validation"] = "${ENTRY_POINT_TARGET_WITH_VALIDATION}";
   window["env"]["entry_point_target_direct"] = "${ENTRY_POINT_TARGET_DIRECT}";
 
+  // EUD-163: destino de obtención de la oferta y base de invocación de wallet.
+  window["env"]["credential_offer_url"] = "${CREDENTIAL_OFFER_URL}";
+  window["env"]["credential_offer_link_base"] = "${CREDENTIAL_OFFER_LINK_BASE}";
+
   // Dev/local tenant identity override (empty = resolve from subdomain).
   // Tenant branding/language assets are same-origin (/assets/tenants/{tenant}/theme.json,
   // nginx-mounted from eudistack-platform-assets) — no base URL config needed.

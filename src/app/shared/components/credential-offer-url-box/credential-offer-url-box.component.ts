@@ -1,5 +1,6 @@
 import { Component, input, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
 
 /**
  * Muestra la Credential Offer URL en un campo de solo lectura con botón de copia.
@@ -7,29 +8,32 @@ import { CommonModule } from '@angular/common';
  * Equivalente a CredentialOfferUrlBox.tsx (React).
  * RF-003: caja de texto readOnly + botón de copia al portapapeles.
  * RNF-004: usa Clipboard API asíncrona (Chrome 90+, Firefox 90+, Safari 14+).
- * FA-001 de RF-003: si Clipboard API no está disponible, falla silenciosamente.
+ * FA-001 de RF-003 / EC-05 (EUD-163): si Clipboard API no está disponible,
+ * falla silenciosamente — el campo readOnly sigue siendo seleccionable.
+ * AC-09 (EUD-163): textos desde el catálogo i18n, color desde token de
+ * branding (`brand-accent`), sin literales ni marca de tenant incrustados.
  */
 @Component({
   selector: 'app-credential-offer-url-box',
-  imports: [CommonModule],
+  imports: [CommonModule, TranslateModule],
   template: `
     <div class="w-full mt-4">
       <p class="text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">
-        URL de la oferta de credencial
+        {{ 'credentialOffer.urlBox.label' | translate }}
       </p>
       <div class="flex items-center gap-2">
         <input
           type="text"
           readonly
           [value]="url()"
-          class="flex-1 min-w-0 px-3 py-2 text-xs font-mono bg-gray-50 border border-gray-200 rounded-md text-gray-700 select-all cursor-text focus:outline-none focus:ring-2 focus:ring-[#1A5276]/30 focus:border-[#1A5276]"
-          aria-label="URL de oferta de credencial"
+          class="flex-1 min-w-0 px-3 py-2 text-xs font-mono bg-gray-50 border border-gray-200 rounded-md text-gray-700 select-all cursor-text focus:outline-none focus:ring-2 focus:ring-brand-accent/30 focus:border-brand-accent"
+          [attr.aria-label]="'credentialOffer.urlBox.label' | translate"
         />
         <button
           type="button"
           (click)="handleCopy()"
-          [attr.title]="copied() ? 'Copiado' : 'Copiar URL'"
-          aria-label="Copiar URL de oferta de credencial"
+          [attr.title]="(copied() ? 'credentialOffer.urlBox.copied' : 'credentialOffer.urlBox.copy') | translate"
+          [attr.aria-label]="'credentialOffer.urlBox.copy' | translate"
           [class]="copyButtonClass()"
         >
           @if (copied()) {
@@ -48,7 +52,7 @@ import { CommonModule } from '@angular/common';
       </div>
       @if (copied()) {
         <p class="mt-1 text-xs text-green-600" role="status" aria-live="polite">
-          URL copiada al portapapeles
+          {{ 'credentialOffer.urlBox.copiedAnnouncement' | translate }}
         </p>
       }
     </div>
@@ -63,7 +67,7 @@ export class CredentialOfferUrlBoxComponent {
       'flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-md border transition-colors duration-150';
     return this.copied()
       ? `${base} border-green-500 bg-green-50 text-green-600`
-      : `${base} border-gray-200 bg-white text-gray-500 hover:border-[#1A5276] hover:text-[#1A5276] hover:bg-[#1A5276]/5`;
+      : `${base} border-gray-200 bg-white text-gray-500 hover:border-brand-accent hover:text-brand-accent hover:bg-brand-accent/5`;
   }
 
   async handleCopy(): Promise<void> {
@@ -72,7 +76,7 @@ export class CredentialOfferUrlBoxComponent {
       this.copied.set(true);
       setTimeout(() => this.copied.set(false), 2000);
     } catch {
-      // FA-001 de RF-003: Clipboard API no disponible o permisos denegados.
+      // FA-001 de RF-003 / EC-05: Clipboard API no disponible o permisos denegados.
       // El campo readOnly sigue siendo seleccionable para copia manual.
     }
   }
