@@ -1,0 +1,3 @@
+- [Timer-wiring coverage gap pattern](feedback_timer_wiring_coverage.md) — pure domain rule fns can be dead code while the service reimplements untested inline; always check coverage + grep call sites.
+- [Version bump via merge illusion](feedback_version_bump_via_merge.md) — package.json version can look bumped only because of a `merge main` pulling in an unrelated Story's bump; always `git diff main..HEAD -- package.json`.
+- [EUD-163 review state (2026-08-12)](project_eud163_review_state.md) — CHANGES REQUESTED: expiry-timer untested + missing version bump commit; 3 WARNINGs also open.

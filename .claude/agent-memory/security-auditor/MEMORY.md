@@ -1,0 +1,1 @@
+- [EUD-163 offer trust boundaries](project_eud163_offer_trust_boundaries.md) — the two worst findings on the credential-offer flow are inherited demo material outside this repo; escalate, don't blame the Story.
