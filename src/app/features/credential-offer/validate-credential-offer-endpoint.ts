@@ -30,8 +30,14 @@ export function validateWalletInvocationBase(value: unknown): value is string {
   return isSameOriginPath(value);
 }
 
-/** Base arbitraria y fija — solo para detectar si `value` cambia de origin al resolverse, nunca se usa como origin real. */
-const DUMMY_BASE = 'http://eudistack-same-origin.invalid';
+/**
+ * Base arbitraria y fija — solo para detectar si `value` cambia de origin al
+ * resolverse, nunca se usa como origin real ni se conecta por red. `https:`
+ * (no `http:`) únicamente para no disparar la regla `typescript:S5332` de
+ * SonarCloud ("Using http protocol is insecure") — la elección de esquema es
+ * irrelevante para la lógica, solo se compara el `origin` resultante.
+ */
+const DUMMY_BASE = 'https://eudistack-same-origin.invalid';
 
 function isSameOriginPath(value: unknown): value is string {
   if (typeof value !== 'string' || value.length === 0 || !value.startsWith('/')) {
