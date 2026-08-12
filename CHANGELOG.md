@@ -39,4 +39,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **EUD-162 (merge con main / EUD-165):** `IssuanceStartSessionStore` y `CannotContinueReason` se alinean con la versión ya integrada en `main` (consumida por `IssuanceEntryPointService`, EUD-165): `create()` recibe ahora el objeto `IssuanceStartSession` completo (la generación del id se movió a `IssuanceStartService`) y devuelve `boolean` en vez de la sesión o `null`, preservando el fail-closed de ES-03 sin afectar a `read()` (el único método que consume EUD-165).
 - **EUD-166 — Test infrastructure migrated from Karma/Jasmine to Jest** (`jest-preset-angular`, same pattern as `eudistack-mfe-login`): `angular.json`'s `test` target now uses `@angular-devkit/build-angular:jest`, and `npm test` runs `jest` directly. Converges with EUD-162's independent migration to the same tooling.
 
-[Unreleased]: https://github.com/in2workspace/eudistack-cgcom-mfe-issuance-portal/compare/main...HEAD
+[Unreleased]: https://github.com/in2workspace/eudistack-mfe-issuance-portal/compare/main...HEAD
