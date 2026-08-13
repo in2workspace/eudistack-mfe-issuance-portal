@@ -131,6 +131,8 @@ jobs:
           OIDC_AUTHORIZATION_ENDPOINT: ${{ vars.OIDC_AUTHORIZATION_ENDPOINT }}
           OIDC_CLIENT_ID: ${{ vars.OIDC_CLIENT_ID }}
           OIDC_PORTAL_REDIRECT_URI: ${{ vars.OIDC_PORTAL_REDIRECT_URI }}
+          CREDENTIAL_OFFER_URL: ${{ vars.CREDENTIAL_OFFER_URL }}
+          CREDENTIAL_OFFER_LINK_BASE: ${{ vars.CREDENTIAL_OFFER_LINK_BASE }}
         run: |
           set -euo pipefail
           sudo apt-get update && sudo apt-get install -y gettext-base
@@ -220,6 +222,8 @@ jobs:
           OIDC_AUTHORIZATION_ENDPOINT: ${{ vars.OIDC_AUTHORIZATION_ENDPOINT }}
           OIDC_CLIENT_ID: ${{ vars.OIDC_CLIENT_ID }}
           OIDC_PORTAL_REDIRECT_URI: ${{ vars.OIDC_PORTAL_REDIRECT_URI }}
+          CREDENTIAL_OFFER_URL: ${{ vars.CREDENTIAL_OFFER_URL }}
+          CREDENTIAL_OFFER_LINK_BASE: ${{ vars.CREDENTIAL_OFFER_LINK_BASE }}
         run: |
           set -euo pipefail
           sudo apt-get update && sudo apt-get install -y gettext-base
