@@ -12,6 +12,13 @@ export const environment = {
   // ya no existe — ver delta reportado en la Story).
   credentialOfferUrl: '/issuance-portal/api/bootstrap',
   credentialOfferLinkBase: '/wallet/protocol/callback',
+  // EUD-164: destino de identificación del carril "Certificado Digital" +
+  // modo de correlación del retorno. Valores Phase 1 (AD-1): el
+  // identificador de certificado ya operativo, sin eco de referencia
+  // (el sistema real no la devuelve hoy) — sin default en código (AD-5).
+  identificationUrl: '/cert/?method=certificate',
+  identificationCorrelationMode: 'same_context',
+  identificationCorrelationParam: 'state',
   // Override de identidad de tenant para dev/local (AD-3). Vacío = resolver desde el subdominio.
   tenant: '',
 };
