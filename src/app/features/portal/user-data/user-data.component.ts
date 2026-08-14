@@ -8,6 +8,7 @@ import { CommonModule } from '@angular/common';
 import { BrandingService } from '../../../core/branding/branding.service';
 import { resolveTenantIdentity } from '../../../core/branding/resolve-tenant-identity';
 import { environment } from '../../../../environments/environment';
+import { IdentificationReturnService } from '../../identification/identification-return.service';
 
 /** Copy de esta pantalla por perfil profesional — CGCOM emite para médicos colegiados; el resto de tenants, para empleados. */
 interface UserDataCopy {
@@ -54,6 +55,7 @@ export class UserDataComponent implements OnInit {
   private state = inject(IssuanceStateService);
   private router = inject(Router);
   private entryPoint = inject(IssuanceEntryPointService);
+  private identificationReturn = inject(IdentificationReturnService);
   protected readonly branding = inject(BrandingService);
 
   user!: AuthenticatedUser;
@@ -72,7 +74,14 @@ export class UserDataComponent implements OnInit {
     }
     this.user = u;
 
-    void this.entryPoint.start({ correlated: true });
+    // EUD-164 (AD-4/AD-7, §3.3.1): traduce el tri-estado interno al
+    // `correlated: boolean` real que EUD-165 ya consume. `out_of_scope`
+    // (los 4 métodos fuera de alcance de esta Story) cuenta como `true` —
+    // solo `rejected` cierra la frontera en `false` (AC-08).
+    void this.entryPoint.start({
+      correlated: this.identificationReturn.outcome() !== 'rejected',
+      session: this.identificationReturn.session(),
+    });
   }
 
   onCancel(): void {
