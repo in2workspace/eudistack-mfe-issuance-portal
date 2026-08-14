@@ -63,4 +63,36 @@ describe('IssuanceStartService', () => {
 
     expect(service.cannotContinueReason()).toBeNull();
   });
+
+  it('reportCannotContinue() surfaces the "no se puede continuar" notice without touching the session (AC-04, EUD-164)', () => {
+    service.reportCannotContinue(CannotContinueReason.NotCorrelated);
+
+    expect(service.cannotContinueReason()).toBe(CannotContinueReason.NotCorrelated);
+    expect(sessionStore.create).not.toHaveBeenCalled();
+  });
+
+  it('AC-06 (EUD-164 fix): retry() releases the double-submit guard so a later restart is not a silent no-op', () => {
+    sessionStore.create.mockReturnValue(true);
+    service.start('cgcom');
+    expect(sessionStore.create).toHaveBeenCalledTimes(1);
+
+    // Sin retry(), un segundo start() en la misma carga sería un no-op
+    // silencioso (la fuga original de _isStarting). reportCannotContinue()
+    // por sí solo no libera el guard — solo retry() lo hace.
+    service.reportCannotContinue(CannotContinueReason.NotCorrelated);
+    service.retry();
+    service.start('cgcom');
+
+    expect(sessionStore.create).toHaveBeenCalledTimes(2);
+    expect(router.navigate).toHaveBeenCalledTimes(2);
+  });
+
+  it('the double-submit guard inside start() itself is untouched by the AC-06 fix (EC-02)', () => {
+    sessionStore.create.mockReturnValue(true);
+
+    service.start('cgcom');
+    service.start('cgcom');
+
+    expect(sessionStore.create).toHaveBeenCalledTimes(1);
+  });
 });
