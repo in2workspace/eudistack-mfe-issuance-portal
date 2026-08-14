@@ -97,9 +97,17 @@ export class IdentificationReturnService {
    * documento y `identificationReturnGuard` denegaba también a los 4
    * métodos fuera de alcance tras reintentar (regresión de AC-08,
    * /code-review F2).
+   *
+   * Deliberadamente NO toca `evaluated`: F2 solo exige volver a
+   * `out_of_scope`, no reabrir "evaluar una sola vez por carga de
+   * documento" (EC-02). `handleReturn()` tiene hoy un único invocador
+   * (`AppComponent.ngOnInit`, que solo corre una vez), así que no hay
+   * riesgo activo — pero si algún día un segundo invocador aparece,
+   * `evaluated` seguiría bloqueando una re-evaluación sin necesidad,
+   * en vez de abrir por defecto una superficie que F2 nunca pidió
+   * (hallazgo de seguridad L1, /code-review, segunda pasada).
    */
   reset(): void {
-    this.evaluated = false;
     this._outcome.set('out_of_scope');
     this._session.set(null);
     this._reason.set(null);

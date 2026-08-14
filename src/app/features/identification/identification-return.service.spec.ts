@@ -169,7 +169,7 @@ describe('IdentificationReturnService', () => {
   });
 
   describe('reset() — /code-review F2', () => {
-    it('returns to the initial out_of_scope state and allows a fresh evaluation', () => {
+    it('returns outcome/session/reason to the initial out_of_scope state', () => {
       sessionStore.read.mockReturnValue(redirectedSession);
       sessionStore.update.mockReturnValue(true);
       withSameContextConfig();
@@ -195,6 +195,21 @@ describe('IdentificationReturnService', () => {
       // titular eligió un método fuera de alcance, que no pasa por esta
       // rama), el outcome vuelve a out_of_scope — el guard lo permite (AC-08).
       expect(service.outcome()).toBe('out_of_scope');
+    });
+
+    it('does NOT reopen "evaluate once per document load" (EC-02) — a second handleReturn() after reset() is still a no-op (security finding L1, segunda pasada)', () => {
+      sessionStore.read.mockReturnValue(redirectedSession);
+      sessionStore.update.mockReturnValue(true);
+      withSameContextConfig();
+      service.handleReturn(cgcomLocation);
+      service.reset();
+
+      // F2 solo exige volver a out_of_scope; NO exige (ni debe permitir)
+      // que una segunda llamada a handleReturn() vuelva a evaluar.
+      service.handleReturn(cgcomLocation);
+
+      expect(service.outcome()).toBe('out_of_scope');
+      expect(sessionStore.update).toHaveBeenCalledTimes(1);
     });
   });
 });
