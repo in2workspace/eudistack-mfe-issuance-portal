@@ -153,4 +153,48 @@ describe('IdentificationReturnService', () => {
     expect(service.outcome()).toBe('rejected');
     expect(service.reason()).toBe(CannotContinueReason.IdentificationConfigInvalid);
   });
+
+  it('/code-review F1 (AC-05, fail-closed): does not publish "correlated" when sealing consumedAt fails to persist', () => {
+    sessionStore.read.mockReturnValue(redirectedSession);
+    sessionStore.update.mockReturnValue(false);
+    withSameContextConfig();
+
+    service.handleReturn(cgcomLocation);
+
+    expect(service.outcome()).toBe('rejected');
+    expect(service.reason()).toBe(CannotContinueReason.Unknown);
+    // La sesión sin consumir se sigue publicando para que el aviso pueda
+    // referenciarla, pero NUNCA con estado 'retomada'/consumedAt sellado.
+    expect(service.session()).toBe(redirectedSession);
+  });
+
+  describe('reset() — /code-review F2', () => {
+    it('returns to the initial out_of_scope state and allows a fresh evaluation', () => {
+      sessionStore.read.mockReturnValue(redirectedSession);
+      sessionStore.update.mockReturnValue(true);
+      withSameContextConfig();
+      service.handleReturn(cgcomLocation);
+      expect(service.outcome()).toBe('correlated');
+
+      service.reset();
+
+      expect(service.outcome()).toBe('out_of_scope');
+      expect(service.session()).toBeNull();
+      expect(service.reason()).toBeNull();
+    });
+
+    it('after reset(), a rejected outcome no longer blocks out-of-scope methods reaching user-data via the guard', () => {
+      sessionStore.read.mockReturnValue(null); // sin sesión → rechazo
+      withSameContextConfig();
+      service.handleReturn(cgcomLocation);
+      expect(service.outcome()).toBe('rejected');
+
+      service.reset();
+
+      // Tras el reset, sin una nueva llamada a handleReturn() (p.ej. el
+      // titular eligió un método fuera de alcance, que no pasa por esta
+      // rama), el outcome vuelve a out_of_scope — el guard lo permite (AC-08).
+      expect(service.outcome()).toBe('out_of_scope');
+    });
+  });
 });

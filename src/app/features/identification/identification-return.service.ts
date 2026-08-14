@@ -70,16 +70,39 @@ export class IdentificationReturnService {
     }
 
     // AC-05 — uso único: se sella en el mismo turno síncrono de la lectura,
-    // antes de publicar el resultado.
+    // antes de publicar el resultado. Si la escritura falla (cuota agotada,
+    // storage particionado), NO se publica `correlated` — de lo contrario
+    // un segundo retorno con la misma referencia, dentro de la ventana de
+    // validez, volvería a evaluar `correlated` (fail-open del uso único,
+    // /code-review F1). Mismo criterio fail-closed que ES-05 en la salida
+    // (`IdentificationRedirectService`).
     const consumed: IssuanceStartSession = {
       ...decision.session,
       state: 'retomada',
       consumedAt: Date.now(),
     };
-    this.sessionStore.update(consumed);
+    if (!this.sessionStore.update(consumed)) {
+      this.reject(CannotContinueReason.Unknown, session);
+      return;
+    }
     this._session.set(consumed);
     this._reason.set(null);
     this._outcome.set('correlated');
+  }
+
+  /**
+   * Vuelve al estado inicial `out_of_scope` — invocado desde
+   * `IssuanceStartService.retry()`. Sin esto, un rechazo previo dejaba
+   * `outcome()` pegado en `'rejected'` para el resto de la carga de
+   * documento y `identificationReturnGuard` denegaba también a los 4
+   * métodos fuera de alcance tras reintentar (regresión de AC-08,
+   * /code-review F2).
+   */
+  reset(): void {
+    this.evaluated = false;
+    this._outcome.set('out_of_scope');
+    this._session.set(null);
+    this._reason.set(null);
   }
 
   private reject(reason: CannotContinueReason, session: IssuanceStartSession | null): void {
