@@ -3,21 +3,25 @@ import { Router } from '@angular/router';
 import { IssuanceStartService } from './issuance-start.service';
 import { IssuanceStartSessionStore } from './issuance-start-session.store';
 import { CannotContinueReason } from './cannot-continue-reason';
+import { IdentificationReturnService } from '../identification/identification-return.service';
 
 describe('IssuanceStartService', () => {
   let service: IssuanceStartService;
   let sessionStore: jest.Mocked<IssuanceStartSessionStore>;
   let router: jest.Mocked<Router>;
+  let identificationReturn: { reset: jest.Mock };
 
   beforeEach(() => {
     sessionStore = { create: jest.fn(), read: jest.fn() } as unknown as jest.Mocked<IssuanceStartSessionStore>;
     router = { navigate: jest.fn() } as unknown as jest.Mocked<Router>;
+    identificationReturn = { reset: jest.fn() };
 
     TestBed.configureTestingModule({
       providers: [
         IssuanceStartService,
         { provide: IssuanceStartSessionStore, useValue: sessionStore },
         { provide: Router, useValue: router },
+        { provide: IdentificationReturnService, useValue: identificationReturn },
       ],
     });
     service = TestBed.inject(IssuanceStartService);
@@ -94,5 +98,11 @@ describe('IssuanceStartService', () => {
     service.start('cgcom');
 
     expect(sessionStore.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('/code-review F2 (AC-08): retry() resets IdentificationReturnService so a prior rejection does not block out-of-scope methods', () => {
+    service.retry();
+
+    expect(identificationReturn.reset).toHaveBeenCalledTimes(1);
   });
 });
