@@ -2,6 +2,8 @@ import { Component, OnInit, inject } from '@angular/core';
 import { Router, RouterOutlet } from '@angular/router';
 import { IssuanceStateService } from './core/services/issuance-state.service';
 import { AuthenticatedUser } from './core/models/issuance.model';
+import { IdentificationReturnService } from './features/identification/identification-return.service';
+import { IssuanceStartService } from './features/issuance-start/issuance-start.service';
 
 /**
  * AppComponent: raíz de la aplicación. Equivalent al estado global de App.tsx (React).
@@ -10,6 +12,9 @@ import { AuthenticatedUser } from './core/models/issuance.model';
  * - Leer el usuario desde el handoff URL (?u=<base64> o ?identified=1)
  * - Redirigir a la ruta correcta según el estado del handoff
  * - Limpiar la URL tras leer los parámetros (replaceState)
+ * - EUD-164: evaluar el retorno del carril "Certificado Digital" (AC-03/
+ *   AC-04) ANTES de fijar el usuario — un retorno rechazado no debe
+ *   producir sesión de usuario en ningún caso.
  */
 @Component({
   selector: 'app-root',
@@ -19,12 +24,26 @@ import { AuthenticatedUser } from './core/models/issuance.model';
 export class AppComponent implements OnInit {
   private state = inject(IssuanceStateService);
   private router = inject(Router);
+  private identificationReturn = inject(IdentificationReturnService);
+  private issuanceStart = inject(IssuanceStartService);
 
   ngOnInit(): void {
     const urlParams = new URLSearchParams(window.location.search);
     const justIdentified = urlParams.get('identified') === '1';
 
     if (justIdentified) {
+      this.identificationReturn.handleReturn(window.location);
+
+      if (this.identificationReturn.outcome() === 'rejected') {
+        window.history.replaceState(null, '', window.location.pathname);
+        const reason = this.identificationReturn.reason();
+        if (reason) {
+          this.issuanceStart.reportCannotContinue(reason);
+        }
+        this.router.navigate(['/']);
+        return;
+      }
+
       const identifiedUser = this.readIdentifiedUser(urlParams);
       if (identifiedUser) {
         window.history.replaceState(null, '', window.location.pathname);

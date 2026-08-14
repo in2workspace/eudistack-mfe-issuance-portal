@@ -6,6 +6,8 @@ import { environment } from '../../../../environments/environment';
 import { IssuanceStateService } from '../../../core/services/issuance-state.service';
 import { DoctorIdOidcService } from '../../../core/services/doctorid-oidc.service';
 import { AuthenticatedUser } from '../../../core/models/issuance.model';
+import { IdentificationRedirectService } from '../../identification/identification-redirect.service';
+import { IssuanceStartService } from '../../issuance-start/issuance-start.service';
 
 /** Identificadores de método de identificación — puerto de AuthMethod (cert-identifier). */
 export type IdentifyMethod = 'eDNI' | 'certificate' | 'claveMobile' | 'doctorId' | 'video';
@@ -76,6 +78,8 @@ export class IdentifyMethodsComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly issuanceState = inject(IssuanceStateService);
   private readonly doctorIdOidcService = inject(DoctorIdOidcService);
+  private readonly identificationRedirect = inject(IdentificationRedirectService);
+  private readonly issuanceStart = inject(IssuanceStartService);
   protected readonly branding = inject(BrandingService);
 
   // ── State (signals) ───────────────────────────────────────────────────────
@@ -135,13 +139,25 @@ export class IdentifyMethodsComponent implements OnInit {
 
   /**
    * 'certificate' sigue redirigiendo a cert-identifier (same-origin,
-   * cross-app — AD-2). El resto se autentica aquí mismo; 'doctorId' redirige
-   * de inmediato al flujo OIDC sin mostrar ninguna UI intermedia (igual que
-   * antes en cert-identifier).
+   * cross-app — AD-2), pero ahora a través de `IdentificationRedirectService`
+   * (EUD-164): resuelve config por tenant, sella la sesión con una
+   * referencia de correlación de un solo uso y una ventana de validez antes
+   * de navegar (AC-01/AC-02). Si falla (fail-closed), no navega: reporta la
+   * razón y vuelve a la pantalla informativa, donde vive el aviso "no se
+   * puede continuar" de EUD-162.
+   *
+   * El resto se autentica aquí mismo; 'doctorId' redirige de inmediato al
+   * flujo OIDC sin mostrar ninguna UI intermedia (igual que antes en
+   * cert-identifier) — ninguno de los dos pasa por el gate de EUD-164
+   * (AC-08, decisión de PO 2026-08-14).
    */
   selectMethod(method: IdentifyMethod): void {
     if (method === 'certificate') {
-      window.location.href = '/cert/?method=certificate';
+      const reason = this.identificationRedirect.redirectToIdentification();
+      if (reason) {
+        this.issuanceStart.reportCannotContinue(reason);
+        this.router.navigate(['/']);
+      }
       return;
     }
     if (method === 'doctorId') {
