@@ -15,22 +15,34 @@ export class TenantPortalConfigSource {
    * `resolveTenantPortalConfig()` already threads `tenant` through to here.
    */
 
-  read(tenant: string): { entryPoint?: unknown; credentialOfferUrl?: unknown; credentialOfferLinkBase?: unknown } | null {
+  read(tenant: string): {
+    entryPoint?: unknown;
+    credentialOfferUrl?: unknown;
+    credentialOfferLinkBase?: unknown;
+    identificationUrl?: unknown;
+    identificationCorrelationMode?: unknown;
+    identificationCorrelationParam?: unknown;
+  } | null {
     void tenant;
-    // EUD-163: entryPoint y credentialOffer* son campos independientes del
-    // mismo runtime env — un tenant sin issuance_entry_point configurado
-    // (safe no-op, FR-06/EUD-165) no debe bloquear la disponibilidad de la
-    // oferta de credencial, ni viceversa. Cada consumidor valida el campo
-    // que le interesa (resolveTenantPortalConfig -> isIssuanceEntryPoint;
-    // resolveCredentialOfferConfig -> validateCredentialOfferEndpoint/Base,
-    // AD-2) — este método ya no decide fail-closed por ninguno de los dos;
-    // el tipo de retorno conserva `| null` por compatibilidad con la
-    // interfaz (`CredentialOfferConfigSource`, `TenantPortalConfigSource`),
-    // pero esta implementación real siempre devuelve el objeto.
+    // EUD-163/EUD-164: entryPoint, credentialOffer* e identification* son
+    // campos independientes del mismo runtime env — un tenant sin
+    // issuance_entry_point configurado (safe no-op, FR-06/EUD-165) no debe
+    // bloquear la disponibilidad de la oferta de credencial ni el destino
+    // de identificación, ni viceversa. Cada consumidor valida el campo que
+    // le interesa (resolveTenantPortalConfig -> isIssuanceEntryPoint;
+    // resolveCredentialOfferConfig -> validateCredentialOfferEndpoint/Base;
+    // resolveTenantIdentificationConfig -> validateIdentificationUrl +
+    // allow-list de modo, AD-3/AD-5) — este método no decide fail-closed
+    // por ninguno de los tres; el tipo de retorno conserva `| null` por
+    // compatibilidad con la interfaz, pero esta implementación real
+    // siempre devuelve el objeto.
     return {
       entryPoint: environment.issuanceEntryPoint,
       credentialOfferUrl: environment.credentialOfferUrl,
       credentialOfferLinkBase: environment.credentialOfferLinkBase,
+      identificationUrl: environment.identificationUrl,
+      identificationCorrelationMode: environment.identificationCorrelationMode,
+      identificationCorrelationParam: environment.identificationCorrelationParam,
     };
   }
 
