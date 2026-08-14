@@ -32,4 +32,29 @@ export class IssuanceStartSessionStore {
       return null;
     }
   }
+
+  /**
+   * Sella una transición de estado sobre la sesión existente (EUD-164:
+   * `redirigida`/`retomada` + sus campos de correlación). Devuelve `false`
+   * sin lanzar en el mismo caso que `create()` — el caller (`Identification
+   * RedirectService`/`IdentificationReturnService`) decide el fail-closed
+   * correspondiente (ES-05).
+   */
+  update(session: IssuanceStartSession): boolean {
+    try {
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /** Descarta la sesión de arranque actual — usado por `retry()` (AC-06). */
+  clear(): void {
+    try {
+      sessionStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // ignore — la ausencia de sesión no es distinguible de un clear fallido
+    }
+  }
 }
