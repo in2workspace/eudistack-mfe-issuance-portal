@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **EUD-220 — SBOM CycloneDX and License Gate**: Added CycloneDX 1.6 SBOM generation (`npm run sbom`), CI license compliance gate (`license-gate.yml`), and automated SBOM asset attachment to GitHub Releases.
+
 - **EUD-164** — Redirigir a identificación y retomar el flujo, carril "Certificado Digital" (US-03).
   - **Alcance acotado por decisión de PO (2026-08-14):** el gate de correlación de esta Story cubre únicamente el método "Certificado Digital" de la pantalla de selección (`IdentifyMethodsComponent`, ruta `identify`). `doctorId` mantiene su propio mecanismo de correlación ad-hoc (PKCE `state` contra el Verifier), sin unificar; `eDNI`, `claveMobile` y `video` (autenticación dentro de la misma app) quedan fuera de alcance — no hay retorno externo que correlacionar y no sufren ninguna regresión (AC-08).
   - `TenantIdentificationConfig` + `resolveTenantIdentificationConfig()`: destino de identificación y modo de correlación (`echo` | `same_context`) resueltos en runtime por tenant, fail-closed sin default en código (AC-01, ES-01, ES-02).
