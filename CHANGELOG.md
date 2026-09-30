@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **EUD-164 — carril "Certificado Digital" roto en STG**: el paso `Generate env.js` de `cd-stg`/`cd-pro` no exportaba `IDENTIFICATION_URL`, `IDENTIFICATION_CORRELATION_MODE` ni `IDENTIFICATION_CORRELATION_PARAM` a `envsubst`, así que llegaban vacías al `env.js` desplegado y `IdentificationRedirectService` fallaba cerrado con `IDENTIFICATION_CONFIG_INVALID` ("No se puede continuar en este momento"). Mismo defecto que ya corrigió `d36bb39` para las variables de EUD-163.
+
 ### Changed
 
 - **EUD-38 — allowlist de licencias unificada**: `.github/license-policy.json` es ahora la transcripción íntegra de `conv-quality-security-gates.md` §16.1, idéntica en los trece repositorios con gate. Añade `LGPL-2.1-only`, la grafía SPDX vigente del mismo permiso que `LGPL-2.1`, que ya estaba admitido: `logback` 1.5.34 la declara así y el gate la bloqueaba por la grafía, no por la licencia. Incorpora también las cuatro entradas que faltaban en este repositorio respecto de la convención (`EPL-1.0`, `LGPL-2.1`, `GPL-2.0-with-classpath-exception`, `Python-2.0`): una divergencia local de la política no es una decisión del repositorio, es un defecto.
