@@ -143,6 +143,9 @@ jobs:
           OIDC_PORTAL_REDIRECT_URI: ${{ vars.OIDC_PORTAL_REDIRECT_URI }}
           CREDENTIAL_OFFER_URL: ${{ vars.CREDENTIAL_OFFER_URL }}
           CREDENTIAL_OFFER_LINK_BASE: ${{ vars.CREDENTIAL_OFFER_LINK_BASE }}
+          IDENTIFICATION_URL: ${{ vars.IDENTIFICATION_URL }}
+          IDENTIFICATION_CORRELATION_MODE: ${{ vars.IDENTIFICATION_CORRELATION_MODE }}
+          IDENTIFICATION_CORRELATION_PARAM: ${{ vars.IDENTIFICATION_CORRELATION_PARAM }}
         run: |
           set -euo pipefail
           sudo apt-get update && sudo apt-get install -y gettext-base
@@ -234,6 +237,9 @@ jobs:
           OIDC_PORTAL_REDIRECT_URI: ${{ vars.OIDC_PORTAL_REDIRECT_URI }}
           CREDENTIAL_OFFER_URL: ${{ vars.CREDENTIAL_OFFER_URL }}
           CREDENTIAL_OFFER_LINK_BASE: ${{ vars.CREDENTIAL_OFFER_LINK_BASE }}
+          IDENTIFICATION_URL: ${{ vars.IDENTIFICATION_URL }}
+          IDENTIFICATION_CORRELATION_MODE: ${{ vars.IDENTIFICATION_CORRELATION_MODE }}
+          IDENTIFICATION_CORRELATION_PARAM: ${{ vars.IDENTIFICATION_CORRELATION_PARAM }}
         run: |
           set -euo pipefail
           sudo apt-get update && sudo apt-get install -y gettext-base
