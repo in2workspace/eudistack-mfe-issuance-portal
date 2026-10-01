@@ -15,6 +15,24 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - name: Filter changed paths
+        id: filter
+        uses: dorny/paths-filter@v4
+        with:
+          predicate-quantifier: every
+          filters: |
+            code:
+              - '!**/*.md'
+              - '!docs/**'
+              - '!.github/**'
+              - '!LICENSE'
+              - '!.gitignore'
+
   build:
     name: Build & Test
     runs-on: ubuntu-latest
@@ -61,7 +79,8 @@ jobs:
 
   dast-baseline:
     name: ZAP DAST Baseline
-    needs: build
+    needs: [build, changes]
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     # G2 (conv-infrastructure-testing.md §6.3): passive scan with Ajax Spider
     # (Angular SPA — default spider only sees index.html), non-blocking.
