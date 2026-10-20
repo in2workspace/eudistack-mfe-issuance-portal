@@ -132,10 +132,10 @@ export class DoctorIdOidcService {
     const mandatee = (claims['mandatee'] as Record<string, unknown>) ?? {};
     const mandator = (claims['mandator'] as Record<string, unknown>) ?? {};
 
-    const givenName = String(
-      claims['given_name'] ?? claims['givenName'] ?? claims['firstName'] ?? mandatee['firstName'] ?? '');
-    const familyName = String(
-      claims['family_name'] ?? claims['familyName'] ?? claims['surname'] ?? claims['lastName'] ?? mandatee['lastName'] ?? '');
+    const givenName = this.asText(
+      claims['given_name'] ?? claims['givenName'] ?? mandatee['firstName']);
+    const familyName = this.asText(
+      claims['family_name'] ?? claims['familyName'] ?? claims['surname'] ?? mandatee['lastName']);
     const nameFull = [givenName, familyName].filter(Boolean).join(' ');
     const defaultName = this.tenant === 'cgcom' ? 'Médico DoctorID' : 'Empleado EmployeeID';
     const name = String(claims['name'] != null ? claims['name'] : (nameFull || defaultName));
@@ -150,19 +150,26 @@ export class DoctorIdOidcService {
       calidalia: 'Responsable de Calidad',
     };
     const specialty = this.tenant === 'cgcom'
-      ? String(claims['specialty'] ?? '')
+      ? this.asText(claims['medical_speciality'])
       : (specialtyByTenant[this.tenant] ?? 'Consultor de Tecnología');
 
     return {
-      id: `${this.tenant === 'cgcom' ? 'DOCTORID' : 'EMPLOYEEID'}-${String(claims['registrationNumber'] ?? mandatee['employeeId'] ?? claims['sub'] ?? Date.now())}`,
+      id: `${this.tenant === 'cgcom' ? 'DOCTORID' : 'EMPLOYEEID'}-${this.asText(claims['personal_administrative_number'] ?? mandatee['employeeId'] ?? claims['sub'] ?? Date.now())}`,
       name,
-      collegiateNumber: String(claims['registrationNumber'] ?? mandatee['employeeId'] ?? ''),
-      dni:              String(claims['nationalId'] ?? mandatee['nationalId'] ?? ''),
+      collegiateNumber: this.asText(claims['personal_administrative_number'] ?? mandatee['employeeId']),
+      dni:              this.asText(mandatee['nationalId']),
       email:            String(claims['email'] ?? mandatee['email'] ?? ''),
       phone:            String(claims['phone_number'] ?? ''),
-      college:          String(claims['provincialBoard'] ?? mandator['organization'] ?? defaultCollege),
+      college:          this.asText(claims['medical_board']) || this.asText(mandator['organization']) || defaultCollege,
       specialty,
       authMethod: 'doctorId',
     };
+  }
+
+  private asText(value: unknown): string {
+    if (Array.isArray(value)) {
+      return value.map(item => this.asText(item)).join(', ');
+    }
+    return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean' ? String(value) : '';
   }
 }
