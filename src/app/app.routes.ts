@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard } from './core/guards/auth.guard';
+import { pendingJourneyGuard } from './core/guards/pending-journey.guard';
 import { identificationReturnGuard } from './core/guards/identification-return.guard';
 
 export const routes: Routes = [
@@ -28,7 +28,7 @@ export const routes: Routes = [
       ),
     // EUD-164 (AD-6): identificationReturnGuard es la segunda capa —
     // deniega solo si el retorno del carril "certificate" fue rechazado.
-    canActivate: [authGuard, identificationReturnGuard],
+    canActivate: [pendingJourneyGuard, identificationReturnGuard],
   },
   {
     // EUD-163: sustituye la ruta demo 'qr' (AD-5) — presenta la oferta real
@@ -38,7 +38,7 @@ export const routes: Routes = [
       import('./features/credential-offer/credential-offer.component').then(
         (m) => m.CredentialOfferComponent,
       ),
-    canActivate: [authGuard],
+    canActivate: [pendingJourneyGuard],
   },
   {
     path: 'incidents',

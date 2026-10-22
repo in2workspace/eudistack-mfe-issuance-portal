@@ -3,11 +3,8 @@ import { Router } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import QRCode from 'qrcode';
 import { CredentialOfferService } from './credential-offer.service';
-import { CredentialOfferRequestContext } from './credential-offer.source';
-import { IssuanceStateService } from '../../core/services/issuance-state.service';
 import { BrandingService } from '../../core/branding/branding.service';
 import { CredentialOfferUrlBoxComponent } from '../../shared/components/credential-offer-url-box/credential-offer-url-box.component';
-import { navigateBackToOrigin } from '../../core/config/issuance-return';
 import { CREDENTIAL_OFFER_PRESENTATION_TTL_MS } from './credential-offer-expiry';
 
 /**
@@ -17,6 +14,12 @@ import { CREDENTIAL_OFFER_PRESENTATION_TTL_MS } from './credential-offer-expiry'
  * `ready` (AC-01/AC-02), `ready-without-qr` (ES-06) y `unavailable`
  * (AC-05, reutiliza el patrón visual + claves `issuanceEntryPoint.cannotContinue.*`
  * ya existentes en el catálogo, igual que `IssuanceInfoComponent`).
+ *
+ * La interfaz ya no guarda los datos del titular (design.md AD-3), así que no
+ * tiene nada que enviar para pedir la oferta: al entrar o reintentar vuelve a
+ * Inicio hasta que la oferta se pida al servicio del portal con
+ * `POST /journey/confirmation` (EUD-286). La ruta la protege
+ * `pendingJourneyGuard` mientras tanto.
  */
 @Component({
   selector: 'app-credential-offer',
@@ -24,7 +27,6 @@ import { CREDENTIAL_OFFER_PRESENTATION_TTL_MS } from './credential-offer-expiry'
   templateUrl: './credential-offer.component.html',
 })
 export class CredentialOfferComponent implements OnInit, OnDestroy {
-  private readonly state = inject(IssuanceStateService);
   private readonly service = inject(CredentialOfferService);
   private readonly router = inject(Router);
   protected readonly branding = inject(BrandingService);
@@ -54,12 +56,7 @@ export class CredentialOfferComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    const context = this.buildContext();
-    if (!context) {
-      this.router.navigate(['/']);
-      return;
-    }
-    this.service.request(context);
+    this.router.navigate(['/']);
   }
 
   ngOnDestroy(): void {
@@ -67,36 +64,14 @@ export class CredentialOfferComponent implements OnInit, OnDestroy {
   }
 
   onRetry(): void {
-    const context = this.buildContext();
-    if (!context) {
-      this.router.navigate(['/']);
-      return;
-    }
-    this.service.retry(context);
+    this.router.navigate(['/']);
   }
 
-  /**
-   * Recuperados del material demo retirado (AD-5) a petición del usuario —
-   * mismo comportamiento que el `CredentialQrComponent` original: vuelve al
-   * origen externo (cross-app, p.ej. eudistack-mfe-demo) si el flujo se
-   * inició desde fuera, o al `fallbackPath` dentro de esta SPA si no.
-   * `fallbackPath` pasa de '/portal' a '/' — la ruta se aplanó tras el
-   * rename /identify/ -> /issuance-portal/ (2ee94a7), '/portal' ya no existe.
-   */
   onComplete(): void {
-    navigateBackToOrigin(this.router, '/');
+    this.router.navigate(['/']);
   }
 
   onCancel(): void {
-    this.state.clearUser();
-    navigateBackToOrigin(this.router, '/');
-  }
-
-  private buildContext(): CredentialOfferRequestContext | null {
-    const user = this.state.authenticatedUser();
-    if (!user) {
-      return null;
-    }
-    return { name: user.name, email: user.email, collegiateNumber: user.collegiateNumber, dni: user.dni };
+    this.router.navigate(['/']);
   }
 }

@@ -18,7 +18,7 @@ describe('routes', () => {
     expect((loaded as { name: string }).name).toBe('IssuanceInfoComponent');
   });
 
-  it('"offer" lazy-loads CredentialOfferComponent and is protected by authGuard (EUD-163, AD-5)', async () => {
+  it('"offer" lazy-loads CredentialOfferComponent and is protected by pendingJourneyGuard until EUD-287', async () => {
     const offer = findRoute('offer');
 
     const loaded = await (offer.loadComponent as () => Promise<unknown>)();
