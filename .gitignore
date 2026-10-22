@@ -53,3 +53,6 @@ Thumbs.db
 
 # Nested node_modules (e.g. angular/ subfolder leftover from migration)
 node_modules/
+
+# Clients generated from api/*.openapi.yaml at build time (npm run api:generate)
+/src/app/core/api/generated/

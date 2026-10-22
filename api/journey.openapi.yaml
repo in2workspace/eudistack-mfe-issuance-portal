@@ -1,0 +1,341 @@
+openapi: 3.1.0
+info:
+  title: EUDIStack — Issuance Portal Service · Journey module
+  version: "1"
+  summary: Journey module of the issuance portal service, used by the issuance portal interface.
+  description: |
+    The issuance portal service has three modules, each with its own part of the API under the same base URL
+    and sharing the journey session: Journey (this contract), Identification and Authentic source.
+
+    The journey session travels in an HttpOnly, Secure, SameSite cookie and lives only in the service. The
+    verified identity and the attestation data are written to the session by the Identification and Authentic
+    source modules and never come from the browser: this module only accepts the holder's confirmation and,
+    when missing, the email.
+
+    Journey states: `in_progress`, `completed` (an offer was obtained) and `withdrawn` (cancelled by the
+    holder, not entitled according to the authentic source, or expired after 15 minutes of inactivity, before
+    an offer was obtained). A journey is never
+    deleted. When it leaves `in_progress`, or its session closes, personal data is deleted; the journey keeps
+    its state, the step reached and the withdrawal reason.
+
+    A step whose prerequisites are not in the session gets 409 `step_not_allowed`. A request on a journey
+    that is no longer in progress, or whose session expired, gets 410 `journey_closed`. The tenant comes
+    from the host.
+  contact:
+    name: EUDIStack
+    url: https://eudistack.net
+  license:
+    name: Proprietary
+    identifier: LicenseRef-Proprietary
+servers:
+  - url: https://{tenant}.{environment}.eudistack.net/issuance-portal/api/v1
+    description: Tenant endpoint.
+    variables:
+      tenant:
+        default: sandbox
+      environment:
+        default: stg
+tags:
+  - name: Configuration
+    description: Portal configuration of the tenant.
+  - name: Journey
+    description: Lifecycle of the holder's journey and issuance request.
+  - name: Incidents
+    description: Support requests from holders.
+
+paths:
+  /config:
+    get:
+      tags: [Configuration]
+      operationId: getPortalConfig
+      summary: Get the portal configuration of the tenant
+      security: []
+      responses:
+        "200":
+          description: Branding, languages, texts, legal links and support details of the tenant.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PortalConfig" }
+        "503":
+          description: "`type` `config_unavailable`: the tenant's portal configuration is missing or invalid."
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /journey:
+    post:
+      tags: [Journey]
+      operationId: startJourney
+      summary: Start a journey
+      description: Creates a journey in progress and its session. Any previous journey of the browser is withdrawn.
+      security: []
+      responses:
+        "201":
+          description: Journey started. Sets the session cookie.
+          headers:
+            Set-Cookie:
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Journey" }
+    get:
+      tags: [Journey]
+      operationId: getJourney
+      summary: Get the current journey
+      description: State, step reached and, once the attestation data is in the session, what the Data step shows.
+      security: [{ journeySession: [] }]
+      responses:
+        "200":
+          description: Current journey.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Journey" }
+        "410": { $ref: "#/components/responses/JourneyClosed" }
+
+  /journey/withdrawal:
+    post:
+      tags: [Journey]
+      operationId: withdrawJourney
+      summary: Withdraw the journey
+      description: |
+        The holder cancels before obtaining an offer. The journey becomes `withdrawn` with the step reached and
+        reason `cancelled`, and personal data is deleted. On a `completed` journey it only closes the session.
+      security: [{ journeySession: [] }]
+      responses:
+        "200":
+          description: Journey withdrawn or session closed.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Journey" }
+        "410": { $ref: "#/components/responses/JourneyClosed" }
+
+  /journey/confirmation:
+    post:
+      tags: [Journey]
+      operationId: confirmAndIssue
+      summary: Confirm the data and request issuance
+      description: |
+        Requires a verified identity and a confirmed entitlement in the session. Only `email` is accepted, and
+        only when the journey says it is required; any other field is ignored. The service requests issuance
+        with delivery by link and authorization code grant. The journey becomes `completed`.
+      security: [{ journeySession: [] }]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: { type: string, format: email }
+      responses:
+        "200":
+          description: Offer ready.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Offer" }
+        "400":
+          description: "`type` `email_required` or `email_invalid`."
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "409": { $ref: "#/components/responses/StepNotAllowed" }
+        "410": { $ref: "#/components/responses/JourneyClosed" }
+        "502":
+          description: "`type` `issuance_rejected`: the issuance API rejected the request."
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "503":
+          description: "`type` `issuance_unavailable`: the issuance API did not answer after the retries."
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /journey/offers:
+    post:
+      tags: [Journey]
+      operationId: newOffer
+      summary: Request a new offer
+      description: After the previous offer expired, while the session is active. Same data, new issuance request.
+      security: [{ journeySession: [] }]
+      responses:
+        "200":
+          description: New offer ready.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Offer" }
+        "409": { $ref: "#/components/responses/StepNotAllowed" }
+        "410": { $ref: "#/components/responses/JourneyClosed" }
+        "502":
+          description: "`type` `issuance_rejected`."
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "503":
+          description: "`type` `issuance_unavailable`."
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /incidents:
+    post:
+      tags: [Incidents]
+      operationId: sendIncident
+      summary: Send an incident to the tenant's support
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Incident" }
+      responses:
+        "202":
+          description: Incident sent.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [response_time]
+                properties:
+                  response_time:
+                    type: string
+                    description: Response time of the tenant's support, as shown to the holder.
+        "400":
+          description: "`type` `bad_request`: missing or malformed field."
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "429":
+          description: "`type` `too_many_requests`."
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+components:
+  securitySchemes:
+    journeySession:
+      type: apiKey
+      in: cookie
+      name: journey_session
+      description: Session of the holder's journey, shared by the three modules. HttpOnly, Secure, SameSite.
+
+  responses:
+    StepNotAllowed:
+      description: "`type` `step_not_allowed`: what the step needs is not in the session yet."
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    JourneyClosed:
+      description: "`type` `journey_closed`: the journey is no longer in progress or its session expired."
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+
+  schemas:
+    PortalConfig:
+      type: object
+      required: [branding, languages, texts, support, legal_links]
+      properties:
+        branding:
+          type: object
+          properties:
+            logo_url: { type: string, format: uri }
+            colors: { type: object, additionalProperties: { type: string } }
+        languages:
+          type: array
+          items: { type: string }
+        texts:
+          type: object
+          additionalProperties: true
+          description: Texts of each step, by language.
+        support:
+          type: object
+          properties:
+            email: { type: string, format: email }
+            phone: { type: string }
+            schedule: { type: string }
+            response_time: { type: string }
+        legal_links:
+          type: object
+          properties:
+            legal_notice: { type: string, format: uri }
+            privacy: { type: string, format: uri }
+            terms: { type: string, format: uri }
+            accessibility: { type: string, format: uri }
+
+    Journey:
+      type: object
+      required: [state, step]
+      properties:
+        state:
+          type: string
+          enum: [in_progress, completed, withdrawn]
+        step:
+          type: string
+          enum: [started, identified, entitlement_confirmed, offer_obtained]
+          description: Last step reached.
+        withdrawal_reason:
+          type: string
+          enum: [cancelled, not_entitled, expired]
+          description: Only with `withdrawn`.
+        attestation:
+          $ref: "#/components/schemas/AttestationPreview"
+        offer:
+          $ref: "#/components/schemas/Offer"
+
+    AttestationPreview:
+      type: object
+      description: What the interface shows in the Data step. Read only. Present once the entitlement is confirmed.
+      required: [type_name, fields, email_required]
+      properties:
+        type_name: { type: string }
+        fields:
+          type: array
+          items:
+            type: object
+            required: [label, value]
+            properties:
+              label: { type: string }
+              value: { type: string }
+        email:
+          type: string
+          format: email
+          description: Present when identification or the source provided it.
+        email_required:
+          type: boolean
+          description: True when the interface must ask the holder for an email.
+
+    Offer:
+      type: object
+      required: [credential_offer_uri, expires_at]
+      properties:
+        credential_offer_uri:
+          type: string
+          description: Offer link exactly as returned by the issuance API.
+        expires_at:
+          type: string
+          format: date-time
+
+    Incident:
+      type: object
+      required: [name, email, type, subject, description]
+      properties:
+        name: { type: string, maxLength: 200 }
+        email: { type: string, format: email }
+        phone: { type: string, maxLength: 30 }
+        type:
+          type: string
+          enum: [technical, access, credentials, other]
+        subject: { type: string, maxLength: 200 }
+        description: { type: string, maxLength: 5000 }
+
+    Problem:
+      type: object
+      description: Problem details (RFC 9457 shape). `type` is an error code.
+      required: [type, title, status]
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string, format: uri-reference }

@@ -7,6 +7,7 @@ import { TranslateHttpLoader } from '@ngx-translate/http-loader';
 import { routes } from './app.routes';
 import { AppMissingTranslationHandler } from './core/branding/missing-translation.handler';
 import { initializeBranding } from './core/branding/branding.initializer';
+import { provideIssuancePortalApi } from './core/api/issuance-portal-api.providers';
 
 export function httpTranslateLoader(http: HttpClient): TranslateHttpLoader {
   return new TranslateHttpLoader(http, 'assets/i18n/', '.json');
@@ -17,6 +18,7 @@ export const appConfig: ApplicationConfig = {
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
     provideHttpClient(),
+    provideIssuancePortalApi(),
     provideTranslateService({
       defaultLanguage: 'es',
       useDefaultLang: true,

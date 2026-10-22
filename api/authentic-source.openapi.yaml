@@ -1,0 +1,143 @@
+openapi: 3.1.0
+info:
+  title: EUDIStack — Issuance Portal Service · Authentic source module
+  version: "1"
+  summary: Authentic source module of the issuance portal service, used by the issuance portal interface.
+  description: |
+    Part of the issuance portal service API, under the same base URL as the other modules and sharing the
+    journey session cookie. Requires a verified identity in the session.
+
+    The interface asks to verify the holder's entitlement without sending any holder data. The module takes the
+    personal identifier from the verified identity in the session, consults the authentic source configured for
+    the tenant and attestation type, translates its data into the attestation data and stores it in the session
+    with the result. It returns `confirmed` (with what the Data step shows) or `not_confirmed` (with a reason).
+    With `not_confirmed`, the journey is withdrawn with reason `not_entitled`.
+    If the source does not answer within 10 seconds, it returns 503. It never returns `confirmed` without an
+    answer from the source. If the attestation type has no source configured, it returns `confirmed` with no
+    additional data.
+  contact:
+    name: EUDIStack
+    url: https://eudistack.net
+  license:
+    name: Proprietary
+    identifier: LicenseRef-Proprietary
+servers:
+  - url: https://{tenant}.{environment}.eudistack.net/issuance-portal/api/v1
+    description: Tenant endpoint.
+    variables:
+      tenant:
+        default: sandbox
+      environment:
+        default: stg
+security:
+  - journeySession: []
+tags:
+  - name: Entitlement
+    description: Entitlement verification against the authentic source.
+
+paths:
+  /entitlement:
+    post:
+      tags: [Entitlement]
+      operationId: verifyEntitlement
+      summary: Verify entitlement and obtain the attestation data
+      description: Takes no body. Any body sent is ignored.
+      responses:
+        "200":
+          description: The source answered.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EntitlementResult" }
+              examples:
+                confirmed:
+                  value:
+                    result: confirmed
+                    attestation:
+                      type_name: Professional attestation
+                      fields:
+                        - { label: Name, value: María García López }
+                        - { label: Registration number, value: "282801234" }
+                        - { label: Specialty, value: Example specialty }
+                      email_required: true
+                not_confirmed:
+                  value:
+                    result: not_confirmed
+                    reason: not_entitled
+        "409":
+          description: "`type` `step_not_allowed`: there is no verified identity in the session."
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "410":
+          description: "`type` `journey_closed`: the journey is no longer in progress or its session expired."
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "503":
+          description: "`type` `authentic_source_unavailable`: the source did not answer or answered with an error. The holder can retry."
+          headers:
+            Retry-After:
+              schema: { type: integer }
+              description: Seconds to wait before retrying.
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+components:
+  securitySchemes:
+    journeySession:
+      type: apiKey
+      in: cookie
+      name: journey_session
+      description: Session of the holder's journey, shared by the three modules. HttpOnly, Secure, SameSite.
+
+  schemas:
+    EntitlementResult:
+      type: object
+      required: [result]
+      properties:
+        result:
+          type: string
+          enum: [confirmed, not_confirmed]
+        attestation:
+          $ref: "#/components/schemas/AttestationPreview"
+        reason:
+          type: string
+          enum: [not_found, not_entitled, identifier_mismatch]
+          description: |
+            Only with `not_confirmed`. `not_found`: the holder is not in the source. `not_entitled`: the holder
+            is in the source without entitlement, for example deregistered. `identifier_mismatch`: the source
+            returned data of a person with another identifier.
+
+    AttestationPreview:
+      type: object
+      description: Only with `confirmed`. What the interface shows in the Data step. Read only.
+      required: [type_name, fields, email_required]
+      properties:
+        type_name: { type: string }
+        fields:
+          type: array
+          items:
+            type: object
+            required: [label, value]
+            properties:
+              label: { type: string }
+              value: { type: string }
+        email:
+          type: string
+          format: email
+          description: Present when identification or the source provided it.
+        email_required:
+          type: boolean
+          description: True when the interface must ask the holder for an email.
+
+    Problem:
+      type: object
+      description: Problem details (RFC 9457 shape). `type` is an error code.
+      required: [type, title, status]
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string, format: uri-reference }

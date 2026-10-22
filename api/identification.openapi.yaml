@@ -1,0 +1,235 @@
+openapi: 3.1.0
+info:
+  title: EUDIStack — Issuance Portal Service · Identification module
+  version: "1"
+  summary: Identification module of the issuance portal service, used by the issuance portal interface.
+  description: |
+    Part of the issuance portal service API, under the same base URL as the other modules and sharing the
+    journey session cookie. Requires a journey in progress in the session.
+
+    The interface lists the tenant's methods, starts an identification with the chosen one and sends the holder
+    to `next_uri`. The certificate address and the returns from Cl@ve and the Verifier are endpoints of this
+    module visited by the browser, not called by the interface. The module verifies the response, stores the
+    verified identity in the journey session and redirects the holder back to the interface with only
+    `result`. The identity is never returned to the interface nor put in a browser address.
+
+    Methods: `qualified_certificate` (client certificate on a dedicated address, validated with the trust
+    validation service), `clave` (SAML redirect with the tenant's minimum assurance level) and `attestation`
+    (OIDC delegation to the platform Verifier, as the tenant's registered client; the ID Token is verified).
+  contact:
+    name: EUDIStack
+    url: https://eudistack.net
+  license:
+    name: Proprietary
+    identifier: LicenseRef-Proprietary
+servers:
+  - url: https://{tenant}.{environment}.eudistack.net/issuance-portal/api/v1
+    description: Tenant endpoint.
+    variables:
+      tenant:
+        default: sandbox
+      environment:
+        default: stg
+security:
+  - journeySession: []
+tags:
+  - name: Identification
+    description: Called by the interface.
+  - name: Browser endpoints
+    description: Visited by the holder's browser through redirects. Not called by the interface.
+
+paths:
+  /identification/methods:
+    get:
+      tags: [Identification]
+      operationId: listIdentificationMethods
+      summary: List the tenant's identification methods
+      responses:
+        "200":
+          description: Enabled methods, recommended one first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Method" }
+              example:
+                - { id: qualified_certificate, recommended: true }
+                - { id: clave, recommended: false }
+        "409": { $ref: "#/components/responses/StepNotAllowed" }
+        "410": { $ref: "#/components/responses/JourneyClosed" }
+
+  /identification:
+    post:
+      tags: [Identification]
+      operationId: startIdentification
+      summary: Start an identification with a method
+      description: Replaces any previous identification of the session. Send the holder to `next_uri`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [method]
+              properties:
+                method: { $ref: "#/components/schemas/MethodId" }
+      responses:
+        "201":
+          description: Identification started.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [next_uri]
+                properties:
+                  next_uri:
+                    type: string
+                    format: uri
+                    description: Certificate address, Cl@ve or the Verifier. Carries no personal data.
+        "400":
+          description: "`type` `method_not_enabled`: the method is not enabled for the tenant."
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "409": { $ref: "#/components/responses/StepNotAllowed" }
+        "410": { $ref: "#/components/responses/JourneyClosed" }
+    get:
+      tags: [Identification]
+      operationId: getIdentificationResult
+      summary: Get the result of the current identification
+      description: Never returns the verified identity.
+      responses:
+        "200":
+          description: Result.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/IdentificationResult" }
+              examples:
+                identified:
+                  value: { status: identified, method: qualified_certificate, assurance_level: high }
+                not_identified:
+                  value: { status: not_identified, method: qualified_certificate, reason: certificate_revoked }
+        "404":
+          description: "`type` `identification_not_started`."
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "410": { $ref: "#/components/responses/JourneyClosed" }
+    delete:
+      tags: [Identification]
+      operationId: cancelIdentification
+      summary: Cancel the identification in progress
+      description: The result becomes `cancelled`. The journey stays in progress; another identification can start.
+      responses:
+        "204":
+          description: Cancelled.
+        "410": { $ref: "#/components/responses/JourneyClosed" }
+
+  /identification/certificate:
+    get:
+      tags: [Browser endpoints]
+      operationId: certificateIdentification
+      summary: Certificate address
+      description: |
+        Served on a dedicated address that requests a client certificate (mTLS), so the browser shows its
+        certificate picker. Validates the certificate and redirects to the interface.
+      responses:
+        "303": { $ref: "#/components/responses/BackToInterface" }
+
+  /identification/clave/callback:
+    post:
+      tags: [Browser endpoints]
+      operationId: claveCallback
+      summary: Return from Cl@ve
+      description: Receives the signed SAML response, verifies signature, correlation and level, and redirects to the interface.
+      responses:
+        "303": { $ref: "#/components/responses/BackToInterface" }
+
+  /identification/verifier/callback:
+    get:
+      tags: [Browser endpoints]
+      operationId: verifierCallback
+      summary: Return from the Verifier
+      description: |
+        Receives the OIDC authorization code and `state`, exchanges the code for the ID Token, verifies
+        signature, issuer, audience, nonce and expiry, and redirects to the interface.
+      parameters:
+        - { name: code, in: query, required: true, schema: { type: string } }
+        - { name: state, in: query, required: true, schema: { type: string } }
+      responses:
+        "303": { $ref: "#/components/responses/BackToInterface" }
+
+components:
+  securitySchemes:
+    journeySession:
+      type: apiKey
+      in: cookie
+      name: journey_session
+      description: Session of the holder's journey, shared by the three modules. HttpOnly, Secure, SameSite.
+
+  responses:
+    BackToInterface:
+      description: Redirect to the interface's identification return, with only `result` (`identified`, `not_identified` or `cancelled`).
+      headers:
+        Location:
+          schema: { type: string, format: uri }
+    StepNotAllowed:
+      description: "`type` `step_not_allowed`: there is no journey in progress in the session."
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    JourneyClosed:
+      description: "`type` `journey_closed`: the journey is no longer in progress or its session expired."
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+
+  schemas:
+    MethodId:
+      type: string
+      enum: [qualified_certificate, clave, attestation]
+
+    Method:
+      type: object
+      required: [id, recommended]
+      properties:
+        id: { $ref: "#/components/schemas/MethodId" }
+        recommended: { type: boolean }
+
+    IdentificationResult:
+      type: object
+      required: [status, method]
+      properties:
+        status:
+          type: string
+          enum: [in_progress, identified, not_identified, cancelled]
+        method: { $ref: "#/components/schemas/MethodId" }
+        assurance_level:
+          type: string
+          enum: [substantial, high]
+          description: Only with `identified`.
+        reason:
+          type: string
+          description: Only with `not_identified`.
+          enum:
+            - no_certificate
+            - certificate_invalid
+            - certificate_revoked
+            - certificate_not_qualified
+            - certificate_not_natural_person
+            - certificate_validation_unavailable
+            - clave_response_invalid
+            - clave_level_insufficient
+            - presentation_invalid
+            - personal_identifier_missing
+
+    Problem:
+      type: object
+      description: Problem details (RFC 9457 shape). `type` is an error code.
+      required: [type, title, status]
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string, format: uri-reference }
