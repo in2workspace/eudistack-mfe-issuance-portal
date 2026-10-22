@@ -31,4 +31,9 @@ describe('routes', () => {
   it('"qr" (ruta demo retirada por AD-5) ya no existe', () => {
     expect(routes.find((r) => r.path === 'qr')).toBeUndefined();
   });
+
+  it('EC-04: the ACME landing routes are gone and any unknown path goes back to Inicio', () => {
+    expect(routes.filter((r) => r.path?.startsWith('cliente'))).toEqual([]);
+    expect(routes[routes.length - 1]).toEqual({ path: '**', redirectTo: '' });
+  });
 });

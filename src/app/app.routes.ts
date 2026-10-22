@@ -45,18 +45,5 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/portal/incidents/incidents.component').then((m) => m.IncidentsComponent),
   },
-  {
-    path: 'cliente',
-    loadComponent: () =>
-      import('./features/acme/acme-landing/acme-landing.component').then(
-        (m) => m.AcmeLandingComponent,
-      ),
-  },
-  {
-    path: 'cliente/home',
-    loadComponent: () =>
-      import('./features/acme/acme-home/acme-home.component').then((m) => m.AcmeHomeComponent),
-    canActivate: [authGuard],
-  },
   { path: '**', redirectTo: '' },
 ];
