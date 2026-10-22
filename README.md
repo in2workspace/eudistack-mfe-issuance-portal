@@ -36,6 +36,27 @@ ng build
 
 This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
 
+## Issuance portal service API
+
+The portal only talks to the issuance portal service, under `/issuance-portal/api/v1` on the tenant host. Its TypeScript clients are generated from the contracts in `api/` before every build and test run (`npm run api:generate`), with openapi-generator in Docker, so Docker must be running. The generated code lives in `src/app/core/api/generated/` and is not committed.
+
+The contracts are maintained in `eudistack-platform-dev`, one per module of the service. After a contract changes there, copy them again:
+
+```bash
+npm run api:sync            # from ../eudistack-platform-dev
+npm run api:sync -- <path>  # from another checkout
+```
+
+### Mock of the API
+
+Until the service has every endpoint, you can run a mock built from the contracts:
+
+```bash
+npm run mock:api
+```
+
+It starts one Prism per contract and a proxy on `http://localhost:4000/issuance-portal/api/v1`. To use it from the local stack, point the `/issuance-portal/api/` location of `local-env/nginx/default.conf.template` in `eudistack-platform-dev` to `http://host.docker.internal:4000` and restart nginx. Prism answers with values made up from the schemas; endpoints that need the `journey_session` cookie answer 401 without it.
+
 ## Running unit tests
 
 To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
