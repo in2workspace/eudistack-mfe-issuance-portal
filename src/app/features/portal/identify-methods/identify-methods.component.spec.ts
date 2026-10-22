@@ -4,8 +4,6 @@ import { signal } from '@angular/core';
 import { IdentifyMethodsComponent } from './identify-methods.component';
 import { IdentificationRedirectService } from '../../identification/identification-redirect.service';
 import { IssuanceStartService } from '../../issuance-start/issuance-start.service';
-import { DoctorIdOidcService } from '../../../core/services/doctorid-oidc.service';
-import { IssuanceStateService } from '../../../core/services/issuance-state.service';
 import { BrandingService } from '../../../core/branding/branding.service';
 import { CannotContinueReason } from '../../issuance-start/cannot-continue-reason';
 
@@ -14,13 +12,11 @@ describe('IdentifyMethodsComponent', () => {
   let component: IdentifyMethodsComponent;
   let identificationRedirect: { redirectToIdentification: jest.Mock };
   let issuanceStart: { reportCannotContinue: jest.Mock };
-  let doctorIdOidcService: { iniciarFlujoOIDCPortal: jest.Mock };
   let router: Router;
 
   beforeEach(() => {
     identificationRedirect = { redirectToIdentification: jest.fn() };
     issuanceStart = { reportCannotContinue: jest.fn() };
-    doctorIdOidcService = { iniciarFlujoOIDCPortal: jest.fn() };
 
     TestBed.configureTestingModule({
       imports: [IdentifyMethodsComponent],
@@ -28,8 +24,6 @@ describe('IdentifyMethodsComponent', () => {
         provideRouter([]),
         { provide: IdentificationRedirectService, useValue: identificationRedirect },
         { provide: IssuanceStartService, useValue: issuanceStart },
-        { provide: DoctorIdOidcService, useValue: doctorIdOidcService },
-        { provide: IssuanceStateService, useValue: { setUser: jest.fn() } },
         { provide: BrandingService, useValue: { logoUrl: signal(''), appName: signal('Portal') } },
       ],
     });
@@ -59,20 +53,19 @@ describe('IdentifyMethodsComponent', () => {
     expect(router.navigate).toHaveBeenCalledWith(['/']);
   });
 
-  it('AC-08: the "doctorId" branch never touches the certificate gate', () => {
-    component.selectMethod('doctorId');
+  it('a method that is not available yet does nothing', () => {
+    component.selectMethod('claveMobile');
 
-    expect(doctorIdOidcService.iniciarFlujoOIDCPortal).toHaveBeenCalledTimes(1);
     expect(identificationRedirect.redirectToIdentification).not.toHaveBeenCalled();
+    expect(router.navigate).not.toHaveBeenCalled();
   });
 
-  it.each(['eDNI', 'claveMobile', 'video'] as const)(
-    'AC-08: the "%s" branch (in-app auth) never touches the certificate gate',
-    (method) => {
-      component.selectMethod(method);
+  it('AC-09: shows no simulated method and no demo notice', () => {
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    const buttons = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button'));
 
-      expect(identificationRedirect.redirectToIdentification).not.toHaveBeenCalled();
-      expect(doctorIdOidcService.iniciarFlujoOIDCPortal).not.toHaveBeenCalled();
-    },
-  );
+    expect(text).not.toMatch(/DNI Electrónico|Video Identificación|DoctorID|EmployeeID|Nota de demostración/);
+    expect(buttons.find((b) => b.textContent?.includes('Cl@ve Móvil'))?.disabled).toBe(true);
+    expect(buttons.find((b) => b.textContent?.includes('Certificado Digital'))?.disabled).toBe(false);
+  });
 });
