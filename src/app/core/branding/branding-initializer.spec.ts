@@ -1,58 +1,48 @@
 import { TestBed } from '@angular/core/testing';
-import { Observable, of, throwError } from 'rxjs';
 import { initializeBranding } from './branding.initializer';
-import { TenantBrandingSource } from './tenant-branding.source';
 import { BrandingService } from './branding.service';
 import { TenantLanguageService } from './tenant-language.service';
-import { DEFAULT_EUDISTACK_BRANDING, TenantBrandingResult } from './tenant-branding.model';
+import { DEFAULT_EUDISTACK_BRANDING } from './tenant-branding.model';
+import { PortalConfigService, PortalConfigState } from '../config/portal-config.service';
+import { PortalConfig } from '../api/generated/journey';
 
 describe('initializeBranding', () => {
-  let sourceSpy: { load: jest.Mock };
   let brandingApplySpy: jest.Mock;
   let languageApplySpy: jest.Mock;
-  const originalLocation = window.location;
 
-  function setHostname(hostname: string): void {
-    Object.defineProperty(window, 'location', {
-      writable: true,
-      configurable: true,
-      value: { ...originalLocation, hostname },
-    });
-  }
+  const config: PortalConfig = {
+    branding: { logo_url: '/assets/tenants/cgcom/logo.png', colors: { primary: '#123456' } },
+    languages: ['es'],
+    texts: {},
+    support: {},
+    legal_links: {},
+  };
 
-  function configure(load$: Observable<TenantBrandingResult>): void {
-    sourceSpy = { load: jest.fn().mockReturnValue(load$) };
+  function configure(load: () => Promise<PortalConfigState>): void {
     brandingApplySpy = jest.fn();
     languageApplySpy = jest.fn();
 
     TestBed.configureTestingModule({
       providers: [
-        { provide: TenantBrandingSource, useValue: sourceSpy },
+        { provide: PortalConfigService, useValue: { load: jest.fn(load) } },
         { provide: BrandingService, useValue: { apply: brandingApplySpy } },
         { provide: TenantLanguageService, useValue: { apply: languageApplySpy } },
       ],
     });
   }
 
-  afterEach(() => {
-    Object.defineProperty(window, 'location', { writable: true, configurable: true, value: originalLocation });
-  });
-
-  it('orchestrates identity → load → resolve → apply before the component tree bootstraps (AC-06)', async () => {
-    setHostname('cgcom.eudistack.net');
-    const result: TenantBrandingResult = { ok: true, descriptor: { branding: { name: 'CGCOM' } } };
-    configure(of(result));
+  it('AC-01: applies the brand of GET /config before the component tree bootstraps', async () => {
+    configure(async () => ({ status: 'loaded', config }));
 
     await TestBed.runInInjectionContext(() => initializeBranding());
 
-    expect(sourceSpy.load).toHaveBeenCalledWith('cgcom');
-    expect(brandingApplySpy).toHaveBeenCalledWith(expect.objectContaining({ appName: 'CGCOM' }));
-    expect(languageApplySpy).toHaveBeenCalledWith(expect.objectContaining({ appName: 'CGCOM' }));
+    const expected = expect.objectContaining({ logoUrl: '/assets/tenants/cgcom/logo.png' });
+    expect(brandingApplySpy).toHaveBeenCalledWith(expected);
+    expect(languageApplySpy).toHaveBeenCalledWith(expected);
   });
 
-  it('resolves to the neutral default and never blocks bootstrap on a network/5xx failure (ES-04)', async () => {
-    setHostname('cgcom.eudistack.net');
-    configure(throwError(() => new Error('network error')));
+  it('ES-01: without configuration applies the neutral brand and never blocks bootstrap', async () => {
+    configure(async () => ({ status: 'unavailable' }));
 
     await expect(TestBed.runInInjectionContext(() => initializeBranding())).resolves.toBeUndefined();
 
@@ -60,22 +50,12 @@ describe('initializeBranding', () => {
     expect(languageApplySpy).toHaveBeenCalledWith(DEFAULT_EUDISTACK_BRANDING);
   });
 
-  it('resolves to the neutral default and never blocks bootstrap on a timeout (ES-05)', async () => {
-    setHostname('cgcom.eudistack.net');
-    configure(throwError(() => new Error('Timeout has occurred')));
+  it('never rejects, even on an unexpected failure', async () => {
+    configure(async () => {
+      throw new Error('boom');
+    });
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
 
     await expect(TestBed.runInInjectionContext(() => initializeBranding())).resolves.toBeUndefined();
-
-    expect(brandingApplySpy).toHaveBeenCalledWith(DEFAULT_EUDISTACK_BRANDING);
-  });
-
-  it('never calls the branding source when the tenant identity is not resolvable (ES-03)', async () => {
-    setHostname('localhost');
-    configure(of({ ok: true, descriptor: {} }));
-
-    await TestBed.runInInjectionContext(() => initializeBranding());
-
-    expect(sourceSpy.load).not.toHaveBeenCalled();
-    expect(brandingApplySpy).toHaveBeenCalledWith(DEFAULT_EUDISTACK_BRANDING);
   });
 });

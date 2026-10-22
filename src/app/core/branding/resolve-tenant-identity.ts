@@ -4,11 +4,10 @@
  * sin caché de módulo ni estado entre invocaciones — cada llamada re-resuelve
  * desde cero, base del aislamiento entre tenants (EC-05, R-2).
  *
- * El subdominio es un trust boundary (AD-3): a diferencia de otros mecanismos
- * de identidad de tenant del producto, esta función NO valida contra una
- * allow-list de tenants conocidos — cualquier candidato no válido cae al
- * branding neutro más adelante en el pipeline vía `TenantBrandingSource`
- * (404 → `absent`), nunca aquí.
+ * Ya no se usa para la marca: la configuración del portal la resuelve el
+ * servicio por el host (`GET /config`). Solo la usan la oferta (EUD-163), el
+ * retorno del certificado (EUD-164), Inicio e Incidencias, y se retira con las
+ * pantallas que llaman al servicio (EUD-284 a EUD-286).
  *
  * @returns el candidato a tenant, o `null` si no hay override y el hostname
  *   no tiene subdominio (ES-03) — nunca adivina ni reutiliza un tenant previo.

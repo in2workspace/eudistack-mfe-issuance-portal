@@ -1,13 +1,12 @@
-import { resolveTenantIdentity } from './resolve-tenant-identity';
 import { resolveTenantBranding } from './resolve-tenant-branding';
 import { BrandingService } from './branding.service';
-import { DEFAULT_EUDISTACK_BRANDING, TenantBrandingResult } from './tenant-branding.model';
+import { DEFAULT_EUDISTACK_BRANDING } from './tenant-branding.model';
+import { PortalConfig } from '../api/generated/journey';
 
 /**
- * Riesgo R-2 (Alto, aislado deliberadamente en su propio archivo/commit):
- * el branding de un tenant NUNCA debe filtrar al siguiente — ni por caché, ni
- * por estado residual, ni por fallback (AC-03/EC-05). Ejercita el pipeline
- * completo (identidad → resolución → aplicación) con dos tenants secuenciales.
+ * Riesgo R-2: la marca de un tenant NUNCA debe filtrar al siguiente, ni por
+ * caché, ni por estado residual, ni por fallback (EC-03 de EUD-283). Ejercita
+ * resolución y aplicación con dos configuraciones seguidas.
  */
 describe('Tenant isolation (no-bleed, R-2)', () => {
   let brandingService: BrandingService;
@@ -15,74 +14,41 @@ describe('Tenant isolation (no-bleed, R-2)', () => {
   beforeEach(() => {
     brandingService = new BrandingService();
     document.documentElement.removeAttribute('style');
-    document.title = '';
   });
 
-  function descriptorFor(tenant: 'A' | 'B'): TenantBrandingResult {
+  function configFor(tenant: 'A' | 'B'): PortalConfig {
     return {
-      ok: true,
-      descriptor: {
-        branding: {
-          primaryColor: tenant === 'A' ? '#111111' : '#222222',
-          secondaryColor: tenant === 'A' ? '#333333' : '#444444',
-          logoUrl: `/assets/tenants/tenant-${tenant.toLowerCase()}/logo.svg`,
-          faviconUrl: `/assets/tenants/tenant-${tenant.toLowerCase()}/favicon.svg`,
-          name: `Tenant ${tenant}`,
-        },
-        i18n: {
-          defaultLang: tenant === 'A' ? 'es' : 'en',
-          available: tenant === 'A' ? ['es'] : ['en'],
-        },
+      branding: {
+        logo_url: `/assets/tenants/tenant-${tenant.toLowerCase()}/logo.svg`,
+        colors: { primary: tenant === 'A' ? '#111111' : '#222222', secondary: tenant === 'A' ? '#333333' : '#444444' },
       },
+      languages: tenant === 'A' ? ['es'] : ['en'],
+      texts: {},
+      support: {},
+      legal_links: {},
     };
   }
 
-  function resolveAndApply(hostname: string, result: TenantBrandingResult | null): void {
-    const tenant = resolveTenantIdentity({ hostname }, {});
-    expect(tenant).not.toBeNull();
-    const branding = resolveTenantBranding(result);
-    brandingService.apply(branding);
-  }
-
-  it('tenant B never inherits tenant A tokens, logo, favicon or app name', () => {
-    resolveAndApply('tenant-a.eudistack.net', descriptorFor('A'));
-
+  it('tenant B never inherits tenant A tokens or logo', () => {
+    brandingService.apply(resolveTenantBranding(configFor('A')));
     expect(document.documentElement.style.getPropertyValue('--brand-primary')).toBe('#111111');
-    expect(brandingService.appName()).toBe('Tenant A');
 
-    resolveAndApply('tenant-b.eudistack.net', descriptorFor('B'));
+    brandingService.apply(resolveTenantBranding(configFor('B')));
 
     expect(document.documentElement.style.getPropertyValue('--brand-primary')).toBe('#222222');
     expect(document.documentElement.style.getPropertyValue('--brand-secondary')).toBe('#444444');
     expect(brandingService.logoUrl()).toContain('tenant-b');
     expect(brandingService.logoUrl()).not.toContain('tenant-a');
-    expect(brandingService.appName()).toBe('Tenant B');
-    expect(document.title).toBe('Tenant B — Portal de Emisión');
   });
 
-  it('a tenant B without branding falls back to the neutral default, never to tenant A branding (EC-05)', () => {
-    resolveAndApply('tenant-a.eudistack.net', descriptorFor('A'));
-    expect(brandingService.appName()).toBe('Tenant A');
+  it('a tenant without configuration falls back to the neutral default, never to the previous tenant', () => {
+    brandingService.apply(resolveTenantBranding(configFor('A')));
 
-    resolveAndApply('tenant-b.eudistack.net', { ok: false, reason: 'absent' });
+    brandingService.apply(resolveTenantBranding(null));
 
-    expect(brandingService.appName()).toBe(DEFAULT_EUDISTACK_BRANDING.appName);
     expect(brandingService.logoUrl()).toBe(DEFAULT_EUDISTACK_BRANDING.logoUrl);
     expect(document.documentElement.style.getPropertyValue('--brand-primary')).toBe(
       DEFAULT_EUDISTACK_BRANDING.tokens['--brand-primary'],
     );
-  });
-
-  it('an unresolvable identity for B never reuses the previously resolved tenant (ES-03/EC-05)', () => {
-    resolveAndApply('tenant-a.eudistack.net', descriptorFor('A'));
-
-    const unresolvableTenant = resolveTenantIdentity({ hostname: 'localhost' }, {});
-    expect(unresolvableTenant).toBeNull();
-
-    const branding = resolveTenantBranding(null);
-    brandingService.apply(branding);
-
-    expect(brandingService.appName()).toBe(DEFAULT_EUDISTACK_BRANDING.appName);
-    expect(brandingService.appName()).not.toBe('Tenant A');
   });
 });
