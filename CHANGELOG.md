@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-22
+
 ### Removed
 
 - **EUD-283 — demo retirada de la interfaz**: la identidad del titular ya no se lee de la dirección (`?u=`, `?identified=1`) ni de `sessionStorage`, y desaparece el usuario simulado con `?code=`. Se quitan los métodos, perfiles y autenticación simulados de `identify-methods` (eDNI, Video y DoctorID como métodos), `DoctorIdOidcService` (canjeaba y decodificaba el ID Token en el navegador sin comprobar la firma), la landing de ACME (`/cliente`, `features/acme/`, `AcmeOidcService` e imágenes), `features/issuance-entry-point/`, `IssuanceStateService`, `AuthenticatedUser`, `issuance-return.ts`, `TenantBrandingSource` y código muerto. Fuera de `env.js` y de los tres despliegues las claves OIDC y las de entrada de emisión; las variables `OIDC_*` del repositorio se pueden borrar a mano en GitHub.
