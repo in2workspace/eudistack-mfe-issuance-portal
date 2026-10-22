@@ -70,6 +70,9 @@
   "header.logoAlt": "Organization logo",
   "header.back": "Back",
   "header.language": "Language",
+  "configUnavailable.title": "You cannot continue right now",
+  "configUnavailable.description": "We could not load the portal. Try again in a few minutes.",
+  "configUnavailable.retry": "Try again",
   "portal": {
     "app_name": "Issuance Portal"
   }

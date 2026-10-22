@@ -70,6 +70,9 @@
   "header.logoAlt": "Logo de la organización",
   "header.back": "Volver",
   "header.language": "Idioma",
+  "configUnavailable.title": "Ahora no se puede continuar",
+  "configUnavailable.description": "No hemos podido cargar el portal. Inténtalo de nuevo en unos minutos.",
+  "configUnavailable.retry": "Volver a intentarlo",
   "portal": {
     "app_name": "Portal de Emisión"
   }

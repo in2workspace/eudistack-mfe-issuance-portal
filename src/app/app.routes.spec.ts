@@ -2,8 +2,11 @@ import { Route } from '@angular/router';
 import { routes } from './app.routes';
 
 describe('routes', () => {
+  /** Rutas de las pantallas: las hijas de la ruta que exige la configuración. */
+  const screens: Route[] = routes.find((r) => r.path === '' && r.children)?.children ?? [];
+
   function findRoute(path: string): Route {
-    const route = routes.find((r) => r.path === path);
+    const route = screens.find((r) => r.path === path);
     if (!route) {
       throw new Error(`Route "${path}" not found`);
     }
@@ -29,11 +32,17 @@ describe('routes', () => {
   });
 
   it('"qr" (ruta demo retirada por AD-5) ya no existe', () => {
-    expect(routes.find((r) => r.path === 'qr')).toBeUndefined();
+    expect(screens.find((r) => r.path === 'qr')).toBeUndefined();
   });
 
   it('EC-04: the ACME landing routes are gone and any unknown path goes back to Inicio', () => {
-    expect(routes.filter((r) => r.path?.startsWith('cliente'))).toEqual([]);
+    expect([...routes, ...screens].filter((r) => r.path?.startsWith('cliente'))).toEqual([]);
     expect(routes[routes.length - 1]).toEqual({ path: '**', redirectTo: '' });
+  });
+
+  it('ES-01: every screen requires the configuration, except the unavailable one', () => {
+    const parent = routes.find((r) => r.path === '' && r.children);
+    expect(parent?.canActivateChild?.length).toBe(1);
+    expect(routes.find((r) => r.path === 'unavailable')?.canActivate?.length).toBe(1);
   });
 });
