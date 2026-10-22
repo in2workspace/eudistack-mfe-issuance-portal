@@ -2,7 +2,6 @@ import { Component, computed, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { IssuanceStartService } from '../issuance-start.service';
-import { BrandingService } from '../../../core/branding/branding.service';
 import { resolveTenantIdentity } from '../../../core/branding/resolve-tenant-identity';
 import { resolveSupportEmail } from '../../../core/branding/resolve-support-email';
 import { environment } from '../../../../environments/environment';
@@ -26,7 +25,6 @@ import { environment } from '../../../../environments/environment';
 export class IssuanceInfoComponent {
   private readonly issuanceStartService = inject(IssuanceStartService);
   private readonly router = inject(Router);
-  protected readonly branding = inject(BrandingService);
 
   readonly cannotContinue = computed(() => this.issuanceStartService.cannotContinueReason() !== null);
   readonly currentYear = new Date().getFullYear();

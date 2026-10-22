@@ -1,10 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
-import { signal } from '@angular/core';
 import { IdentifyMethodsComponent } from './identify-methods.component';
 import { IdentificationRedirectService } from '../../identification/identification-redirect.service';
 import { IssuanceStartService } from '../../issuance-start/issuance-start.service';
-import { BrandingService } from '../../../core/branding/branding.service';
 import { CannotContinueReason } from '../../issuance-start/cannot-continue-reason';
 
 describe('IdentifyMethodsComponent', () => {
@@ -24,7 +22,6 @@ describe('IdentifyMethodsComponent', () => {
         provideRouter([]),
         { provide: IdentificationRedirectService, useValue: identificationRedirect },
         { provide: IssuanceStartService, useValue: issuanceStart },
-        { provide: BrandingService, useValue: { logoUrl: signal(''), appName: signal('Portal') } },
       ],
     });
 

@@ -1,8 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
-import { signal } from '@angular/core';
 import { UserDataComponent } from './user-data.component';
-import { BrandingService } from '../../../core/branding/branding.service';
 
 describe('UserDataComponent', () => {
   let fixture: ComponentFixture<UserDataComponent>;
@@ -13,7 +11,6 @@ describe('UserDataComponent', () => {
       imports: [UserDataComponent],
       providers: [
         provideRouter([]),
-        { provide: BrandingService, useValue: { logoUrl: signal(''), appName: signal('Portal') } },
       ],
     });
     fixture = TestBed.createComponent(UserDataComponent);

@@ -67,6 +67,9 @@
   "credentialOffer.validity.notice": "This QR code is valid for {{minutes}} minutes. If you need more time, you can generate a new one",
   "credentialOffer.actions.cancel": "Cancel",
   "credentialOffer.actions.complete": "Mark as done",
+  "header.logoAlt": "Organization logo",
+  "header.back": "Back",
+  "header.language": "Language",
   "portal": {
     "app_name": "Issuance Portal"
   }

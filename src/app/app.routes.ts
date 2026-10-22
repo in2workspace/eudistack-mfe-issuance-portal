@@ -15,6 +15,7 @@ export const routes: Routes = [
     // ClaveAuthComponent (eudistack-cgcom-mfe-cert-identifier). Al elegir un
     // método redirige a /cert/?method=<id>, que entra directo en 'authenticate'.
     path: 'identify',
+    data: { back: '' },
     loadComponent: () =>
       import('./features/portal/identify-methods/identify-methods.component').then(
         (m) => m.IdentifyMethodsComponent,
@@ -22,6 +23,7 @@ export const routes: Routes = [
   },
   {
     path: 'user-data',
+    data: { back: '' },
     loadComponent: () =>
       import('./features/portal/user-data/user-data.component').then(
         (m) => m.UserDataComponent,
@@ -42,6 +44,7 @@ export const routes: Routes = [
   },
   {
     path: 'incidents',
+    data: { back: '' },
     loadComponent: () =>
       import('./features/portal/incidents/incidents.component').then((m) => m.IncidentsComponent),
   },

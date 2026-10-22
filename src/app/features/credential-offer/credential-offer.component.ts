@@ -3,7 +3,6 @@ import { Router } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import QRCode from 'qrcode';
 import { CredentialOfferService } from './credential-offer.service';
-import { BrandingService } from '../../core/branding/branding.service';
 import { CredentialOfferUrlBoxComponent } from '../../shared/components/credential-offer-url-box/credential-offer-url-box.component';
 import { CREDENTIAL_OFFER_PRESENTATION_TTL_MS } from './credential-offer-expiry';
 
@@ -29,7 +28,6 @@ import { CREDENTIAL_OFFER_PRESENTATION_TTL_MS } from './credential-offer-expiry'
 export class CredentialOfferComponent implements OnInit, OnDestroy {
   private readonly service = inject(CredentialOfferService);
   private readonly router = inject(Router);
-  protected readonly branding = inject(BrandingService);
 
   protected readonly status = this.service.status;
   protected readonly cannotContinueReason = this.service.cannotContinueReason;

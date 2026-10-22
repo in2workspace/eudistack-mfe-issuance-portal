@@ -1,6 +1,9 @@
 import { TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
 import { provideRouter, Router } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
 import { AppComponent } from './app.component';
+import { PortalConfigService, PortalConfigState } from './core/config/portal-config.service';
 
 describe('AppComponent', () => {
   const originalLocation = window.location;
@@ -13,11 +16,14 @@ describe('AppComponent', () => {
     });
   }
 
+  const configState = signal<PortalConfigState>({ status: 'loading' });
+
   beforeEach(async () => {
     sessionStorage.clear();
+    configState.set({ status: 'loading' });
     await TestBed.configureTestingModule({
-      imports: [AppComponent],
-      providers: [provideRouter([])],
+      imports: [AppComponent, TranslateModule.forRoot()],
+      providers: [provideRouter([]), { provide: PortalConfigService, useValue: { state: configState } }],
     }).compileComponents();
   });
 
@@ -37,6 +43,27 @@ describe('AppComponent', () => {
     const fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges();
     expect((fixture.nativeElement as HTMLElement).querySelector('router-outlet')).toBeTruthy();
+  });
+
+  it('AC-04: renders the common header above every screen', () => {
+    setUrl('/issuance-portal/', '');
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelectorAll('header').length).toBe(1);
+    expect(element.querySelector('header img')).not.toBeNull();
+  });
+
+  it('ES-01: the header is neutral when the configuration is unavailable', () => {
+    setUrl('/issuance-portal/', '');
+    configState.set({ status: 'unavailable' });
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('header img')).toBeNull();
+    expect(element.querySelector('header select')).toBeNull();
   });
 
   it.each([

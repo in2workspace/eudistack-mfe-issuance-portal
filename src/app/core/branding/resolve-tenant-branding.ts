@@ -95,9 +95,8 @@ export function resolveTenantBranding(config: PortalConfig | null): TenantBrandi
     return {
       tokens: sanitizeTokens(config.branding?.colors),
       logoUrl: sanitizeField(config.branding?.logo_url, DEFAULT_EUDISTACK_BRANDING.logoUrl),
-      // El contrato no trae favicon ni nombre del tenant.
+      // El contrato no trae favicon.
       faviconUrl: DEFAULT_EUDISTACK_BRANDING.faviconUrl,
-      appName: DEFAULT_EUDISTACK_BRANDING.appName,
       defaultLanguage: languages[0] ?? DEFAULT_EUDISTACK_BRANDING.defaultLanguage,
       supportedLanguages: languages.length > 0 ? languages : [...DEFAULT_EUDISTACK_BRANDING.supportedLanguages],
     };

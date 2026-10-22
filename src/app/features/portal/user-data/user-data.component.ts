@@ -1,6 +1,5 @@
 import { Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { BrandingService } from '../../../core/branding/branding.service';
 
 /**
  * Paso Datos. Ya no lee el usuario del navegador ni pinta etiquetas fijas por
@@ -14,7 +13,6 @@ import { BrandingService } from '../../../core/branding/branding.service';
 })
 export class UserDataComponent {
   private readonly router = inject(Router);
-  protected readonly branding = inject(BrandingService);
 
   onCancel(): void {
     this.router.navigate(['/']);

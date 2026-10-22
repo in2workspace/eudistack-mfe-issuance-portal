@@ -8,7 +8,6 @@ export interface TenantBranding {
   tokens: Record<string, string>;
   logoUrl: string;
   faviconUrl: string;
-  appName: string;
   /** Idioma aplicado si el configurado por el tenant no es válido/soportado. */
   defaultLanguage: string;
   /** Allow-list de idiomas que `TenantLanguageService` acepta para este tenant. */
@@ -37,7 +36,6 @@ export const DEFAULT_EUDISTACK_BRANDING: Readonly<TenantBranding> = Object.freez
   // (pensada para fondos de color/oscuros — sería invisible aquí).
   logoUrl: '/assets/tenants/eudistack/logo-dark.svg',
   faviconUrl: '/assets/tenants/eudistack/favicon.svg',
-  appName: 'EUDIStack',
   defaultLanguage: 'es',
   supportedLanguages: Object.freeze(['es', 'en']) as string[],
 });

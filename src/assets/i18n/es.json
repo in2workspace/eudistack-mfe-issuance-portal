@@ -67,6 +67,9 @@
   "credentialOffer.validity.notice": "Este código QR es válido por {{minutes}} minutos. Si necesitas más tiempo, puedes generar uno nuevo",
   "credentialOffer.actions.cancel": "Cancelar",
   "credentialOffer.actions.complete": "Marcar como completado",
+  "header.logoAlt": "Logo de la organización",
+  "header.back": "Volver",
+  "header.language": "Idioma",
   "portal": {
     "app_name": "Portal de Emisión"
   }

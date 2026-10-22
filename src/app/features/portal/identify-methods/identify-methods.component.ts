@@ -1,6 +1,5 @@
 import { Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { BrandingService } from '../../../core/branding/branding.service';
 import { IdentificationRedirectService } from '../../identification/identification-redirect.service';
 import { IssuanceStartService } from '../../issuance-start/issuance-start.service';
 
@@ -22,7 +21,6 @@ export class IdentifyMethodsComponent {
   private readonly router = inject(Router);
   private readonly identificationRedirect = inject(IdentificationRedirectService);
   private readonly issuanceStart = inject(IssuanceStartService);
-  protected readonly branding = inject(BrandingService);
 
   protected readonly authMethods: Array<{
     id: IdentifyMethod;
@@ -46,10 +44,6 @@ export class IdentifyMethodsComponent {
       available: false,
     },
   ];
-
-  onBack(): void {
-    this.router.navigate(['/']);
-  }
 
   /**
    * 'certificate' redirige a través de `IdentificationRedirectService`
