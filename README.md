@@ -55,7 +55,7 @@ Until the service has every endpoint, you can run a mock built from the contract
 npm run mock:api
 ```
 
-It starts one Prism per contract and a proxy on `http://localhost:4000/issuance-portal/api/v1`. To use it from the local stack, point the `/issuance-portal/api/` location of `local-env/nginx/default.conf.template` in `eudistack-platform-dev` to `http://host.docker.internal:4000` and restart nginx. Prism answers with values made up from the schemas; endpoints that need the `journey_session` cookie answer 401 without it.
+It starts one Prism per contract and a proxy on `http://localhost:4000/issuance-portal/api/v1`. To use it from the local stack, point the `/issuance-portal/api/` location of `local-env/nginx/default.conf.template` in `eudistack-platform-dev` to `http://host.docker.internal:4000` and restart nginx. `GET /config` answers the CGCOM configuration in `mock/portal-config.cgcom.json`, read on every request so you can edit it without restarting; set `MOCK_API_CONFIG` to another file, or to `unavailable` to get 503 `config_unavailable`. The other endpoints come from Prism, which makes up values from the schemas; those that need the `journey_session` cookie answer 401 without it.
 
 ## Running unit tests
 

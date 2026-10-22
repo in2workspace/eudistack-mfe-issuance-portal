@@ -5,12 +5,34 @@
 // and a small proxy on MOCK_API_PORT (4000) that sends each path under
 // /issuance-portal/api/v1 to the Prism of its module.
 //
+// Prism makes up values from the schemas, which leaves the portal without a
+// usable brand or language. GET /config is answered instead from
+// MOCK_API_CONFIG (mock/portal-config.cgcom.json by default), or with 503
+// config_unavailable when MOCK_API_CONFIG=unavailable.
+//
 // Usage: npm run mock:api
+//        MOCK_API_CONFIG=unavailable npm run mock:api
 import { spawn } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { createServer, request } from 'node:http';
 
 const BASE_PATH = '/issuance-portal/api/v1';
 const PORT = Number(process.env.MOCK_API_PORT ?? 4000);
+const CONFIG = process.env.MOCK_API_CONFIG ?? 'mock/portal-config.cgcom.json';
+
+function sendJson(res, status, contentType, body) {
+  res.writeHead(status, { 'content-type': contentType });
+  res.end(typeof body === 'string' ? body : JSON.stringify(body));
+}
+
+function sendConfig(res) {
+  if (CONFIG === 'unavailable') {
+    sendJson(res, 503, 'application/problem+json', { type: 'config_unavailable', title: 'Config unavailable', status: 503 });
+    return;
+  }
+  // Read on every request, so the file can be edited without restarting.
+  sendJson(res, 200, 'application/json', readFileSync(CONFIG, 'utf-8'));
+}
 
 const modules = [
   { contract: 'api/journey.openapi.yaml', port: 4010, prefixes: ['config', 'journey', 'incidents'] },
@@ -33,10 +55,13 @@ function moduleFor(path) {
 const proxy = createServer((req, res) => {
   const url = req.url ?? '/';
   const path = url.startsWith(BASE_PATH) ? url.slice(BASE_PATH.length) || '/' : url;
+  if (req.method === 'GET' && path.split('?')[0] === '/config') {
+    sendConfig(res);
+    return;
+  }
   const target = moduleFor(path);
   if (!target) {
-    res.writeHead(404, { 'content-type': 'application/problem+json' });
-    res.end(JSON.stringify({ type: 'not_found', title: 'Not found', status: 404 }));
+    sendJson(res, 404, 'application/problem+json', { type: 'not_found', title: 'Not found', status: 404 });
     return;
   }
   const upstream = request(
@@ -47,13 +72,14 @@ const proxy = createServer((req, res) => {
     },
   );
   upstream.on('error', () => {
-    res.writeHead(502, { 'content-type': 'application/problem+json' });
-    res.end(JSON.stringify({ type: 'mock_unavailable', title: 'Mock not ready', status: 502 }));
+    sendJson(res, 502, 'application/problem+json', { type: 'mock_unavailable', title: 'Mock not ready', status: 502 });
   });
   req.pipe(upstream);
 });
 
-proxy.listen(PORT, () => console.log(`Issuance portal API mock on http://localhost:${PORT}${BASE_PATH}`));
+proxy.listen(PORT, () =>
+  console.log(`Issuance portal API mock on http://localhost:${PORT}${BASE_PATH} (GET /config: ${CONFIG})`),
+);
 
 function stop() {
   proxy.close();

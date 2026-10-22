@@ -1,0 +1,34 @@
+{
+  "branding": {
+    "logo_url": "/assets/tenants/cgcom/logo.png",
+    "colors": {
+      "primary": "#ffffff",
+      "primary_contrast": "#46484C",
+      "secondary": "#F9B000",
+      "secondary_contrast": "#46484C"
+    }
+  },
+  "languages": ["es", "en"],
+  "texts": {
+    "es": {
+      "issuanceInfo.title": "Obtén tu DoctorID en tu cartera digital",
+      "portal": { "app_name": "Portal de emisión de DoctorID" }
+    },
+    "en": {
+      "issuanceInfo.title": "Get your DoctorID in your digital wallet",
+      "portal": { "app_name": "DoctorID Issuance Portal" }
+    }
+  },
+  "support": {
+    "email": "soporte@example.org",
+    "phone": "900 000 000",
+    "schedule": "L-V 9:00-18:00",
+    "response_time": "48 horas"
+  },
+  "legal_links": {
+    "legal_notice": "https://example.org/aviso-legal",
+    "privacy": "https://example.org/privacidad",
+    "terms": "https://example.org/condiciones",
+    "accessibility": "https://example.org/accesibilidad"
+  }
+}
