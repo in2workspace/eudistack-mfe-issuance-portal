@@ -8,11 +8,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-## [0.4.0] - 2026-10-22
-
 ### Removed
 
-- **EUD-283 — demo retirada de la interfaz**: la identidad del titular ya no se lee de la dirección (`?u=`, `?identified=1`) ni de `sessionStorage`, y desaparece el usuario simulado con `?code=`. Se quitan los métodos, perfiles y autenticación simulados de `identify-methods` (eDNI, Video y DoctorID como métodos), `DoctorIdOidcService` (canjeaba y decodificaba el ID Token en el navegador sin comprobar la firma), la landing de ACME (`/cliente`, `features/acme/`, `AcmeOidcService` e imágenes), `features/issuance-entry-point/`, `IssuanceStateService`, `AuthenticatedUser`, `issuance-return.ts`, `TenantBrandingSource` y código muerto. Fuera de `env.js` y de los tres despliegues las claves OIDC y las de entrada de emisión; las variables `OIDC_*` del repositorio se pueden borrar a mano en GitHub.
+- **EUD-283 — demo retirada de la interfaz**: la identidad del titular ya no se lee de la dirección (`?u=`, `?identified=1`) ni de `sessionStorage`, y desaparece el usuario simulado con `?code=`. El portal ya no tiene identificación propia, porque el titular se identifica en el inicio de sesión del Verifier: fuera `identify-methods`, la ruta `/identify`, `features/identification/`, `identificationReturnGuard`, la sesión de arranque en `sessionStorage` e `IssuanceStartService`; "Empezar" queda sin destino hasta EUD-314. Fuera también `DoctorIdOidcService` (canjeaba el ID Token en el navegador sin comprobar la firma), la landing de ACME, `features/issuance-entry-point/`, `IssuanceStateService`, `AuthenticatedUser`, `issuance-return.ts`, `TenantPortalConfigSource`, la petición de la oferta de la demo (`POST /api/bootstrap` con los datos del titular desde el navegador) y código muerto. `env.js` solo conserva el override de tenant: fuera las claves OIDC, de entrada de emisión, de la oferta y de identificación, y sus variables en los tres despliegues; las del repositorio de GitHub se pueden borrar a mano.
 
 ### Fixed
 
@@ -20,18 +18,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- **EUD-283 — configuración e idioma desde `GET /config`**: marca (logo y colores `primary`, `primary_contrast`, `secondary`, `secondary_contrast`) e idiomas del tenant salen de `GET /config` en lugar de `assets/tenants/{tenant}/theme.json`. El idioma inicial es el del navegador si el tenant lo ofrece (sin región) y si no el primero del tenant; los textos del tenant de `/config` sustituyen a los del producto. Los textos dicen "atestación" en lugar de "credencial". Los pasos Datos y QR dejan de leer el usuario del navegador y vuelven a Inicio (`pendingJourneyGuard`) hasta EUD-286/EUD-287.
-- **EUD-301 — `DoctorIdOidcService` adaptado a los campos de DoctorID v1**: lee `personal_administrative_number`, `medical_board` y `medical_speciality` en lugar de `registrationNumber`, `provincialBoard` y `specialty`, y deja de leer `firstName`, `lastName` y `nationalId` del `id_token`.
-- **EUD-38 — allowlist de licencias unificada**: `.github/license-policy.json` es ahora la transcripción íntegra de `conv-quality-security-gates.md` §16.1, idéntica en los trece repositorios con gate. Añade `LGPL-2.1-only`, la grafía SPDX vigente del mismo permiso que `LGPL-2.1`, que ya estaba admitido: `logback` 1.5.34 la declara así y el gate la bloqueaba por la grafía, no por la licencia. Incorpora también las cuatro entradas que faltaban en este repositorio respecto de la convención (`EPL-1.0`, `LGPL-2.1`, `GPL-2.0-with-classpath-exception`, `Python-2.0`): una divergencia local de la política no es una decisión del repositorio, es un defecto.
+- **EUD-283 — marca, idioma y configuración**: la marca y los idiomas vienen del `theme.json` del tenant en los recursos compartidos, como en el Login y el Wallet, con el tema de EUDIStack si no carga; `GET /config` aporta lo propio del portal (textos del tenant, soporte, enlaces legales y dirección del wallet). El idioma inicial es el del navegador si el tenant lo ofrece y, si no, su idioma por defecto; los textos del tenant sustituyen a los del producto, que dicen "atestación" en lugar de "credencial". Datos y QR vuelven a Inicio (`pendingJourneyGuard`) hasta EUD-286/EUD-287, y `CredentialOfferService` conserva sus estados y la caducidad sin pedir la oferta. El canal de soporte y "¿Necesitas ayuda?" de Inicio quedan comentados temporalmente.
 
 ### Added
 
 - **EUD-283 — base común de la interfaz**:
-  - Clientes TypeScript generados de los tres contratos del servicio del portal de emisión (`api/`, `npm run api:generate` con openapi-generator en Docker, antes de cada build y test; `npm run api:sync` los copia de `eudistack-platform-dev`). Un cambio de contrato rompe la compilación (design.md AD-2).
-  - Interceptor para `/issuance-portal/api/v1`: cookie de sesión, `X-Requested-With: issuance-portal` y errores traducidos a `ApiProblemError` (`type`, `status`, `title`).
-  - Cabecera común en todas las pantallas: logo del tenant, nombre del portal, selector con los idiomas del tenant y botón de volver por ruta; neutra sin configuración.
-  - Pantalla "Ahora no se puede continuar" cuando `GET /config` falla, con "Volver a intentarlo" (prd.md §3.4).
-  - Textos de producto en inglés (`assets/i18n/en.json`) y `npm run mock:api` con un mock de la API a partir de los contratos.
+  - Clientes TypeScript generados de los dos contratos del servicio, Recorrido y Fuente auténtica (`api/`, `npm run api:generate` con openapi-generator en Docker antes de cada build y test; `npm run api:sync` los copia de `eudistack-platform-dev`). El generador y Prism se ejecutan desde `node_modules`, nunca con `npx`.
+  - Interceptor para `/issuance-portal/api/v1`: errores traducidos a `ApiProblemError` (`type`, `status`, `title`) y `Authorization: Bearer` cuando hay Access Token (`ISSUANCE_PORTAL_ACCESS_TOKEN`, que rellena EUD-314). Sin cookie ni `X-Requested-With`.
+  - Cabecera común en todas las pantallas: logo del tenant, nombre del portal, selector con los idiomas del tenant y botón de volver por ruta.
+  - Pantalla "Ahora no se puede continuar" cuando `GET /config` falla, con la cabecera del tenant y "Volver a intentarlo" (prd.md 1.4.0 §3.4).
+  - Textos de producto en inglés (`assets/i18n/en.json`) y `npm run mock:api` con un mock de la API a partir de los contratos y un token de prueba.
 
 - **EUD-220 — SBOM CycloneDX and License Gate**: Added CycloneDX 1.6 SBOM generation (`npm run sbom`), CI license compliance gate (`license-gate.yml`), and automated SBOM asset attachment to GitHub Releases. The evaluator is vendored at `.github/scripts/license-gate.mjs` with its own `node --test` suite, which the gate workflow runs before evaluating anything: this repository verifies itself without depending on any other one. Free-text upstream license names resolve through a reviewed SPDX equivalence table instead of piling up as expiring exceptions, and the `CODEOWNERS` rules that protect the policy, the exception register and the evaluator sit at the END of the file, because GitHub applies the last matching pattern.
 
