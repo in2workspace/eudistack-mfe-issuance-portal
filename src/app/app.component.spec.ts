@@ -47,7 +47,7 @@ describe('AppComponent', () => {
     expect((fixture.nativeElement as HTMLElement).querySelector('router-outlet')).toBeTruthy();
   });
 
-  it('AC-04: renders the common header above every screen', () => {
+  it('AC-08: renders the common header above every screen', () => {
     setUrl('/issuance-portal/', '');
     const fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges();
@@ -57,7 +57,7 @@ describe('AppComponent', () => {
     expect(element.querySelector('header img')).not.toBeNull();
   });
 
-  it('AC-04: the header keeps the tenant logo and language selector when the configuration is unavailable', () => {
+  it('AC-04, AC-08: the header keeps the tenant logo and language selector when the configuration is unavailable', () => {
     setUrl('/issuance-portal/', '');
     configState.set({ status: 'unavailable' });
     TestBed.inject(TenantLanguageService).apply({ ...DEFAULT_EUDISTACK_BRANDING, supportedLanguages: ['es', 'en'] }, ['es']);

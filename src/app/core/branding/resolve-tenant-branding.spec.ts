@@ -126,7 +126,7 @@ describe('resolveTenantBranding', () => {
     expect(branding).toEqual(DEFAULT_EUDISTACK_BRANDING);
   });
 
-  it('sanitizes tokens field by field: drops invalid CSS color values', () => {
+  it('EC-03: sanitizes tokens field by field: drops invalid CSS color values', () => {
     const result: TenantBrandingResult = {
       ok: true,
       descriptor: {

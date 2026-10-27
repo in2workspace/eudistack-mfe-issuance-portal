@@ -46,7 +46,7 @@ describe('PortalHeaderComponent', () => {
     fixture.detectChanges();
   }
 
-  it('AC-04: shows the tenant logo and the portal name', () => {
+  it('AC-01, AC-08: shows the tenant logo and the portal name', () => {
     expect(element().querySelector('img')?.getAttribute('src')).toBe('/assets/tenants/cgcom/logo.png');
     expect(element().textContent).toContain('portal.app_name');
   });
@@ -66,7 +66,7 @@ describe('PortalHeaderComponent', () => {
     expect(language.use).toHaveBeenCalledWith('es');
   });
 
-  it('AC-04: shows the back button only on routes that have one', async () => {
+  it('AC-08: shows the back button only on routes that have one', async () => {
     await navigate('/');
     expect(element().querySelector('button')).toBeNull();
 

@@ -13,7 +13,7 @@ function templates(dir: string): string[] {
 }
 
 describe('Screens', () => {
-  it('AC-04: no screen paints its own header, the common one comes from AppComponent', () => {
+  it('AC-08: no screen paints its own header, the common one comes from AppComponent', () => {
     const found = templates(__dirname);
 
     expect(found.length).toBeGreaterThan(0);

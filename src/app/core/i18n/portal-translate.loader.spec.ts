@@ -24,7 +24,7 @@ describe('PortalTranslateLoader', () => {
 
   afterEach(() => http.verify());
 
-  it('AC-05: a tenant text replaces the product text for the active language', () => {
+  it('AC-09: a tenant text replaces the product text for the active language', () => {
     texts.set({ es: { 'issuanceInfo.title': 'Obtén tu DoctorID' } });
     let result: Record<string, unknown> = {};
     loader.getTranslation('es').subscribe((t) => (result = t as Record<string, unknown>));
