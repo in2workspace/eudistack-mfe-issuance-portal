@@ -55,7 +55,11 @@ Until the service has every endpoint, you can run a mock built from the contract
 npm run mock:api
 ```
 
-It starts one Prism per contract and a proxy on `http://localhost:4000/issuance-portal/api/v1`. To use it from the local stack, point the `/issuance-portal/api/` location of `local-env/nginx/default.conf.template` in `eudistack-platform-dev` to `http://host.docker.internal:4000` and restart nginx. `GET /config` answers, like the service, by the tenant of the host: `mock/portal-config.<tenant>.json` (only `cgcom` is included), or 503 `config_unavailable` when the tenant has no file. The file is read on every request, so you can edit it without restarting. Set `MOCK_API_CONFIG` to force one file for every tenant, or to `unavailable` to always get 503. The other endpoints come from Prism, which makes up values from the schemas; those that need the `journey_session` cookie answer 401 without it.
+It starts one Prism per contract and a proxy on `http://localhost:4000/issuance-portal/api/v1`. To use it from the local stack, point the `/issuance-portal/api/v1/` location of `local-env/nginx/default.conf.template` in `eudistack-platform-dev` to `http://host.docker.internal:4000` and restart nginx. `GET /config` answers, like the service, by the tenant of the host: `mock/portal-config.<tenant>.json` (only `cgcom` is included), or 503 `config_unavailable` when the tenant has no file. The file is read on every request, so you can edit it without restarting. Set `MOCK_API_CONFIG` to force one file for every tenant, or to `unavailable` to always get 503. The other endpoints come from Prism, which makes up values from the schemas. They require a Bearer Access Token, which the portal gets from the Verifier login (EUD-314); until then the proxy adds a test token (`MOCK_API_TOKEN`, `mock-token` by default) to the calls that carry none.
+
+With the issuance portal service running in the local stack (its nginx route sends `/issuance-portal/api/v1/` to `issuance-portal-service`), the portal can use the real `GET /config` instead of the mock.
+
+The brand and the languages do not come from the API: the portal reads them from `/assets/tenants/{tenant}/theme.json`, served by nginx from `eudistack-platform-assets`.
 
 ## Running unit tests
 

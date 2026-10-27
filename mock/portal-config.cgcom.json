@@ -1,14 +1,4 @@
 {
-  "branding": {
-    "logo_url": "/assets/tenants/cgcom/logo.png",
-    "colors": {
-      "primary": "#ffffff",
-      "primary_contrast": "#46484C",
-      "secondary": "#F9B000",
-      "secondary_contrast": "#46484C"
-    }
-  },
-  "languages": ["es", "en"],
   "texts": {
     "es": {
       "issuanceInfo.title": "Obtén tu DoctorID en tu cartera digital",
@@ -20,15 +10,11 @@
     }
   },
   "support": {
-    "email": "soporte@example.org",
-    "phone": "900 000 000",
+    "email": "soporte@cgcom-identidad.es",
+    "phone": "900 123 456",
     "schedule": "L-V 9:00-18:00",
     "response_time": "48 horas"
   },
-  "legal_links": {
-    "legal_notice": "https://example.org/aviso-legal",
-    "privacy": "https://example.org/privacidad",
-    "terms": "https://example.org/condiciones",
-    "accessibility": "https://example.org/accesibilidad"
-  }
+  "legal_links": {},
+  "wallet_url": "https://cgcom.127.0.0.1.nip.io:4443/wallet"
 }

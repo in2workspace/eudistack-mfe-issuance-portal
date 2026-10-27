@@ -11,6 +11,11 @@
 // 503 config_unavailable when the tenant has no file. MOCK_API_CONFIG forces
 // one file for every tenant, or 503 with MOCK_API_CONFIG=unavailable.
 //
+// The contracts secure every endpoint but GET /config with a Bearer Access
+// Token, which the portal gets from the Verifier login (EUD-314). Until then
+// the proxy adds a test token, MOCK_API_TOKEN (mock-token by default), to the
+// calls that do not carry one.
+//
 // Usage: npm run mock:api
 //        MOCK_API_CONFIG=unavailable npm run mock:api
 import { spawn } from 'node:child_process';
@@ -21,6 +26,7 @@ import { localBin } from './local-bin.mjs';
 const BASE_PATH = '/issuance-portal/api/v1';
 const PORT = Number(process.env.MOCK_API_PORT ?? 4000);
 const CONFIG = process.env.MOCK_API_CONFIG;
+const TOKEN = process.env.MOCK_API_TOKEN ?? 'mock-token';
 const TENANT_PATTERN = /^[a-z0-9-]+$/;
 
 function sendJson(res, status, contentType, body) {
@@ -76,8 +82,9 @@ const proxy = createServer((req, res) => {
     sendJson(res, 404, 'application/problem+json', { type: 'not_found', title: 'Not found', status: 404 });
     return;
   }
+  const headers = { ...req.headers, authorization: req.headers.authorization ?? `Bearer ${TOKEN}` };
   const upstream = request(
-    { host: '127.0.0.1', port: target.port, method: req.method, path, headers: req.headers },
+    { host: '127.0.0.1', port: target.port, method: req.method, path, headers },
     (upstreamRes) => {
       res.writeHead(upstreamRes.statusCode ?? 502, upstreamRes.headers);
       upstreamRes.pipe(res);
