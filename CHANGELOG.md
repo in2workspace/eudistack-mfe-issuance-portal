@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-27
+
 ### Removed
 
 - **EUD-283 — demo retirada de la interfaz**: la identidad del titular ya no se lee de la dirección (`?u=`, `?identified=1`) ni de `sessionStorage`, y desaparece el usuario simulado con `?code=`. El portal ya no tiene identificación propia, porque el titular se identifica en el inicio de sesión del Verifier: fuera `identify-methods`, la ruta `/identify`, `features/identification/`, `identificationReturnGuard`, la sesión de arranque en `sessionStorage` e `IssuanceStartService`; "Empezar" queda sin destino hasta EUD-314. Fuera también `DoctorIdOidcService` (canjeaba el ID Token en el navegador sin comprobar la firma), la landing de ACME, `features/issuance-entry-point/`, `IssuanceStateService`, `AuthenticatedUser`, `issuance-return.ts`, `TenantPortalConfigSource`, la petición de la oferta de la demo (`POST /api/bootstrap` con los datos del titular desde el navegador) y código muerto. `env.js` solo conserva el override de tenant: fuera las claves OIDC, de entrada de emisión, de la oferta y de identificación, y sus variables en los tres despliegues; las del repositorio de GitHub se pueden borrar a mano.
