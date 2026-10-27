@@ -8,10 +8,11 @@ function primarySubtag(lang: string): string {
 }
 
 /**
- * Idioma del portal (prd.md FR-02, design.md AD-4). El inicial es el primero
- * del navegador que el tenant ofrece, comparando sin región (EC-02); si no
- * ofrece ninguno, el primero del tenant (AC-03). El titular solo puede cambiar
- * entre los idiomas del tenant.
+ * Idioma del portal (prd.md FR-02, design.md AD-4), con los idiomas del
+ * `theme.json` del tenant. El inicial es el primero del navegador que el
+ * tenant ofrece, comparando sin región (EC-02); si no ofrece ninguno, su
+ * idioma por defecto (AC-03), o el primero de su lista si ese no está en
+ * ella. El titular solo puede cambiar entre los idiomas del tenant.
  */
 @Injectable({ providedIn: 'root' })
 export class TenantLanguageService {
@@ -26,9 +27,21 @@ export class TenantLanguageService {
     const supported = branding.supportedLanguages;
     this._supported.set(supported);
     this.translate.addLangs([...supported]);
+    const fallback = supported.includes(branding.defaultLanguage) ? branding.defaultLanguage : supported[0];
     // Respaldo de las claves que falten en el idioma activo.
-    this.translate.setDefaultLang(branding.defaultLanguage);
-    this.use(this.initialLanguage(supported, browserLanguages) ?? branding.defaultLanguage);
+    this.translate.setDefaultLang(fallback);
+    this.use(this.browserLanguage(supported, browserLanguages) ?? fallback);
+  }
+
+  /**
+   * Vuelve a cargar los textos del idioma activo, para mezclar los del tenant
+   * cuando `GET /config` responde después del arranque.
+   */
+  reloadTexts(): void {
+    const lang = this._current();
+    if (lang) {
+      this.translate.reloadLang(lang).subscribe(() => this.translate.use(lang));
+    }
   }
 
   /** Cambia de idioma sin recargar. Un idioma que el tenant no ofrece se ignora. */
@@ -40,13 +53,13 @@ export class TenantLanguageService {
     this.translate.use(lang);
   }
 
-  private initialLanguage(supported: readonly string[], browserLanguages: readonly string[]): string | undefined {
+  private browserLanguage(supported: readonly string[], browserLanguages: readonly string[]): string | undefined {
     for (const browserLanguage of browserLanguages) {
       const match = supported.find((lang) => primarySubtag(lang) === primarySubtag(browserLanguage));
       if (match) {
         return match;
       }
     }
-    return supported[0];
+    return undefined;
   }
 }

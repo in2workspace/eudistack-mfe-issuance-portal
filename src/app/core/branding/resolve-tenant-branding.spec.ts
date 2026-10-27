@@ -25,7 +25,6 @@ describe('resolveTenantBranding', () => {
 
     const branding = resolveTenantBranding(result);
 
-    expect(branding.appName).toBe('CGCOM');
     expect(branding.logoUrl).toBe(DEFAULT_EUDISTACK_BRANDING.logoUrl);
     expect(branding.faviconUrl).toBe(DEFAULT_EUDISTACK_BRANDING.faviconUrl);
     expect(branding.defaultLanguage).toBe(DEFAULT_EUDISTACK_BRANDING.defaultLanguage);
@@ -34,11 +33,11 @@ describe('resolveTenantBranding', () => {
   });
 
   it('resolves in runtime with no build-time branch: same function, different tenant descriptors (AC-04)', () => {
-    const tenantA = resolveTenantBranding({ ok: true, descriptor: { branding: { name: 'Tenant A' } } });
-    const tenantB = resolveTenantBranding({ ok: true, descriptor: { branding: { name: 'Tenant B' } } });
+    const tenantA = resolveTenantBranding({ ok: true, descriptor: { branding: { logoUrl: '/assets/tenants/a/logo.svg' } } });
+    const tenantB = resolveTenantBranding({ ok: true, descriptor: { branding: { logoUrl: '/assets/tenants/b/logo.svg' } } });
 
-    expect(tenantA.appName).toBe('Tenant A');
-    expect(tenantB.appName).toBe('Tenant B');
+    expect(tenantA.logoUrl).toBe('/assets/tenants/a/logo.svg');
+    expect(tenantB.logoUrl).toBe('/assets/tenants/b/logo.svg');
   });
 
   it('a brand-new tenant resolves from config/assets alone, no code change (AC-05)', () => {
@@ -50,7 +49,6 @@ describe('resolveTenantBranding', () => {
       },
     });
 
-    expect(brandNewTenant.appName).toBe('Brand New Tenant');
     expect(brandNewTenant.logoUrl).toBe('/assets/tenants/brand-new/logo.svg');
     expect(brandNewTenant.defaultLanguage).toBe('en');
     expect(brandNewTenant.supportedLanguages).toEqual(['en']);

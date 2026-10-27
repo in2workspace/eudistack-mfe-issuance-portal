@@ -4,7 +4,6 @@ import { TranslateModule } from '@ngx-translate/core';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import { ConfigUnavailableComponent } from './config-unavailable.component';
 import { PortalConfigService, PortalConfigState } from '../../core/config/portal-config.service';
-import { BrandingService } from '../../core/branding/branding.service';
 import { TenantLanguageService } from '../../core/branding/tenant-language.service';
 import { PortalConfig } from '../../core/api/generated/journey';
 
@@ -13,27 +12,20 @@ expect.extend(toHaveNoViolations);
 describe('ConfigUnavailableComponent', () => {
   let fixture: ComponentFixture<ConfigUnavailableComponent>;
   let load: jest.Mock<Promise<PortalConfigState>>;
-  let brandingApply: jest.Mock;
+  let reloadTexts: jest.Mock;
   let router: Router;
 
-  const config: PortalConfig = {
-    branding: { logo_url: '/assets/tenants/cgcom/logo.png' },
-    languages: ['es'],
-    texts: {},
-    support: {},
-    legal_links: {},
-  };
+  const config: PortalConfig = { texts: {}, support: {}, legal_links: {}, wallet_url: 'https://cgcom.example/wallet' };
 
   beforeEach(() => {
     load = jest.fn();
-    brandingApply = jest.fn();
+    reloadTexts = jest.fn();
     TestBed.configureTestingModule({
       imports: [ConfigUnavailableComponent, TranslateModule.forRoot()],
       providers: [
         provideRouter([]),
         { provide: PortalConfigService, useValue: { load } },
-        { provide: BrandingService, useValue: { apply: brandingApply } },
-        { provide: TenantLanguageService, useValue: { apply: jest.fn() } },
+        { provide: TenantLanguageService, useValue: { reloadTexts } },
       ],
     });
     router = TestBed.inject(Router);
@@ -46,23 +38,23 @@ describe('ConfigUnavailableComponent', () => {
     return (fixture.nativeElement as HTMLElement).querySelector('button') as HTMLButtonElement;
   }
 
-  it('ES-01: shows the message with no code, system name or internal detail', () => {
+  it('AC-04: shows the message with no code, system name or internal detail', () => {
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
 
     expect(text).toContain('configUnavailable.title');
     expect(text).not.toMatch(/\b[45]\d{2}\b|config_unavailable|GET \/config|Problem/);
   });
 
-  it('ES-01: once GET /config answers, retrying applies the brand and goes to Inicio', async () => {
+  it('AC-04: once GET /config answers, retrying reloads the texts with the tenant ones and goes to Inicio', async () => {
     load.mockResolvedValue({ status: 'loaded', config });
 
     await fixture.componentInstance.onRetry();
 
-    expect(brandingApply).toHaveBeenCalledWith(expect.objectContaining({ logoUrl: '/assets/tenants/cgcom/logo.png' }));
+    expect(reloadTexts).toHaveBeenCalledTimes(1);
     expect(router.navigate).toHaveBeenCalledWith(['/']);
   });
 
-  it('ES-01: if it is still unavailable, retrying stays on this screen', async () => {
+  it('AC-04: if it is still unavailable, retrying stays on this screen', async () => {
     load.mockResolvedValue({ status: 'unavailable' });
 
     await fixture.componentInstance.onRetry();

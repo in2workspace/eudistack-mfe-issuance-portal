@@ -4,10 +4,9 @@
  * sin caché de módulo ni estado entre invocaciones — cada llamada re-resuelve
  * desde cero, base del aislamiento entre tenants (EC-05, R-2).
  *
- * Ya no se usa para la marca: la configuración del portal la resuelve el
- * servicio por el host (`GET /config`). Solo la usan la oferta (EUD-163), el
- * retorno del certificado (EUD-164), Inicio e Incidencias, y se retira con las
- * pantallas que llaman al servicio (EUD-284 a EUD-286).
+ * Con ella se pide el `theme.json` del tenant (marca e idiomas). La
+ * configuración propia del portal (`GET /config`) la resuelve el servicio por
+ * el host.
  *
  * @returns el candidato a tenant, o `null` si no hay override y el hostname
  *   no tiene subdominio (ES-03) — nunca adivina ni reutiliza un tenant previo.

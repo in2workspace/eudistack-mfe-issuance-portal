@@ -1,12 +1,14 @@
-import { Component, EnvironmentInjector, inject, runInInjectionContext, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
-import { loadPortalConfiguration } from '../../core/branding/branding.initializer';
+import { PortalConfigService } from '../../core/config/portal-config.service';
+import { TenantLanguageService } from '../../core/branding/tenant-language.service';
 
 /**
- * Configuración del portal no disponible (prd.md §3.4): sin detalles internos
- * y con la cabecera neutra. "Volver a intentarlo" vuelve a pedir la
- * configuración y, si responde, aplica marca e idioma y va a Inicio.
+ * Configuración del portal no disponible (prd.md §3.4): sin detalles
+ * internos, con la cabecera del tenant. "Volver a intentarlo" vuelve a pedir
+ * la configuración y, si responde, recarga los textos para añadir los del
+ * tenant y va a Inicio.
  */
 @Component({
   selector: 'app-config-unavailable',
@@ -15,7 +17,8 @@ import { loadPortalConfiguration } from '../../core/branding/branding.initialize
 })
 export class ConfigUnavailableComponent {
   private readonly router = inject(Router);
-  private readonly injector = inject(EnvironmentInjector);
+  private readonly config = inject(PortalConfigService);
+  private readonly language = inject(TenantLanguageService);
 
   protected readonly retrying = signal(false);
 
@@ -25,8 +28,9 @@ export class ConfigUnavailableComponent {
     }
     this.retrying.set(true);
     try {
-      const state = await runInInjectionContext(this.injector, () => loadPortalConfiguration());
+      const state = await this.config.load();
       if (state.status === 'loaded') {
+        this.language.reloadTexts();
         await this.router.navigate(['/']);
       }
     } finally {

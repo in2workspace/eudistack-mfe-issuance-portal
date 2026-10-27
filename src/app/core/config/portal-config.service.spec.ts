@@ -9,11 +9,10 @@ describe('PortalConfigService', () => {
   let http: HttpTestingController;
 
   const config = {
-    branding: { logo_url: '/assets/tenants/cgcom/logo.png', colors: { primary: '#ffffff' } },
-    languages: ['es'],
     texts: {},
     support: { email: 'soporte@example.org' },
     legal_links: {},
+    wallet_url: 'https://cgcom.example/wallet',
   };
 
   beforeEach(() => {
@@ -36,7 +35,7 @@ describe('PortalConfigService', () => {
     expect(service.config()).toEqual(config);
   });
 
-  it('ES-01: config_unavailable (503) leaves the configuration unavailable', async () => {
+  it('AC-04: config_unavailable (503) leaves the configuration unavailable', async () => {
     const loaded = service.load();
     http
       .expectOne('/issuance-portal/api/v1/config')
@@ -46,7 +45,7 @@ describe('PortalConfigService', () => {
     expect(service.config()).toBeNull();
   });
 
-  it('ES-02: no answer in 3 seconds leaves the configuration unavailable', async () => {
+  it('ES-01: no answer in 3 seconds leaves the configuration unavailable', async () => {
     jest.useFakeTimers();
     try {
       const loaded = service.load();
@@ -61,14 +60,14 @@ describe('PortalConfigService', () => {
     }
   });
 
-  it('ES-03: a configuration without its required fields is unavailable', async () => {
+  it('ES-02: a configuration without its required fields is unavailable', async () => {
     const loaded = service.load();
-    http.expectOne('/issuance-portal/api/v1/config').flush({ ...config, languages: [] });
+    http.expectOne('/issuance-portal/api/v1/config').flush({ ...config, wallet_url: undefined });
 
     expect(await loaded).toEqual({ status: 'unavailable' });
   });
 
-  it('ES-01: a retry after a failure can load the configuration', async () => {
+  it('AC-04: a retry after a failure can load the configuration', async () => {
     const first = service.load();
     http.expectOne('/issuance-portal/api/v1/config').error(new ProgressEvent('error'));
     await first;

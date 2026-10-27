@@ -1,18 +1,19 @@
 import { TestBed } from '@angular/core/testing';
 import { TranslateService } from '@ngx-translate/core';
+import { of } from 'rxjs';
 import { TenantLanguageService } from './tenant-language.service';
 import { DEFAULT_EUDISTACK_BRANDING, TenantBranding } from './tenant-branding.model';
 
 describe('TenantLanguageService', () => {
   let service: TenantLanguageService;
-  let translateSpy: { use: jest.Mock; addLangs: jest.Mock; setDefaultLang: jest.Mock };
+  let translateSpy: { use: jest.Mock; addLangs: jest.Mock; setDefaultLang: jest.Mock; reloadLang: jest.Mock };
 
-  function brandingWith(supportedLanguages: string[]): TenantBranding {
-    return { ...DEFAULT_EUDISTACK_BRANDING, defaultLanguage: supportedLanguages[0], supportedLanguages };
+  function brandingWith(supportedLanguages: string[], defaultLanguage = supportedLanguages[0]): TenantBranding {
+    return { ...DEFAULT_EUDISTACK_BRANDING, defaultLanguage, supportedLanguages };
   }
 
   beforeEach(() => {
-    translateSpy = { use: jest.fn(), addLangs: jest.fn(), setDefaultLang: jest.fn() };
+    translateSpy = { use: jest.fn(), addLangs: jest.fn(), setDefaultLang: jest.fn(), reloadLang: jest.fn(() => of({})) };
     TestBed.configureTestingModule({
       providers: [{ provide: TranslateService, useValue: translateSpy }],
     });
@@ -31,6 +32,28 @@ describe('TenantLanguageService', () => {
     service.apply(brandingWith(['es', 'en']), ['fr-FR', 'fr']);
 
     expect(translateSpy.use).toHaveBeenLastCalledWith('es');
+  });
+
+  it('AC-03: uses the default language of the tenant even when it is not the first of its list (cgcom: en, es)', () => {
+    service.apply(brandingWith(['en', 'es'], 'es'), ['fr']);
+
+    expect(service.current()).toBe('es');
+  });
+
+  it('uses the first language of the tenant when its default language is not in its list', () => {
+    service.apply(brandingWith(['es', 'en'], 'ca'), ['fr']);
+
+    expect(service.current()).toBe('es');
+  });
+
+  it('reloads the texts of the active language when the tenant texts arrive later', () => {
+    service.apply(brandingWith(['es', 'en']), ['en']);
+    translateSpy.use.mockClear();
+
+    service.reloadTexts();
+
+    expect(translateSpy.reloadLang).toHaveBeenCalledWith('en');
+    expect(translateSpy.use).toHaveBeenCalledWith('en');
   });
 
   it('falls back to the first language of the tenant for missing keys', () => {
