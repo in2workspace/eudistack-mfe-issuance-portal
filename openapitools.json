@@ -19,20 +19,6 @@
           "supportsES6": true
         }
       },
-      "identification": {
-        "generatorName": "typescript-angular",
-        "inputSpec": "#{cwd}/api/identification.openapi.yaml",
-        "output": "#{cwd}/src/app/core/api/generated/identification",
-        "additionalProperties": {
-          "ngVersion": "19.0.0",
-          "providedIn": "root",
-          "apiModulePrefix": "Identification",
-          "configurationPrefix": "Identification",
-          "serviceSuffix": "Api",
-          "fileNaming": "kebab-case",
-          "supportsES6": true
-        }
-      },
       "authentic-source": {
         "generatorName": "typescript-angular",
         "inputSpec": "#{cwd}/api/authentic-source.openapi.yaml",

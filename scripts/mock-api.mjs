@@ -48,7 +48,6 @@ function sendConfig(req, res) {
 
 const modules = [
   { contract: 'api/journey.openapi.yaml', port: 4010, prefixes: ['config', 'journey', 'incidents'] },
-  { contract: 'api/identification.openapi.yaml', port: 4011, prefixes: ['identification'] },
   { contract: 'api/authentic-source.openapi.yaml', port: 4012, prefixes: ['entitlement'] },
 ];
 

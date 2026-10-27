@@ -40,7 +40,7 @@ This will compile your project and store the build artifacts in the `dist/` dire
 
 The portal only talks to the issuance portal service, under `/issuance-portal/api/v1` on the tenant host. Its TypeScript clients are generated from the contracts in `api/` before every build and test run (`npm run api:generate`), with openapi-generator in Docker, so Docker must be running. The generated code lives in `src/app/core/api/generated/` and is not committed.
 
-The contracts are maintained in `eudistack-platform-dev`, one per module of the service. After a contract changes there, copy them again:
+The contracts are maintained in `eudistack-platform-dev` (`docs/02_discovery/features/`), one per module of the service: Journey and Authentic source. After a contract changes there, copy them again:
 
 ```bash
 npm run api:sync            # from ../eudistack-platform-dev

@@ -4,13 +4,16 @@ info:
   version: "1"
   summary: Authentic source module of the issuance portal service, used by the issuance portal interface.
   description: |
-    Part of the issuance portal service API, under the same base URL as the other modules and sharing the
-    journey session cookie. Requires a verified identity in the session.
+    Part of the issuance portal service API, under the same base URL as the Journey module. Every call carries
+    the holder's Access Token issued by the Verifier; the service validates it on every call and works on the
+    holder's journey in progress.
 
     The interface asks to verify the holder's entitlement without sending any holder data. The module takes the
-    personal identifier from the verified identity in the session, consults the authentic source configured for
-    the tenant and attestation type, translates its data into the attestation data and stores it in the session
-    with the result. It returns `confirmed` (with what the Data step shows) or `not_confirmed` (with a reason).
+    personal identifier and its type from the holder's journey, where the Journey module stored them from
+    the Access Token and the login method: national identity number (DNI/NIE) for
+    certificate (and Cl@ve in the future), registration number for DoctorID. The module searches the authentic
+    source configured for the tenant and attestation type by that identifier type, translates its data into the
+    attestation data and stores it in the journey with the result. It returns `confirmed` (with what the Data step shows) or `not_confirmed` (with a reason).
     With `not_confirmed`, the journey is withdrawn with reason `not_entitled`.
     If the source does not answer within 10 seconds, it returns 503. It never returns `confirmed` without an
     answer from the source. If the attestation type has no source configured, it returns `confirmed` with no
@@ -30,7 +33,7 @@ servers:
       environment:
         default: stg
 security:
-  - journeySession: []
+  - idpAccessToken: []
 tags:
   - name: Entitlement
     description: Entitlement verification against the authentic source.
@@ -63,13 +66,18 @@ paths:
                   value:
                     result: not_confirmed
                     reason: not_entitled
+        "401":
+          description: "`type` `unauthenticated`: missing, expired or invalid Access Token, or level of assurance below high."
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
         "409":
-          description: "`type` `step_not_allowed`: there is no verified identity in the session."
+          description: "`type` `step_not_allowed`: the holder has no journey in progress."
           content:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Problem" }
         "410":
-          description: "`type` `journey_closed`: the journey is no longer in progress or its session expired."
+          description: "`type` `journey_closed`: the journey is no longer in progress or it expired."
           content:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Problem" }
@@ -85,11 +93,11 @@ paths:
 
 components:
   securitySchemes:
-    journeySession:
-      type: apiKey
-      in: cookie
-      name: journey_session
-      description: Session of the holder's journey, shared by the three modules. HttpOnly, Secure, SameSite.
+    idpAccessToken:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Access Token issued by the tenant's Verifier to the issuance portal, with a high level of assurance.
 
   schemas:
     EntitlementResult:
@@ -107,7 +115,7 @@ components:
           description: |
             Only with `not_confirmed`. `not_found`: the holder is not in the source. `not_entitled`: the holder
             is in the source without entitlement, for example deregistered. `identifier_mismatch`: the source
-            returned data of a person with another identifier.
+            returned data of a person with an identifier other than the one searched.
 
     AttestationPreview:
       type: object
@@ -126,7 +134,7 @@ components:
         email:
           type: string
           format: email
-          description: Present when identification or the source provided it.
+          description: Present when the Access Token or the source provided it.
         email_required:
           type: boolean
           description: True when the interface must ask the holder for an email.

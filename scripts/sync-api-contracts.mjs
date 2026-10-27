@@ -7,11 +7,10 @@ import { copyFileSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 const platformDev = resolve(process.argv[2] ?? '../eudistack-platform-dev');
-const features = join(platformDev, 'docs', 'features');
+const features = join(platformDev, 'docs', '02_discovery', 'features');
 
 const contracts = {
   'journey.openapi.yaml': 'EUD-262-servicio-portal-emision',
-  'identification.openapi.yaml': 'EUD-260-identificacion-titular',
   'authentic-source.openapi.yaml': 'EUD-261-fuente-autentica',
 };
 
