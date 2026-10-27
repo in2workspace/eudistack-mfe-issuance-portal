@@ -10,7 +10,7 @@ import { PortalConfigService, PortalConfigState } from './core/config/portal-con
 import { PortalConfig } from './core/api/generated/journey';
 
 /**
- * AC-06 / NFR-2: recorre todas las rutas y comprueba que ni el
+ * AC-05 / NFR-2: recorre todas las rutas y comprueba que ni el
  * almacenamiento del navegador ni la dirección tienen identidad, datos de la
  * atestación o correo del titular.
  */
@@ -39,7 +39,7 @@ describe('Holder data in the browser', () => {
   }
 
   it.each(['/', '/identify', '/user-data', '/offer', '/incidents', '/unavailable', '/cliente'])(
-    'AC-06: visiting %s leaves no holder data in the storage or the address',
+    'AC-05: visiting %s leaves no holder data in the storage or the address',
     async (url) => {
       const harness = await RouterTestingHarness.create();
       await harness.navigateByUrl(url);
@@ -49,10 +49,21 @@ describe('Holder data in the browser', () => {
     },
   );
 
-  it('EC-01: an old demo address with ?u= and ?code= stores nothing of the holder', async () => {
-    const harness = await RouterTestingHarness.create();
-    await harness.navigateByUrl('/?u=eyJuYW1lIjoiRHJhIn0&code=abc&identified=1');
+  it.each(['/?u=eyJuYW1lIjoiRHJhIn0&code=abc&identified=1', '/user-data?u=eyJuYW1lIjoiRHJhIn0', '/unavailable?identified=1'])(
+    'AC-05, EC-01: an old demo address (%s) stores nothing and its parameters leave the address',
+    async (url) => {
+      const harness = await RouterTestingHarness.create();
+      await harness.navigateByUrl(url);
 
-    expect(storageContents()).not.toMatch(holderData);
+      expect(storageContents()).not.toMatch(holderData);
+      expect(TestBed.inject(Router).url).not.toMatch(/[?&](u|code|identified)=/);
+    },
+  );
+
+  it('keeps any other query parameter', async () => {
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/?lang=en&code=abc');
+
+    expect(TestBed.inject(Router).url).toBe('/?lang=en');
   });
 });

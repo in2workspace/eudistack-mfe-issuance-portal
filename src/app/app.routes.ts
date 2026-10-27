@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { pendingJourneyGuard } from './core/guards/pending-journey.guard';
 import { CONFIG_UNAVAILABLE_PATH, configAvailableGuard, configUnavailableGuard } from './core/guards/config-available.guard';
+import { legacyQueryParamsGuard } from './core/guards/legacy-query-params.guard';
 
 export const routes: Routes = [
   {
@@ -8,12 +9,12 @@ export const routes: Routes = [
     path: CONFIG_UNAVAILABLE_PATH,
     loadComponent: () =>
       import('./features/config-unavailable/config-unavailable.component').then((m) => m.ConfigUnavailableComponent),
-    canActivate: [configUnavailableGuard],
+    canActivate: [legacyQueryParamsGuard, configUnavailableGuard],
   },
   {
     // Todas las pantallas necesitan la configuración del tenant.
     path: '',
-    canActivateChild: [configAvailableGuard],
+    canActivateChild: [legacyQueryParamsGuard, configAvailableGuard],
     children: [
       {
         path: '',

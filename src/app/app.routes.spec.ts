@@ -1,5 +1,6 @@
 import { Route } from '@angular/router';
 import { routes } from './app.routes';
+import { configAvailableGuard, configUnavailableGuard } from './core/guards/config-available.guard';
 
 describe('routes', () => {
   /** Rutas de las pantallas: las hijas de la ruta que exige la configuración. */
@@ -42,7 +43,7 @@ describe('routes', () => {
 
   it('ES-01: every screen requires the configuration, except the unavailable one', () => {
     const parent = routes.find((r) => r.path === '' && r.children);
-    expect(parent?.canActivateChild?.length).toBe(1);
-    expect(routes.find((r) => r.path === 'unavailable')?.canActivate?.length).toBe(1);
+    expect(parent?.canActivateChild).toContain(configAvailableGuard);
+    expect(routes.find((r) => r.path === 'unavailable')?.canActivate).toContain(configUnavailableGuard);
   });
 });
