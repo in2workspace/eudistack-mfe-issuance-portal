@@ -19,7 +19,8 @@
 // Usage: npm run mock:api
 //        MOCK_API_CONFIG=unavailable npm run mock:api
 import { spawn } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
 import { createServer, request } from 'node:http';
 import { localBin } from './local-bin.mjs';
 
@@ -42,9 +43,25 @@ function tenantOf(req) {
   return TENANT_PATTERN.test(tenant) ? tenant : null;
 }
 
+/**
+ * Files mock/portal-config.<tenant>.json by tenant, listed on every request so
+ * new files are picked up without restarting. The tenant of the request is
+ * only a key into this map: no path is ever built from request data.
+ */
+function tenantConfigFiles() {
+  const files = new Map();
+  for (const name of readdirSync('mock')) {
+    const match = /^portal-config\.([a-z0-9-]+)\.json$/.exec(name);
+    if (match) {
+      files.set(match[1], join('mock', name));
+    }
+  }
+  return files;
+}
+
 function sendConfig(req, res) {
   const tenant = tenantOf(req);
-  const file = CONFIG ?? (tenant ? `mock/portal-config.${tenant}.json` : null);
+  const file = CONFIG ?? (tenant ? tenantConfigFiles().get(tenant) : undefined);
   if (!file || file === 'unavailable' || !existsSync(file)) {
     sendJson(res, 503, 'application/problem+json', { type: 'config_unavailable', title: 'Config unavailable', status: 503 });
     return;
