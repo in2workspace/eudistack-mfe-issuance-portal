@@ -134,15 +134,6 @@ jobs:
           path: dist/out/browser/
 
       - name: Generate env.js
-        env:
-          CERT_IDENTIFIER_URL: ${{ vars.CERT_IDENTIFIER_URL }}
-          BOOTSTRAP_API_URL: ${{ vars.BOOTSTRAP_API_URL }}
-          WALLET_CALLBACK_BASE: ${{ vars.WALLET_CALLBACK_BASE }}
-          CREDENTIAL_OFFER_URL: ${{ vars.CREDENTIAL_OFFER_URL }}
-          CREDENTIAL_OFFER_LINK_BASE: ${{ vars.CREDENTIAL_OFFER_LINK_BASE }}
-          IDENTIFICATION_URL: ${{ vars.IDENTIFICATION_URL }}
-          IDENTIFICATION_CORRELATION_MODE: ${{ vars.IDENTIFICATION_CORRELATION_MODE }}
-          IDENTIFICATION_CORRELATION_PARAM: ${{ vars.IDENTIFICATION_CORRELATION_PARAM }}
         run: |
           set -euo pipefail
           sudo apt-get update && sudo apt-get install -y gettext-base
@@ -226,15 +217,6 @@ jobs:
           path: dist/out/browser/
 
       - name: Generate env.js
-        env:
-          CERT_IDENTIFIER_URL: ${{ vars.CERT_IDENTIFIER_URL }}
-          BOOTSTRAP_API_URL: ${{ vars.BOOTSTRAP_API_URL }}
-          WALLET_CALLBACK_BASE: ${{ vars.WALLET_CALLBACK_BASE }}
-          CREDENTIAL_OFFER_URL: ${{ vars.CREDENTIAL_OFFER_URL }}
-          CREDENTIAL_OFFER_LINK_BASE: ${{ vars.CREDENTIAL_OFFER_LINK_BASE }}
-          IDENTIFICATION_URL: ${{ vars.IDENTIFICATION_URL }}
-          IDENTIFICATION_CORRELATION_MODE: ${{ vars.IDENTIFICATION_CORRELATION_MODE }}
-          IDENTIFICATION_CORRELATION_PARAM: ${{ vars.IDENTIFICATION_CORRELATION_PARAM }}
         run: |
           set -euo pipefail
           sudo apt-get update && sudo apt-get install -y gettext-base
@@ -317,15 +299,6 @@ jobs:
           path: dist/out/browser/
 
       - name: Generate env.js
-        env:
-          CERT_IDENTIFIER_URL: ${{ vars.CERT_IDENTIFIER_URL }}
-          BOOTSTRAP_API_URL: ${{ vars.BOOTSTRAP_API_URL }}
-          WALLET_CALLBACK_BASE: ${{ vars.WALLET_CALLBACK_BASE }}
-          CREDENTIAL_OFFER_URL: ${{ vars.CREDENTIAL_OFFER_URL }}
-          CREDENTIAL_OFFER_LINK_BASE: ${{ vars.CREDENTIAL_OFFER_LINK_BASE }}
-          IDENTIFICATION_URL: ${{ vars.IDENTIFICATION_URL }}
-          IDENTIFICATION_CORRELATION_MODE: ${{ vars.IDENTIFICATION_CORRELATION_MODE }}
-          IDENTIFICATION_CORRELATION_PARAM: ${{ vars.IDENTIFICATION_CORRELATION_PARAM }}
         run: |
           set -euo pipefail
           sudo apt-get update && sudo apt-get install -y gettext-base
