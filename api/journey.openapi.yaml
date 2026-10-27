@@ -1,0 +1,405 @@
+openapi: 3.1.0
+info:
+  title: EUDIStack — Issuance Portal Service · Journey module
+  version: "1"
+  summary: Journey module of the issuance portal service, used by the issuance portal interface.
+  description: |
+    The issuance portal service has two modules, each with its own part of the API under the same base URL
+    and sharing the journey data: Journey (this contract) and Authentic source.
+
+    The interface identifies the holder with the Verifier (OpenID Connect, authorization code with PKCE) and
+    calls the service with the Access Token the Verifier issues, as a Bearer token. The service accepts only
+    tokens that are valid, issued by the tenant's Verifier for the portal and with a high level of assurance;
+    otherwise it answers 401. It takes the holder's verified identity from the token.
+
+    The journey is linked to the holder of the token. A holder has at most one journey in progress per tenant,
+    and every call works on that journey. The verified identity and the attestation data live only in the
+    service and never come from the browser: this module only accepts the holder's confirmation and the email.
+
+    Journey states: `in_progress`, `completed` (an offer was obtained) and `withdrawn` (cancelled by the
+    holder, not entitled according to the authentic source, or expired after 15 minutes of inactivity, before
+    an offer was obtained). A journey is never deleted. When it ends, is withdrawn or expires, personal data is
+    deleted; the journey keeps its state, the step reached and the withdrawal reason.
+
+    A journey creates at most one issuance process. A new QR is a new credential offer for that same process,
+    requested from the issuance API as a system; it voids the previous offer.
+
+    A step whose prerequisites are not in the journey gets 409 `step_not_allowed`. A request on a journey that
+    is no longer in progress, or that expired, gets 410 `journey_closed`. The tenant comes from the host.
+  contact:
+    name: EUDIStack
+    url: https://eudistack.net
+  license:
+    name: Proprietary
+    identifier: LicenseRef-Proprietary
+servers:
+  - url: https://{tenant}.{environment}.eudistack.net/issuance-portal/api/v1
+    description: Tenant endpoint.
+    variables:
+      tenant:
+        default: sandbox
+      environment:
+        default: stg
+tags:
+  - name: Configuration
+    description: Portal configuration of the tenant.
+  - name: Journey
+    description: Lifecycle of the holder's journey and issuance request.
+  - name: Incidents
+    description: Support requests from holders.
+
+paths:
+  /config:
+    get:
+      tags: [Configuration]
+      operationId: getPortalConfig
+      summary: Get the portal configuration of the tenant
+      security: []
+      responses:
+        "200":
+          description: Texts, legal links and support details of the tenant. Branding and languages are not included; the interface takes them from the platform shared assets.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PortalConfig" }
+        "503":
+          description: "`type` `config_unavailable`: the tenant's portal configuration is missing or invalid."
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /journey:
+    post:
+      tags: [Journey]
+      operationId: openJourney
+      summary: Open the holder's journey
+      description: Opens a journey in progress for the holder of the token, or returns the one already in progress.
+      security: [{ idpAccessToken: [] }]
+      responses:
+        "200":
+          description: Journey already in progress.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Journey" }
+        "201":
+          description: Journey opened.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Journey" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+    get:
+      tags: [Journey]
+      operationId: getJourney
+      summary: Get the current journey
+      description: State, step reached and, once the attestation data is in the journey, what the Data step shows.
+      security: [{ idpAccessToken: [] }]
+      responses:
+        "200":
+          description: Current journey.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Journey" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "410": { $ref: "#/components/responses/JourneyClosed" }
+
+  /journey/withdrawal:
+    post:
+      tags: [Journey]
+      operationId: withdrawJourney
+      summary: Withdraw the journey
+      description: |
+        The holder cancels before obtaining an offer. The journey becomes `withdrawn` with the step reached and
+        reason `cancelled`, and personal data is deleted. On a `completed` journey it ends it and deletes personal data.
+      security: [{ idpAccessToken: [] }]
+      responses:
+        "200":
+          description: Journey withdrawn or ended.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Journey" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "410": { $ref: "#/components/responses/JourneyClosed" }
+
+  /journey/confirmation:
+    post:
+      tags: [Journey]
+      operationId: confirmAndIssue
+      summary: Confirm the data and request issuance
+      description: |
+        Requires a verified identity and a confirmed entitlement in the journey. Only `email` is accepted; any
+        other field is ignored. The email is also the holder's wallet account email. The service requests
+        issuance with delivery by link and authorization code grant, then, if the tenant uses onboarding tickets,
+        requests one from the Wallet Unit Service with that email and the offer link. The journey becomes `completed`
+        when the offer is returned.
+
+        If the Wallet Unit Service rejects the ticket request or does not answer, the service answers 503
+        `onboarding_unavailable` and returns no offer. The offer obtained is never used and no attestation is issued.
+        The journey stays `in_progress` at step `entitlement_confirmed`; the interface calls this operation again.
+        Once the journey has its issuance process, a repeated confirmation does not request issuance again: it
+        renews the offer of that process and asks for a new ticket, like `POST /journey/offers`. Retries of the
+        issuance request reuse the journey's idempotency key.
+      security: [{ idpAccessToken: [] }]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: { type: string, format: email }
+      responses:
+        "200":
+          description: Offer ready.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Offer" }
+        "400":
+          description: "`type` `email_required` or `email_invalid`."
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "409":
+          description: |
+            - `type` `step_not_allowed`: what the step needs is not in the journey yet, or the address already
+              delivered has not expired.
+            - `type` `offer_not_renewable`: the issuance process of the journey is no longer a draft (the holder
+              collected the attestation, or it was withdrawn or revoked). The journey ends, its personal data is
+              deleted and no other issuance is requested.
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "410": { $ref: "#/components/responses/JourneyClosed" }
+        "502":
+          description: "`type` `issuance_rejected`: the issuance API rejected the request."
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "503":
+          description: |
+            - `type` `issuance_unavailable`: the issuance API did not answer after the retries.
+            - `type` `onboarding_unavailable`: the tenant uses onboarding tickets and the Wallet Unit Service rejected
+              the ticket request or did not answer. No offer is returned.
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /journey/offers:
+    post:
+      tags: [Journey]
+      operationId: newOffer
+      summary: Request a new offer
+      description: |
+        After the address delivered expired, or after a previous call got `onboarding_unavailable`, while the
+        journey is active. The service asks the issuance API for a new credential offer for the journey's issuance
+        process, which voids the previous one, and, if the tenant uses them, for a new onboarding ticket. No new
+        issuance process is created. If the ticket cannot be obtained, it answers 503 `onboarding_unavailable` with
+        no offer and the interface calls this operation again. If the address delivered has not expired yet, it
+        answers 409 `step_not_allowed` and the current offer keeps working.
+      security: [{ idpAccessToken: [] }]
+      responses:
+        "200":
+          description: New offer ready.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Offer" }
+        "409":
+          description: |
+            - `type` `step_not_allowed`: what the step needs is not in the journey yet, or the address already
+              delivered has not expired.
+            - `type` `offer_not_renewable`: the issuance process of the journey is no longer a draft (the holder
+              collected the attestation, or it was withdrawn or revoked). The journey ends, its personal data is
+              deleted and no other issuance is requested.
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "410": { $ref: "#/components/responses/JourneyClosed" }
+        "502":
+          description: "`type` `issuance_rejected`."
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "503":
+          description: "`type` `issuance_unavailable`, or `onboarding_unavailable` (no offer is returned)."
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /incidents:
+    post:
+      tags: [Incidents]
+      operationId: sendIncident
+      summary: Send an incident to the tenant's support
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Incident" }
+      responses:
+        "202":
+          description: Incident sent.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [response_time]
+                properties:
+                  response_time:
+                    type: string
+                    description: Response time of the tenant's support, as shown to the holder.
+        "400":
+          description: "`type` `bad_request`: missing or malformed field."
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "429":
+          description: "`type` `too_many_requests`."
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+components:
+  securitySchemes:
+    idpAccessToken:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Access Token issued by the tenant's Verifier to the issuance portal, with a high level of assurance.
+
+  responses:
+    StepNotAllowed:
+      description: "`type` `step_not_allowed`: what the step needs is not in the journey yet."
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    Unauthenticated:
+      description: "`type` `unauthenticated`: missing, expired or invalid Access Token, or level of assurance below high."
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    JourneyClosed:
+      description: "`type` `journey_closed`: the journey is no longer in progress or it expired."
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+
+  schemas:
+    PortalConfig:
+      type: object
+      required: [texts, support, legal_links, wallet_url]
+      properties:
+        wallet_url:
+          type: string
+          format: uri
+          description: Address of the tenant's wallet. Used to build the QR with the offer link when the offer has no `onboarding_url`.
+        texts:
+          type: object
+          additionalProperties: true
+          description: Texts of each step, by language.
+        support:
+          type: object
+          properties:
+            email: { type: string, format: email }
+            phone: { type: string }
+            schedule: { type: string }
+            response_time: { type: string }
+        legal_links:
+          type: object
+          properties:
+            legal_notice: { type: string, format: uri }
+            privacy: { type: string, format: uri }
+            terms: { type: string, format: uri }
+            accessibility: { type: string, format: uri }
+
+    Journey:
+      type: object
+      required: [state, step]
+      properties:
+        state:
+          type: string
+          enum: [in_progress, completed, withdrawn]
+        step:
+          type: string
+          enum: [identified, entitlement_confirmed, offer_obtained]
+          description: Last step reached.
+        withdrawal_reason:
+          type: string
+          enum: [cancelled, not_entitled, expired]
+          description: Only with `withdrawn`.
+        attestation:
+          $ref: "#/components/schemas/AttestationPreview"
+        offer:
+          $ref: "#/components/schemas/Offer"
+
+    AttestationPreview:
+      type: object
+      description: What the interface shows in the Data step. Read only. Present once the entitlement is confirmed.
+      required: [type_name, fields, email_required]
+      properties:
+        type_name: { type: string }
+        fields:
+          type: array
+          items:
+            type: object
+            required: [label, value]
+            properties:
+              label: { type: string }
+              value: { type: string }
+        email:
+          type: string
+          format: email
+          description: Present when the Access Token or the authentic source provided it.
+        email_required:
+          type: boolean
+          description: True when the interface must ask the holder for an email.
+
+    Offer:
+      type: object
+      description: |
+        With `onboarding_url`, the QR, the button and the copy link carry it as is. Without it (the tenant does not
+        use onboarding tickets), the interface builds the tenant's wallet address with `wallet_url` and the offer link.
+      required: [credential_offer_uri, expires_at]
+      properties:
+        credential_offer_uri:
+          type: string
+          description: Offer link exactly as returned by the issuance API.
+        expires_at:
+          type: string
+          format: date-time
+        onboarding_url:
+          type: string
+          format: uri
+          description: |
+            Onboarding address returned by the Wallet Unit Service: the tenant's wallet host and a short single-use
+            ticket, with no other data. The Wallet Unit Service keeps the email and the offer with the ticket. Always
+            present when the tenant uses onboarding tickets, absent otherwise.
+          example: https://wallet.example/t/Zk3q9Xw2Lp7Rt4Vb8Nc1Ha
+        onboarding_expires_at:
+          type: string
+          format: date-time
+          description: Earlier than `expires_at`. Present with `onboarding_url`.
+
+    Incident:
+      type: object
+      required: [name, email, type, subject, description]
+      properties:
+        name: { type: string, maxLength: 200 }
+        email: { type: string, format: email }
+        phone: { type: string, maxLength: 30 }
+        type:
+          type: string
+          enum: [technical, access, credentials, other]
+        subject: { type: string, maxLength: 200 }
+        description: { type: string, maxLength: 5000 }
+
+    Problem:
+      type: object
+      description: Problem details (RFC 9457 shape). `type` is an error code.
+      required: [type, title, status]
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string, format: uri-reference }

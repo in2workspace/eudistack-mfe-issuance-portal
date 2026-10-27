@@ -5,7 +5,6 @@ import { TranslateModule } from '@ngx-translate/core';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import { CredentialOfferComponent } from './credential-offer.component';
 import { CredentialOfferService, CredentialOfferStatus } from './credential-offer.service';
-import { IssuanceStateService } from '../../core/services/issuance-state.service';
 import { CannotContinueReason } from '../issuance-start/cannot-continue-reason';
 
 expect.extend(toHaveNoViolations);
@@ -19,8 +18,6 @@ jest.mock('qrcode', () => ({
 
 describe('CredentialOfferComponent a11y (AC-08, WCAG 2.1 AA)', () => {
   let fixture: ComponentFixture<CredentialOfferComponent>;
-
-  const user = { name: 'Dra. García', email: 'a@b.com', collegiateNumber: '123', dni: '12345678A' };
 
   function configure(
     initialStatus: CredentialOfferStatus,
@@ -41,7 +38,6 @@ describe('CredentialOfferComponent a11y (AC-08, WCAG 2.1 AA)', () => {
             cannotContinueReason: signal(initialStatus === 'unavailable' ? CannotContinueReason.OfferUnavailable : null),
           },
         },
-        { provide: IssuanceStateService, useValue: { authenticatedUser: () => user } },
         provideRouter([]),
       ],
     });

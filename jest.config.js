@@ -22,5 +22,6 @@ module.exports = {
     '!<rootDir>/node_modules/',
     '!<rootDir>/test/',
     '!src/app/**/*.module.ts',
+    '!src/app/core/api/generated/**',
   ],
 };

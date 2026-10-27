@@ -8,7 +8,6 @@ export interface TenantBranding {
   tokens: Record<string, string>;
   logoUrl: string;
   faviconUrl: string;
-  appName: string;
   /** Idioma aplicado si el configurado por el tenant no es válido/soportado. */
   defaultLanguage: string;
   /** Allow-list de idiomas que `TenantLanguageService` acepta para este tenant. */
@@ -37,7 +36,6 @@ export const DEFAULT_EUDISTACK_BRANDING: Readonly<TenantBranding> = Object.freez
   // (pensada para fondos de color/oscuros — sería invisible aquí).
   logoUrl: '/assets/tenants/eudistack/logo-dark.svg',
   faviconUrl: '/assets/tenants/eudistack/favicon.svg',
-  appName: 'EUDIStack',
   defaultLanguage: 'es',
   supportedLanguages: Object.freeze(['es', 'en']) as string[],
 });
@@ -47,9 +45,9 @@ export const DEFAULT_EUDISTACK_BRANDING: Readonly<TenantBranding> = Object.freez
  * assets compartido (`eudistack-platform-assets/tenants/{tenant}/theme.json`,
  * servido same-origin por nginx — mismo contrato que consume `ThemeService` en
  * la Wallet PWA, SAD §8.8). Todos los campos son `unknown`/opcionales:
- * `resolveTenantBranding()` (task 3) valida y sanitiza cada uno antes de
+ * `resolveTenantBranding()` valida y sanitiza cada uno antes de
  * aceptarlo — este tipo nunca se usa para renderizar directamente. Solo se
- * modelan los campos que EUD-166 consume; `content.*` y otros campos del
+ * modelan los campos que consume el portal; `content.*` y otros campos del
  * theme.json real (links, footer, wallet URLs…) no son de interés aquí.
  */
 export type TenantBrandingDescriptor = {
@@ -72,7 +70,7 @@ export type TenantBrandingDescriptor = {
 
 /**
  * Resultado fail-safe de cargar el descriptor de un tenant. `reason` distingue
- * las 4 categorías de fallo que `TenantBrandingSource` (task 5) puede producir;
+ * las 4 categorías de fallo que `TenantBrandingSource` puede producir;
  * `resolveTenantBranding()` trata todas ellas igual: cae al default (EC-01,
  * ES-01, ES-02, ES-04, ES-05).
  */

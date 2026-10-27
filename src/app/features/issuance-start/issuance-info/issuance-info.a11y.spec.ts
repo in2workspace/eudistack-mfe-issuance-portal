@@ -3,7 +3,6 @@ import { provideRouter } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import { IssuanceInfoComponent } from './issuance-info.component';
-import { IssuanceStartService } from '../issuance-start.service';
 
 expect.extend(toHaveNoViolations);
 
@@ -13,13 +12,7 @@ describe('IssuanceInfoComponent a11y', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [IssuanceInfoComponent, TranslateModule.forRoot()],
-      providers: [
-        {
-          provide: IssuanceStartService,
-          useValue: { start: jest.fn(), retry: jest.fn(), cannotContinueReason: () => null },
-        },
-        provideRouter([]),
-      ],
+      providers: [provideRouter([])],
     });
 
     fixture = TestBed.createComponent(IssuanceInfoComponent);

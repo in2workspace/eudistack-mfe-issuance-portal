@@ -5,29 +5,37 @@ import { TenantBrandingSource } from './tenant-branding.source';
 import { BrandingService } from './branding.service';
 import { TenantLanguageService } from './tenant-language.service';
 import { DEFAULT_EUDISTACK_BRANDING, TenantBrandingResult } from './tenant-branding.model';
+import { PortalConfigService, PortalConfigState } from '../config/portal-config.service';
 
 describe('initializeBranding', () => {
   let sourceSpy: { load: jest.Mock };
+  let configLoad: jest.Mock;
   let brandingApplySpy: jest.Mock;
   let languageApplySpy: jest.Mock;
   const originalLocation = window.location;
 
+  const cgcomTheme: TenantBrandingResult = {
+    ok: true,
+    descriptor: {
+      branding: { logoUrl: '/assets/tenants/cgcom/logo.png', primaryColor: '#123456' },
+      i18n: { defaultLang: 'es', available: ['es', 'en'] },
+    },
+  };
+
   function setHostname(hostname: string): void {
-    Object.defineProperty(window, 'location', {
-      writable: true,
-      configurable: true,
-      value: { ...originalLocation, hostname },
-    });
+    Object.defineProperty(window, 'location', { writable: true, configurable: true, value: { ...originalLocation, hostname } });
   }
 
-  function configure(load$: Observable<TenantBrandingResult>): void {
+  function configure(load$: Observable<TenantBrandingResult>, config: PortalConfigState): void {
     sourceSpy = { load: jest.fn().mockReturnValue(load$) };
+    configLoad = jest.fn().mockResolvedValue(config);
     brandingApplySpy = jest.fn();
     languageApplySpy = jest.fn();
 
     TestBed.configureTestingModule({
       providers: [
         { provide: TenantBrandingSource, useValue: sourceSpy },
+        { provide: PortalConfigService, useValue: { load: configLoad } },
         { provide: BrandingService, useValue: { apply: brandingApplySpy } },
         { provide: TenantLanguageService, useValue: { apply: languageApplySpy } },
       ],
@@ -38,21 +46,31 @@ describe('initializeBranding', () => {
     Object.defineProperty(window, 'location', { writable: true, configurable: true, value: originalLocation });
   });
 
-  it('orchestrates identity → load → resolve → apply before the component tree bootstraps (AC-06)', async () => {
+  it('AC-01: loads the theme.json of the tenant of the host and GET /config, then applies brand and language', async () => {
     setHostname('cgcom.eudistack.net');
-    const result: TenantBrandingResult = { ok: true, descriptor: { branding: { name: 'CGCOM' } } };
-    configure(of(result));
+    configure(of(cgcomTheme), { status: 'unavailable' });
 
     await TestBed.runInInjectionContext(() => initializeBranding());
 
     expect(sourceSpy.load).toHaveBeenCalledWith('cgcom');
-    expect(brandingApplySpy).toHaveBeenCalledWith(expect.objectContaining({ appName: 'CGCOM' }));
-    expect(languageApplySpy).toHaveBeenCalledWith(expect.objectContaining({ appName: 'CGCOM' }));
+    expect(configLoad).toHaveBeenCalledTimes(1);
+    const expected = expect.objectContaining({ logoUrl: '/assets/tenants/cgcom/logo.png', supportedLanguages: ['es', 'en'] });
+    expect(brandingApplySpy).toHaveBeenCalledWith(expected);
+    expect(languageApplySpy).toHaveBeenCalledWith(expected);
   });
 
-  it('resolves to the neutral default and never blocks bootstrap on a network/5xx failure (ES-04)', async () => {
+  it('AC-04: the tenant brand is applied even when GET /config is unavailable', async () => {
     setHostname('cgcom.eudistack.net');
-    configure(throwError(() => new Error('network error')));
+    configure(of(cgcomTheme), { status: 'unavailable' });
+
+    await TestBed.runInInjectionContext(() => initializeBranding());
+
+    expect(brandingApplySpy).toHaveBeenCalledWith(expect.objectContaining({ logoUrl: '/assets/tenants/cgcom/logo.png' }));
+  });
+
+  it('ES-03: when the theme does not load, applies the EUDIStack theme and never blocks bootstrap', async () => {
+    setHostname('cgcom.eudistack.net');
+    configure(throwError(() => new Error('network error')), { status: 'unavailable' });
 
     await expect(TestBed.runInInjectionContext(() => initializeBranding())).resolves.toBeUndefined();
 
@@ -60,18 +78,18 @@ describe('initializeBranding', () => {
     expect(languageApplySpy).toHaveBeenCalledWith(DEFAULT_EUDISTACK_BRANDING);
   });
 
-  it('resolves to the neutral default and never blocks bootstrap on a timeout (ES-05)', async () => {
-    setHostname('cgcom.eudistack.net');
-    configure(throwError(() => new Error('Timeout has occurred')));
+  it('EC-05: a tenant without theme.json gets the EUDIStack theme', async () => {
+    setHostname('nuevo.eudistack.net');
+    configure(of<TenantBrandingResult>({ ok: false, reason: 'absent' }), { status: 'unavailable' });
 
-    await expect(TestBed.runInInjectionContext(() => initializeBranding())).resolves.toBeUndefined();
+    await TestBed.runInInjectionContext(() => initializeBranding());
 
     expect(brandingApplySpy).toHaveBeenCalledWith(DEFAULT_EUDISTACK_BRANDING);
   });
 
-  it('never calls the branding source when the tenant identity is not resolvable (ES-03)', async () => {
+  it('never asks for a theme when the tenant cannot be resolved from the host', async () => {
     setHostname('localhost');
-    configure(of({ ok: true, descriptor: {} }));
+    configure(of(cgcomTheme), { status: 'unavailable' });
 
     await TestBed.runInInjectionContext(() => initializeBranding());
 

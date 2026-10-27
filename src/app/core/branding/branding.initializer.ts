@@ -7,13 +7,16 @@ import { resolveTenantBranding } from './resolve-tenant-branding';
 import { TenantBrandingSource } from './tenant-branding.source';
 import { BrandingService } from './branding.service';
 import { TenantLanguageService } from './tenant-language.service';
+import { PortalConfigService } from '../config/portal-config.service';
 
 /**
- * Orquesta identidad → carga → resolución → aplicación de branding/idioma
- * ANTES de que Angular bootstree el árbol de componentes (AC-06, sin flash).
- * Resuelve SIEMPRE — nunca rechaza la promesa (belt-and-suspenders): cada paso
- * del pipeline ya es fail-safe por diseño (AD-2), pero un fallo inesperado no
- * debe impedir el arranque del portal.
+ * Antes de que Angular arranque el árbol de componentes (sin flash), pide a
+ * la vez el `theme.json` del tenant y `GET /config` (design.md AD-4). Con los
+ * dos aplica la marca y el idioma, para que el primer catálogo ya lleve los
+ * textos del tenant. La marca no depende de `/config`: si la configuración
+ * falla se aplica igual y `configAvailableGuard` lleva al error de
+ * configuración. Sin tema, o si no carga, el tema de EUDIStack. Resuelve
+ * siempre, nunca rechaza.
  *
  * Registro en `app.config.ts`:
  * ```ts
@@ -22,18 +25,17 @@ import { TenantLanguageService } from './tenant-language.service';
  */
 export async function initializeBranding(): Promise<void> {
   const source = inject(TenantBrandingSource);
+  const configService = inject(PortalConfigService);
   const brandingService = inject(BrandingService);
   const languageService = inject(TenantLanguageService);
 
   try {
     const tenant = resolveTenantIdentity(window.location, environment);
+    const theme: Promise<TenantBrandingResult | null> = tenant
+      ? firstValueFrom(source.load(tenant).pipe(catchError(() => of<TenantBrandingResult>({ ok: false, reason: 'error' }))))
+      : Promise.resolve(null);
 
-    const result: TenantBrandingResult | null = tenant
-      ? await firstValueFrom(
-          source.load(tenant).pipe(catchError(() => of<TenantBrandingResult>({ ok: false, reason: 'error' }))),
-        )
-      : null;
-
+    const [result] = await Promise.all([theme, configService.load()]);
     const branding = resolveTenantBranding(result);
     brandingService.apply(branding);
     languageService.apply(branding);

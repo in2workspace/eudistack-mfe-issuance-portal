@@ -4,11 +4,9 @@
  * sin caché de módulo ni estado entre invocaciones — cada llamada re-resuelve
  * desde cero, base del aislamiento entre tenants (EC-05, R-2).
  *
- * El subdominio es un trust boundary (AD-3): a diferencia de otros mecanismos
- * de identidad de tenant del producto, esta función NO valida contra una
- * allow-list de tenants conocidos — cualquier candidato no válido cae al
- * branding neutro más adelante en el pipeline vía `TenantBrandingSource`
- * (404 → `absent`), nunca aquí.
+ * Con ella se pide el `theme.json` del tenant (marca e idiomas). La
+ * configuración propia del portal (`GET /config`) la resuelve el servicio por
+ * el host.
  *
  * @returns el candidato a tenant, o `null` si no hay override y el hostname
  *   no tiene subdominio (ES-03) — nunca adivina ni reutiliza un tenant previo.
