@@ -5,12 +5,14 @@
 // which is how the eudistack-platform-dev Makefile builds the MFEs, PWD stays
 // as a POSIX path (/c/Users/...) that Node reads as C:\c\Users\..., so the
 // CLI misses the config and falls back to the Java generator. PWD is set to
-// the real working directory here.
+// the real working directory here. The CLI is the one in node_modules, never
+// one fetched by npx (see local-bin.mjs).
 //
 // Usage: npm run api:generate
 import { spawnSync } from 'node:child_process';
+import { localBin } from './local-bin.mjs';
 
-const result = spawnSync('npx', ['openapi-generator-cli', 'generate'], {
+const result = spawnSync(localBin('openapi-generator-cli'), ['generate'], {
   stdio: 'inherit',
   shell: process.platform === 'win32',
   env: { ...process.env, PWD: process.cwd() },

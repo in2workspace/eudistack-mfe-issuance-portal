@@ -15,7 +15,7 @@ import { PortalConfig } from './core/api/generated/journey';
  * atestación o correo del titular.
  */
 describe('Holder data in the browser', () => {
-  const config: PortalConfig = { branding: {}, languages: ['es'], texts: {}, support: {}, legal_links: {} };
+  const config: PortalConfig = { texts: {}, support: {}, legal_links: {}, wallet_url: 'https://cgcom.example/wallet' };
   const holderData = /dni|nif|givenName|familyName|email|correo|colegiado|collegiate|specialty|especialidad|@/i;
 
   beforeEach(() => {

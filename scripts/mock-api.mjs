@@ -16,6 +16,7 @@
 import { spawn } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { createServer, request } from 'node:http';
+import { localBin } from './local-bin.mjs';
 
 const BASE_PATH = '/issuance-portal/api/v1';
 const PORT = Number(process.env.MOCK_API_PORT ?? 4000);
@@ -52,7 +53,7 @@ const modules = [
 ];
 
 const children = modules.map(({ contract, port }) =>
-  spawn('npx', ['prism', 'mock', contract, '--port', String(port), '--host', '127.0.0.1'], {
+  spawn(localBin('prism'), ['mock', contract, '--port', String(port), '--host', '127.0.0.1'], {
     stdio: 'inherit',
     shell: process.platform === 'win32',
   }),

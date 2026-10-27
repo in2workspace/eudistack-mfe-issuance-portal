@@ -1,16 +1,18 @@
-import { PortalConfig } from '../api/generated/journey';
-import { DEFAULT_EUDISTACK_BRANDING, TenantBranding } from './tenant-branding.model';
+import {
+  DEFAULT_EUDISTACK_BRANDING,
+  TenantBranding,
+  TenantBrandingDescriptor,
+  TenantBrandingResult,
+} from './tenant-branding.model';
 
-/**
- * Mapea cada CSS custom property (allow-list, R-6) a su clave en
- * `branding.colors` de `GET /config`. Las claves están pendientes de fijar en
- * el contrato con EUD-276; se usan las mismas del `theme.json` en snake_case.
- */
-const TOKEN_FIELD_MAP: Record<string, string> = {
-  '--brand-primary': 'primary',
-  '--brand-primary-contrast': 'primary_contrast',
-  '--brand-secondary': 'secondary',
-  '--brand-secondary-contrast': 'secondary_contrast',
+type BrandingDescriptor = NonNullable<TenantBrandingDescriptor['branding']>;
+
+/** Mapea cada CSS custom property (allow-list, R-6) al campo del `theme.json` real que la alimenta. */
+const TOKEN_FIELD_MAP: Record<string, keyof BrandingDescriptor> = {
+  '--brand-primary': 'primaryColor',
+  '--brand-primary-contrast': 'primaryContrastColor',
+  '--brand-secondary': 'secondaryColor',
+  '--brand-secondary-contrast': 'secondaryContrastColor',
 };
 
 /** Mismo patrón de validación de color que `ThemeService` (Wallet PWA, SAD §8.8) — defensa en profundidad ante inyección de valores CSS (R-6). */
@@ -61,13 +63,13 @@ function deriveAccentTokens(tokens: Record<string, string>): Record<string, stri
   };
 }
 
-function sanitizeTokens(colors: unknown): Record<string, string> {
+function sanitizeTokens(branding: BrandingDescriptor | undefined): Record<string, string> {
   const tokens: Record<string, string> = { ...DEFAULT_EUDISTACK_BRANDING.tokens };
-  if (!colors || typeof colors !== 'object') {
+  if (!branding || typeof branding !== 'object') {
     return { ...tokens, ...deriveAccentTokens(tokens) };
   }
   for (const [token, field] of Object.entries(TOKEN_FIELD_MAP)) {
-    const value = (colors as Record<string, unknown>)[field];
+    const value = branding[field];
     if (isNonEmptyString(value) && CSS_COLOR_PATTERN.test(value.trim())) {
       tokens[token] = value.trim();
     }
@@ -79,26 +81,49 @@ function sanitizeField(raw: unknown, fallback: string): string {
   return isNonEmptyString(raw) ? raw.trim() : fallback;
 }
 
+function sanitizeSupportedLanguages(raw: unknown): string[] {
+  if (!Array.isArray(raw)) {
+    return [...DEFAULT_EUDISTACK_BRANDING.supportedLanguages];
+  }
+  const languages = raw.filter(isNonEmptyString).map(lang => lang.trim());
+  return languages.length > 0 ? languages : [...DEFAULT_EUDISTACK_BRANDING.supportedLanguages];
+}
+
 /**
- * Resuelve un `TenantBranding` completo y válido a partir de la configuración
- * del portal (`GET /config`), o `null` si no está disponible. Nunca lanza
- * (ES-01): cada campo se valida por separado y uno inválido cae al valor
- * neutro sin invalidar el resto (EC-03). Sin configuración → exactamente
- * `DEFAULT_EUDISTACK_BRANDING`, nunca la marca de un tenant previo (R-2).
+ * Resuelve un `TenantBranding` completo y válido a partir del resultado fail-safe
+ * de cargar el descriptor del tenant (o `null` cuando la identidad de tenant no
+ * fue resoluble — ES-03). Nunca lanza (ES-01): valida y sanitiza cada campo por
+ * separado desde la forma anidada real (`descriptor.branding.*`,
+ * `descriptor.i18n.*` — mismo contrato que `theme.json` en la Wallet PWA); uno
+ * inválido cae al valor neutro correspondiente sin invalidar el resto (EC-02).
+ * Sin descriptor válido → exactamente `DEFAULT_EUDISTACK_BRANDING` (EC-01,
+ * ES-02/ES-03/ES-04/ES-05) — nunca el branding de un tenant previo (R-2).
  */
-export function resolveTenantBranding(config: PortalConfig | null): TenantBranding {
+export function resolveTenantBranding(result: TenantBrandingResult | null): TenantBranding {
   try {
-    if (!config) {
+    if (!result || !result.ok) {
       return DEFAULT_EUDISTACK_BRANDING;
     }
-    const languages = config.languages.filter(isNonEmptyString).map((lang) => lang.trim());
+
+    const descriptor: TenantBrandingDescriptor = result.descriptor ?? {};
+    const branding = descriptor.branding;
+    const i18n = descriptor.i18n;
+
+    // Todos los headers de este repo tienen fondo blanco (AD-2): se prioriza
+    // la variante oscura del logo (contraste sobre claro); si el tenant no
+    // la publica, se usa `logoUrl` tal cual (caso CGCOM, sin `logoDarkUrl`).
+    const logoDarkUrl = branding?.logoDarkUrl;
+    const logoUrl = isNonEmptyString(logoDarkUrl)
+      ? logoDarkUrl.trim()
+      : sanitizeField(branding?.logoUrl, DEFAULT_EUDISTACK_BRANDING.logoUrl);
+
     return {
-      tokens: sanitizeTokens(config.branding?.colors),
-      logoUrl: sanitizeField(config.branding?.logo_url, DEFAULT_EUDISTACK_BRANDING.logoUrl),
-      // El contrato no trae favicon.
-      faviconUrl: DEFAULT_EUDISTACK_BRANDING.faviconUrl,
-      defaultLanguage: languages[0] ?? DEFAULT_EUDISTACK_BRANDING.defaultLanguage,
-      supportedLanguages: languages.length > 0 ? languages : [...DEFAULT_EUDISTACK_BRANDING.supportedLanguages],
+      tokens: sanitizeTokens(branding),
+      logoUrl,
+      faviconUrl: sanitizeField(branding?.faviconUrl, DEFAULT_EUDISTACK_BRANDING.faviconUrl),
+      appName: sanitizeField(branding?.name, DEFAULT_EUDISTACK_BRANDING.appName),
+      defaultLanguage: sanitizeField(i18n?.defaultLang, DEFAULT_EUDISTACK_BRANDING.defaultLanguage),
+      supportedLanguages: sanitizeSupportedLanguages(i18n?.available),
     };
   } catch {
     return DEFAULT_EUDISTACK_BRANDING;
