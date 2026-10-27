@@ -53,7 +53,7 @@ describe('AppComponent', () => {
     fixture.detectChanges();
 
     const element = fixture.nativeElement as HTMLElement;
-    expect(element.querySelectorAll('header').length).toBe(1);
+    expect(element.querySelectorAll('header')).toHaveLength(1);
     expect(element.querySelector('header img')).not.toBeNull();
   });
 
@@ -66,7 +66,7 @@ describe('AppComponent', () => {
 
     const element = fixture.nativeElement as HTMLElement;
     expect(element.querySelector('header img')).not.toBeNull();
-    expect(element.querySelectorAll('header select option').length).toBe(2);
+    expect(element.querySelectorAll('header select option')).toHaveLength(2);
   });
 
   it.each([

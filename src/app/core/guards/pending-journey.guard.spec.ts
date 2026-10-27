@@ -13,7 +13,7 @@ describe('pendingJourneyGuard', () => {
     );
 
     const router = TestBed.inject(Router);
-    expect(result instanceof UrlTree).toBe(true);
+    expect(result).toBeInstanceOf(UrlTree);
     expect(router.serializeUrl(result as UrlTree)).toBe('/');
   });
 });

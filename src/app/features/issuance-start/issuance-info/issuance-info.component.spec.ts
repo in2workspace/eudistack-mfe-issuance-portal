@@ -40,8 +40,8 @@ describe('IssuanceInfoComponent', () => {
 
     expect(navigate).not.toHaveBeenCalled();
     expect(navigateByUrl).not.toHaveBeenCalled();
-    expect(sessionStorage.length).toBe(0);
-    expect(localStorage.length).toBe(0);
+    expect(sessionStorage).toHaveLength(0);
+    expect(localStorage).toHaveLength(0);
   });
 
   it('renders the explainer sections and footer without a second start CTA or h1 (AC-01, AC-03)', () => {
