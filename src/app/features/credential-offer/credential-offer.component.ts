@@ -54,7 +54,7 @@ export class CredentialOfferComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.router.navigate(['/']);
+    void this.router.navigate(['/']);
   }
 
   ngOnDestroy(): void {
@@ -62,14 +62,14 @@ export class CredentialOfferComponent implements OnInit, OnDestroy {
   }
 
   onRetry(): void {
-    this.router.navigate(['/']);
+    void this.router.navigate(['/']);
   }
 
   onComplete(): void {
-    this.router.navigate(['/']);
+    void this.router.navigate(['/']);
   }
 
   onCancel(): void {
-    this.router.navigate(['/']);
+    void this.router.navigate(['/']);
   }
 }

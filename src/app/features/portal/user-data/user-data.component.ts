@@ -15,10 +15,10 @@ export class UserDataComponent {
   private readonly router = inject(Router);
 
   onCancel(): void {
-    this.router.navigate(['/']);
+    void this.router.navigate(['/']);
   }
 
   onContinue(): void {
-    this.router.navigate(['/offer']);
+    void this.router.navigate(['/offer']);
   }
 }

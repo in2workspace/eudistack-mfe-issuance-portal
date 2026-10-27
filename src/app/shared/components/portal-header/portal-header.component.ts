@@ -53,7 +53,7 @@ export class PortalHeaderComponent {
   onBack(): void {
     const back = this.backTo();
     if (back !== null) {
-      this.router.navigateByUrl(`/${back}`);
+      void this.router.navigateByUrl(`/${back}`);
     }
   }
 
