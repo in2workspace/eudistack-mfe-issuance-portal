@@ -1,19 +1,11 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
-import { IssuanceStartService } from '../issuance-start.service';
-import { resolveTenantIdentity } from '../../../core/branding/resolve-tenant-identity';
 import { resolveSupportEmail } from '../../../core/branding/resolve-support-email';
-import { environment } from '../../../../environments/environment';
 
 /**
- * Pantalla informativa de arranque de emisión (AC-01, FR-01, FR-11).
- *
- * Dos estados, mutuamente excluyentes por construcción (`computed` sobre una
- * única fuente de verdad — `IssuanceStartService.cannotContinueReason`):
- * - **Informativo** (por defecto): información del proceso + CTA.
- * - **No se puede continuar** (AC-05): aviso genérico i18n + Reintentar
- *   (AC-06), sin exponer la causa cruda (ES-01).
+ * Pantalla informativa de arranque de emisión (AC-01, FR-01, FR-11): qué es
+ * la cartera, cómo funciona el proceso y el CTA para empezar.
  */
 @Component({
   selector: 'app-issuance-info',
@@ -23,20 +15,18 @@ import { environment } from '../../../../environments/environment';
   styleUrl: './issuance-info.component.scss',
 })
 export class IssuanceInfoComponent {
-  private readonly issuanceStartService = inject(IssuanceStartService);
   private readonly router = inject(Router);
 
-  readonly cannotContinue = computed(() => this.issuanceStartService.cannotContinueReason() !== null);
   readonly currentYear = new Date().getFullYear();
   protected readonly supportEmail = resolveSupportEmail();
 
+  /**
+   * El titular ya no se identifica en el portal: "Empezar" lo llevará al
+   * inicio de sesión del Verifier, que añade EUD-314. Hasta entonces no hace
+   * nada.
+   */
   onStart(): void {
-    const tenant = resolveTenantIdentity(window.location, environment) ?? 'cgcom';
-    this.issuanceStartService.start(tenant);
-  }
-
-  onRetry(): void {
-    this.issuanceStartService.retry();
+    // Sin destino hasta EUD-314.
   }
 
   navigateToIncidents(): void {

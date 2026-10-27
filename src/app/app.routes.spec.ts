@@ -35,8 +35,8 @@ describe('routes', () => {
     expect(screens.find((r) => r.path === 'qr')).toBeUndefined();
   });
 
-  it('EC-04: the ACME landing routes are gone and any unknown path goes back to Inicio', () => {
-    expect([...routes, ...screens].filter((r) => r.path?.startsWith('cliente'))).toEqual([]);
+  it('EC-04: the ACME landing and identification routes are gone and any unknown path goes back to Inicio', () => {
+    expect([...routes, ...screens].filter((r) => r.path?.startsWith('cliente') || r.path === 'identify')).toEqual([]);
     expect(routes[routes.length - 1]).toEqual({ path: '**', redirectTo: '' });
   });
 

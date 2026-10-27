@@ -5,7 +5,6 @@ import { resolveWalletInvocationUrl, WalletInvocationUrl } from './resolve-walle
 import { msUntilCredentialOfferExpiry } from './credential-offer-expiry';
 import { CredentialOffer, CredentialOfferFailureReason } from './credential-offer.model';
 import { CannotContinueReason } from '../issuance-start/cannot-continue-reason';
-import { IssuanceStartSessionStore } from '../issuance-start/issuance-start-session.store';
 import { TenantPortalConfigSource } from '../../core/config/tenant-portal-config.source';
 import { resolveTenantIdentity } from '../../core/branding/resolve-tenant-identity';
 import { environment } from '../../../environments/environment';
@@ -29,7 +28,6 @@ export const MAX_QR_PAYLOAD_CHARS = 1200;
 @Injectable({ providedIn: 'root' })
 export class CredentialOfferService {
   private readonly configSource = inject(TenantPortalConfigSource);
-  private readonly sessionStore = inject(IssuanceStartSessionStore);
   private readonly source = inject(CredentialOfferSource);
 
   private readonly _status = signal<CredentialOfferStatus>('idle');
@@ -150,14 +148,12 @@ export class CredentialOfferService {
     return reason === 'timeout' ? CannotContinueReason.OfferTimeout : CannotContinueReason.OfferUnavailable;
   }
 
-  /** Clave de memoización por proceso (AC-07) — `session.id`, o `tenant:<tenant>` sin sesión (EC-04). */
+  /** Clave de memoización por proceso (AC-07): el tenant, ya sin sesión de arranque en el navegador. */
   private resolveProcessKey(): string {
-    const session = this.sessionStore.read();
-    return session?.id ?? `tenant:${this.resolveTenant()}`;
+    return `tenant:${this.resolveTenant()}`;
   }
 
   private resolveTenant(): string {
-    const session = this.sessionStore.read();
-    return session?.tenant ?? resolveTenantIdentity(window.location, environment) ?? '';
+    return resolveTenantIdentity(window.location, environment) ?? '';
   }
 }

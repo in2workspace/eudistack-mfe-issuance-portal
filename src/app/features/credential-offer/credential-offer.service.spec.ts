@@ -3,7 +3,6 @@ import { Subject } from 'rxjs';
 import { CredentialOfferService } from './credential-offer.service';
 import { CredentialOfferSource } from './credential-offer.source';
 import { TenantPortalConfigSource } from '../../core/config/tenant-portal-config.source';
-import { IssuanceStartSessionStore } from '../issuance-start/issuance-start-session.store';
 import { CannotContinueReason } from '../issuance-start/cannot-continue-reason';
 import { CredentialOfferResult } from './credential-offer.model';
 
@@ -11,7 +10,6 @@ describe('CredentialOfferService', () => {
   let service: CredentialOfferService;
   let source: { fetch: jest.Mock };
   let configSource: { read: jest.Mock };
-  let sessionStore: { read: jest.Mock };
   let fetch$: Subject<CredentialOfferResult>;
 
   const context = { name: 'Dra. García', email: 'a@b.com', collegiateNumber: '123', dni: '12345678A' };
@@ -21,14 +19,12 @@ describe('CredentialOfferService', () => {
     fetch$ = new Subject();
     source = { fetch: jest.fn(() => fetch$.asObservable()) };
     configSource = { read: jest.fn(() => validConfig) };
-    sessionStore = { read: jest.fn(() => ({ id: 'sess-1', tenant: 'cgcom', state: 'iniciada' })) };
 
     TestBed.configureTestingModule({
       providers: [
         CredentialOfferService,
         { provide: CredentialOfferSource, useValue: source },
         { provide: TenantPortalConfigSource, useValue: configSource },
-        { provide: IssuanceStartSessionStore, useValue: sessionStore },
       ],
     });
     service = TestBed.inject(CredentialOfferService);
@@ -101,9 +97,7 @@ describe('CredentialOfferService', () => {
     expect(service.cannotContinueReason()).toBe(CannotContinueReason.OfferUnavailable);
   });
 
-  it('EC-04: sin sesión, la solicitud se identifica por tenant y AC-07 sigue aplicando', () => {
-    sessionStore.read.mockReturnValue(null);
-
+  it('EC-04: la solicitud se identifica por tenant y AC-07 sigue aplicando', () => {
     service.request(context);
     fetch$.next({ ok: true, offer: { reference: 'ref', obtainedAt: Date.now() } });
     service.request(context);
