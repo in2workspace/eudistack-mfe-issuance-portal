@@ -10,7 +10,12 @@
 //
 // Usage: npm run api:generate
 import { spawnSync } from 'node:child_process';
+import { rmSync } from 'node:fs';
 import { localBin } from './local-bin.mjs';
+
+// openapi-generator never deletes files: start from an empty folder so a
+// client or operation removed from a contract stops compiling (AC-07).
+rmSync('src/app/core/api/generated', { recursive: true, force: true });
 
 const result = spawnSync(localBin('openapi-generator-cli'), ['generate'], {
   stdio: 'inherit',
