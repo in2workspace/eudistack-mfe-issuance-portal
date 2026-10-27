@@ -86,16 +86,6 @@ describe('PortalHeaderComponent', () => {
     expect(router.url).toBe('/');
   });
 
-  it('ES-01: in neutral mode shows neither the logo nor the language selector', async () => {
-    fixture.componentRef.setInput('neutral', true);
-    await navigate('/identify');
-
-    expect(element().querySelector('img')).toBeNull();
-    expect(element().querySelector('select')).toBeNull();
-    expect(element().querySelector('button')).toBeNull();
-    expect(element().textContent).toContain('portal.app_name');
-  });
-
   it('sets the tab title to the portal name in the active language', () => {
     const translate = TestBed.inject(TranslateService);
     translate.setTranslation('es', { portal: { app_name: 'Portal de emisión' } });
@@ -110,10 +100,4 @@ describe('PortalHeaderComponent', () => {
     expect(await axe(element())).toHaveNoViolations();
   });
 
-  it('NFR-1: has no accessibility violations in neutral mode', async () => {
-    fixture.componentRef.setInput('neutral', true);
-    fixture.detectChanges();
-
-    expect(await axe(element())).toHaveNoViolations();
-  });
 });

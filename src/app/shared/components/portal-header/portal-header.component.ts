@@ -1,4 +1,4 @@
-import { Component, inject, input } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { Title } from '@angular/platform-browser';
 import { ActivatedRouteSnapshot, NavigationEnd, Router } from '@angular/router';
@@ -20,8 +20,9 @@ function backOf(root: ActivatedRouteSnapshot): string | null {
 /**
  * Cabecera común de todas las pantallas (wireframes, navegación y cabecera):
  * logo del tenant, nombre del portal, selector con los idiomas del tenant y,
- * en las rutas con `data.back`, un botón para volver. En modo neutro (sin
- * configuración del tenant) solo muestra el nombre del portal.
+ * en las rutas con `data.back`, un botón para volver. La marca viene del
+ * `theme.json` del tenant, así que se muestra también cuando `GET /config`
+ * no está disponible.
  */
 @Component({
   selector: 'app-portal-header',
@@ -29,8 +30,6 @@ function backOf(root: ActivatedRouteSnapshot): string | null {
   templateUrl: './portal-header.component.html',
 })
 export class PortalHeaderComponent {
-  readonly neutral = input(false);
-
   private readonly router = inject(Router);
   protected readonly branding = inject(BrandingService);
   protected readonly language = inject(TenantLanguageService);

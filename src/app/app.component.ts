@@ -1,6 +1,5 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { PortalConfigService } from './core/config/portal-config.service';
 import { PortalHeaderComponent } from './shared/components/portal-header/portal-header.component';
 
 /**
@@ -13,13 +12,8 @@ import { PortalHeaderComponent } from './shared/components/portal-header/portal-
   selector: 'app-root',
   imports: [RouterOutlet, PortalHeaderComponent],
   template: `
-    <app-portal-header [neutral]="configUnavailable()" />
+    <app-portal-header />
     <router-outlet />
   `,
 })
-export class AppComponent {
-  private readonly portalConfig = inject(PortalConfigService);
-
-  /** Sin configuración del tenant, la cabecera es neutra (prd.md §3.4). */
-  protected readonly configUnavailable = computed(() => this.portalConfig.state().status === 'unavailable');
-}
+export class AppComponent {}

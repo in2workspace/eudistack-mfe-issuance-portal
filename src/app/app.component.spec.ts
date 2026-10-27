@@ -4,6 +4,8 @@ import { provideRouter, Router } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { AppComponent } from './app.component';
 import { PortalConfigService, PortalConfigState } from './core/config/portal-config.service';
+import { TenantLanguageService } from './core/branding/tenant-language.service';
+import { DEFAULT_EUDISTACK_BRANDING } from './core/branding/tenant-branding.model';
 
 describe('AppComponent', () => {
   const originalLocation = window.location;
@@ -55,15 +57,16 @@ describe('AppComponent', () => {
     expect(element.querySelector('header img')).not.toBeNull();
   });
 
-  it('ES-01: the header is neutral when the configuration is unavailable', () => {
+  it('AC-04: the header keeps the tenant logo and language selector when the configuration is unavailable', () => {
     setUrl('/issuance-portal/', '');
     configState.set({ status: 'unavailable' });
+    TestBed.inject(TenantLanguageService).apply({ ...DEFAULT_EUDISTACK_BRANDING, supportedLanguages: ['es', 'en'] }, ['es']);
     const fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges();
 
     const element = fixture.nativeElement as HTMLElement;
-    expect(element.querySelector('header img')).toBeNull();
-    expect(element.querySelector('header select')).toBeNull();
+    expect(element.querySelector('header img')).not.toBeNull();
+    expect(element.querySelectorAll('header select option').length).toBe(2);
   });
 
   it.each([

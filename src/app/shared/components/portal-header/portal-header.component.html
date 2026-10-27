@@ -1,6 +1,6 @@
 <header class="bg-white border-b border-gray-200">
   <div class="max-w-7xl mx-auto flex items-center gap-3 px-4 py-3 sm:gap-6 sm:px-6 lg:px-8">
-    @if (!neutral() && backTo() !== null) {
+    @if (backTo() !== null) {
       <button
         type="button"
         (click)="onBack()"
@@ -12,19 +12,11 @@
         </svg>
       </button>
     }
-    @if (!neutral()) {
-      <img [src]="branding.logoUrl()" [alt]="'header.logoAlt' | translate" class="h-10 w-auto shrink-0 sm:h-12" />
-    }
-    <p
-      class="min-w-0 flex-1 truncate text-sm font-medium text-gray-700"
-      [class.border-l]="!neutral()"
-      [class.border-gray-300]="!neutral()"
-      [class.pl-3]="!neutral()"
-      [class.sm:pl-6]="!neutral()"
-    >
+    <img [src]="branding.logoUrl()" [alt]="'header.logoAlt' | translate" class="h-10 w-auto shrink-0 sm:h-12" />
+    <p class="min-w-0 flex-1 truncate border-l border-gray-300 pl-3 text-sm font-medium text-gray-700 sm:pl-6">
       {{ 'portal.app_name' | translate }}
     </p>
-    @if (!neutral() && language.supported().length > 0) {
+    @if (language.supported().length > 0) {
       <label for="portal-language" class="sr-only">{{ 'header.language' | translate }}</label>
       <select
         id="portal-language"
