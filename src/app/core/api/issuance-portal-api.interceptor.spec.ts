@@ -1,16 +1,22 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { issuancePortalApiInterceptor } from './issuance-portal-api.interceptor';
+import { ISSUANCE_PORTAL_ACCESS_TOKEN, issuancePortalApiInterceptor } from './issuance-portal-api.interceptor';
 import { ApiProblemError, NETWORK_ERROR, UNEXPECTED_ERROR } from './api-problem.error';
 
 describe('issuancePortalApiInterceptor', () => {
   let http: HttpClient;
   let controller: HttpTestingController;
+  let accessToken: string | null;
 
   beforeEach(() => {
+    accessToken = null;
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(withInterceptors([issuancePortalApiInterceptor])), provideHttpClientTesting()],
+      providers: [
+        provideHttpClient(withInterceptors([issuancePortalApiInterceptor])),
+        provideHttpClientTesting(),
+        { provide: ISSUANCE_PORTAL_ACCESS_TOKEN, useValue: () => accessToken },
+      ],
     });
     http = TestBed.inject(HttpClient);
     controller = TestBed.inject(HttpTestingController);
@@ -18,25 +24,45 @@ describe('issuancePortalApiInterceptor', () => {
 
   afterEach(() => controller.verify());
 
-  it('AC-07: a call to the service carries the cookie and X-Requested-With', () => {
+  it('AC-10: a call to the service carries neither the cookie nor X-Requested-With', () => {
     http.post('/issuance-portal/api/v1/journey', null).subscribe();
 
     const req = controller.expectOne('/issuance-portal/api/v1/journey');
-    expect(req.request.withCredentials).toBe(true);
-    expect(req.request.headers.get('X-Requested-With')).toBe('issuance-portal');
-    req.flush({});
-  });
-
-  it('a request outside the service API is left untouched', () => {
-    http.get('assets/i18n/es.json').subscribe();
-
-    const req = controller.expectOne('assets/i18n/es.json');
     expect(req.request.withCredentials).toBe(false);
     expect(req.request.headers.has('X-Requested-With')).toBe(false);
     req.flush({});
   });
 
-  it('AC-07: a Problem response becomes a typed error with its type, status and title', () => {
+  it('AC-10: without an Access Token there is no Authorization header', () => {
+    http.get('/issuance-portal/api/v1/config').subscribe();
+
+    const req = controller.expectOne('/issuance-portal/api/v1/config');
+    expect(req.request.headers.has('Authorization')).toBe(false);
+    req.flush({});
+  });
+
+  it('AC-10: with an Access Token, a call to the service carries it as Bearer', () => {
+    accessToken = 'token-123';
+    http.get('/issuance-portal/api/v1/journey').subscribe();
+
+    const req = controller.expectOne('/issuance-portal/api/v1/journey');
+    expect(req.request.headers.get('Authorization')).toBe('Bearer token-123');
+    req.flush({});
+  });
+
+  it.each(['assets/i18n/es.json', '/assets/tenants/cgcom/theme.json'])(
+    'AC-10: a request to %s never carries the Access Token',
+    (url) => {
+      accessToken = 'token-123';
+      http.get(url).subscribe();
+
+      const req = controller.expectOne(url);
+      expect(req.request.headers.has('Authorization')).toBe(false);
+      req.flush({});
+    },
+  );
+
+  it('AC-10: a Problem response becomes a typed error with its type, status and title', () => {
     let error: unknown;
     http.get('/issuance-portal/api/v1/journey').subscribe({ error: (e: unknown) => (error = e) });
 
