@@ -19,8 +19,8 @@ describe('validatePortalConfig', () => {
     expect(validatePortalConfig(raw)).toBeNull();
   });
 
-  it('ES-02: rejects an empty wallet_url', () => {
-    expect(validatePortalConfig({ ...valid, wallet_url: '  ' })).toBeNull();
+  it.each(['  ', 'http://cgcom.example/wallet', 'javascript:alert(1)', 'wallet'])('ES-02: rejects a wallet_url that is not an https URL (%p)', (walletUrl) => {
+    expect(validatePortalConfig({ ...valid, wallet_url: walletUrl })).toBeNull();
   });
 
   it('does not need brand or languages, which come from the theme.json', () => {
