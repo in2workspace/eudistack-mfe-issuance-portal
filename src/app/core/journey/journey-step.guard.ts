@@ -3,9 +3,8 @@ import { CanActivateFn, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { Journey, JourneyApi } from '../api/generated/journey';
 import { ISSUANCE_PORTAL_ACCESS_TOKEN } from '../api/issuance-portal-api.interceptor';
-import { errorUrl } from '../../features/error/error-reason';
 import { DATA_PATH, ENTITLEMENT_PATH, QR_PATH } from './journey-paths';
-import { isJourneyClosed, stepUrl } from './journey-navigator';
+import { JourneyNavigator, isJourneyClosed, stepUrl } from './journey-navigator';
 
 /**
  * Pasos con los que se puede estar en cada ruta. QR admite también
@@ -30,11 +29,12 @@ export const journeyStepGuard: CanActivateFn = async (route) => {
     return router.createUrlTree(['/']);
   }
   const journeyApi = inject(JourneyApi);
+  const navigator = inject(JourneyNavigator);
   try {
     const journey = await firstValueFrom(journeyApi.getJourney());
     const allowed = journey.state === 'in_progress' && ALLOWED_STEPS[route.routeConfig?.path ?? '']?.includes(journey.step);
     return allowed ? true : router.createUrlTree(stepUrl(journey));
   } catch (error: unknown) {
-    return router.createUrlTree(isJourneyClosed(error) ? errorUrl('session-expired') : ['/']);
+    return router.createUrlTree(isJourneyClosed(error) ? navigator.expireSession() : ['/']);
   }
 };

@@ -4,6 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import { ApiProblemError, JOURNEY_CLOSED } from '../api/api-problem.error';
 import { Journey, JourneyApi } from '../api/generated/journey';
 import { errorUrl } from '../../features/error/error-reason';
+import { SESSION_ACTIONS } from '../session/session-actions';
 import { DATA_PATH, ENTITLEMENT_PATH, QR_PATH } from './journey-paths';
 
 /** Ruta del último paso alcanzado del recorrido. */
@@ -27,9 +28,20 @@ export function isJourneyClosed(error: unknown): boolean {
 export class JourneyNavigator {
   private readonly router = inject(Router);
   private readonly journeyApi = inject(JourneyApi);
+  private readonly session = inject(SESSION_ACTIONS);
+
+  /**
+   * El recorrido ha caducado: descarta los tokens (design.md §3.1, punto 7) y
+   * devuelve la dirección de la sesión caducada. Es el único camino del 410,
+   * venga de una llamada, de la guarda o del temporizador de inactividad.
+   */
+  expireSession(): string[] {
+    this.session.discardTokens();
+    return errorUrl('session-expired');
+  }
 
   toSessionExpired(): Promise<boolean> {
-    return this.router.navigate(errorUrl('session-expired'));
+    return this.router.navigate(this.expireSession());
   }
 
   /** Consulta `GET /journey` y va a la ruta de su paso; un 410 lleva a sesión caducada y otro fallo, a Inicio. */

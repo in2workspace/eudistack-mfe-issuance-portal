@@ -6,19 +6,23 @@ import { ApiProblemError, NETWORK_ERROR } from '../api/api-problem.error';
 import { Journey, JourneyApi } from '../api/generated/journey';
 import { ISSUANCE_PORTAL_ACCESS_TOKEN } from '../api/issuance-portal-api.interceptor';
 import { routes } from '../../app.routes';
+import { SESSION_ACTIONS } from '../session/session-actions';
 
 describe('journeyStepGuard', () => {
   let token: string | null;
   let getJourney: jest.Mock<Observable<Journey>>;
+  let discardTokens: jest.Mock;
 
   beforeEach(() => {
     token = 'access-token';
     getJourney = jest.fn();
+    discardTokens = jest.fn();
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
         { provide: ISSUANCE_PORTAL_ACCESS_TOKEN, useValue: () => token },
         { provide: JourneyApi, useValue: { getJourney } },
+        { provide: SESSION_ACTIONS, useValue: { restartLogin: jest.fn(), discardTokens } },
       ],
     });
   });
@@ -82,12 +86,14 @@ describe('journeyStepGuard', () => {
     getJourney.mockReturnValue(throwError(() => new ApiProblemError('unauthenticated', 401, 'Unauthenticated')));
 
     expect(await run('user-data')).toBe('/');
+    expect(discardTokens).not.toHaveBeenCalled();
   });
 
-  it('ES-01: a 410 journey_closed goes to the session expired case', async () => {
+  it('ES-01, EC-07: a 410 journey_closed discards the tokens and goes to the session expired case', async () => {
     getJourney.mockReturnValue(throwError(() => new ApiProblemError('journey_closed', 410, 'Journey closed')));
 
     expect(await run('offer')).toBe('/error/session-expired');
+    expect(discardTokens).toHaveBeenCalledTimes(1);
   });
 
   it('any other failure goes to Inicio', async () => {

@@ -4,15 +4,24 @@ import { Observable, of, throwError } from 'rxjs';
 import { JourneyNavigator, stepUrl } from './journey-navigator';
 import { ApiProblemError, NETWORK_ERROR } from '../api/api-problem.error';
 import { Journey, JourneyApi } from '../api/generated/journey';
+import { SESSION_ACTIONS } from '../session/session-actions';
 
 describe('JourneyNavigator', () => {
   let getJourney: jest.Mock<Observable<Journey>>;
   let navigate: jest.SpyInstance;
   let navigator: JourneyNavigator;
+  let discardTokens: jest.Mock;
 
   beforeEach(() => {
     getJourney = jest.fn();
-    TestBed.configureTestingModule({ providers: [provideRouter([]), { provide: JourneyApi, useValue: { getJourney } }] });
+    discardTokens = jest.fn();
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        { provide: JourneyApi, useValue: { getJourney } },
+        { provide: SESSION_ACTIONS, useValue: { restartLogin: jest.fn(), discardTokens } },
+      ],
+    });
     navigate = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
     navigator = TestBed.inject(JourneyNavigator);
   });
@@ -29,10 +38,17 @@ describe('JourneyNavigator', () => {
     expect(stepUrl({ state: 'withdrawn', step: 'entitlement_confirmed' })).toEqual(['/']);
   });
 
-  it('ES-01: goes to the session expired case', async () => {
+  it('ES-01, EC-07: goes to the session expired case after discarding the tokens', async () => {
     await navigator.toSessionExpired();
 
+    expect(discardTokens).toHaveBeenCalledTimes(1);
     expect(navigate).toHaveBeenCalledWith(['/', 'error', 'session-expired']);
+    expect(discardTokens.mock.invocationCallOrder[0]).toBeLessThan(navigate.mock.invocationCallOrder[0]);
+  });
+
+  it('EC-07: expireSession discards the tokens and gives the session expired address', () => {
+    expect(navigator.expireSession()).toEqual(['/', 'error', 'session-expired']);
+    expect(discardTokens).toHaveBeenCalledTimes(1);
   });
 
   it('AC-08: goes to the route of the step the service gives', async () => {
@@ -48,6 +64,7 @@ describe('JourneyNavigator', () => {
 
     await navigator.toCurrentStep();
 
+    expect(discardTokens).toHaveBeenCalledTimes(1);
     expect(navigate).toHaveBeenCalledWith(['/', 'error', 'session-expired']);
   });
 

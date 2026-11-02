@@ -82,7 +82,6 @@ describe('ErrorComponent', () => {
   });
 
   it.each<[ErrorReason, unknown[]]>([
-    ['not-entitled', ['/']],
     ['source-unavailable', ['/', 'entitlement']],
     ['issuance-failed', ['/', 'offer']],
     ['onboarding-unavailable', ['/', 'offer']],
@@ -103,6 +102,15 @@ describe('ErrorComponent', () => {
 
     expect(session.restartLogin).toHaveBeenCalledTimes(1);
     expect(router.navigate).not.toHaveBeenCalled();
+  });
+
+  it('EC-07: not-entitled discards the tokens and goes to Inicio', async () => {
+    show('not-entitled');
+
+    await clickAction();
+
+    expect(session.discardTokens).toHaveBeenCalledTimes(1);
+    expect(router.navigate).toHaveBeenCalledWith(['/']);
   });
 
   it('AC-07: offer-not-renewable discards the tokens and goes to Inicio', async () => {

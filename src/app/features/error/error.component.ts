@@ -73,12 +73,14 @@ export class ErrorComponent {
         // QR (generando) repite la llamada que falló con los mismos datos (EUD-286).
         return () => this.router.navigate(['/', QR_PATH]);
       case 'offer-not-renewable':
+      case 'not-entitled':
+        // El recorrido ya ha terminado o lo ha retirado el servicio (design.md §3.1, punto 7).
         return () => {
           this.session.discardTokens();
           return this.router.navigate(['/']);
         };
-      case 'not-entitled':
       case 'session-expired':
+        // Los tokens ya se descartaron al llegar aquí (JourneyNavigator.expireSession).
         return () => this.router.navigate(['/']);
     }
   }
