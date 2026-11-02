@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { pendingJourneyGuard } from './core/guards/pending-journey.guard';
 import { CONFIG_UNAVAILABLE_PATH, configAvailableGuard, configUnavailableGuard } from './core/guards/config-available.guard';
 import { legacyQueryParamsGuard } from './core/guards/legacy-query-params.guard';
+import { ERROR_PATH, errorReasonGuard } from './features/error/error-reason';
 
 export const routes: Routes = [
   {
@@ -41,6 +42,12 @@ export const routes: Routes = [
             (m) => m.CredentialOfferComponent,
           ),
         canActivate: [pendingJourneyGuard],
+      },
+      {
+        // Pantalla de error única (prd.md §3.4), sin botón de volver.
+        path: `${ERROR_PATH}/:reason`,
+        loadComponent: () => import('./features/error/error.component').then((m) => m.ErrorComponent),
+        canActivate: [errorReasonGuard],
       },
       {
         path: 'incidents',
