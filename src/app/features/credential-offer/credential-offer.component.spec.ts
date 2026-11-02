@@ -4,7 +4,6 @@ import { signal } from '@angular/core';
 import { TranslateModule } from '@ngx-translate/core';
 import { CredentialOfferComponent } from './credential-offer.component';
 import { CredentialOfferService, CredentialOfferStatus } from './credential-offer.service';
-import { CannotContinueReason } from '../issuance-start/cannot-continue-reason';
 
 // `qrcode` hace codificación PNG real (zlib) con latencia de E/S real — no es una
 // promesa "de microtarea pura", así que ni `fakeAsync`/`tick()` ni `whenStable()`
@@ -19,13 +18,11 @@ describe('CredentialOfferComponent', () => {
   let fixture: ComponentFixture<CredentialOfferComponent>;
   let status: ReturnType<typeof signal<CredentialOfferStatus>>;
   let walletInvocationUrl: ReturnType<typeof signal<{ url: string; length: number } | null>>;
-  let cannotContinueReason: ReturnType<typeof signal<CannotContinueReason | null>>;
   let serviceMock: { request: jest.Mock; retry: jest.Mock; cancelPendingWork: jest.Mock };
 
   function configure(initialStatus: CredentialOfferStatus, initialUrl: { url: string; length: number } | null = null): void {
     status = signal(initialStatus);
     walletInvocationUrl = signal(initialUrl);
-    cannotContinueReason = signal(initialStatus === 'unavailable' ? CannotContinueReason.OfferUnavailable : null);
     serviceMock = { request: jest.fn(), retry: jest.fn(), cancelPendingWork: jest.fn() };
 
     TestBed.configureTestingModule({
@@ -33,7 +30,7 @@ describe('CredentialOfferComponent', () => {
       providers: [
         {
           provide: CredentialOfferService,
-          useValue: { ...serviceMock, status, offer: signal(null), walletInvocationUrl, cannotContinueReason },
+          useValue: { ...serviceMock, status, offer: signal(null), walletInvocationUrl },
         },
         provideRouter([]),
       ],

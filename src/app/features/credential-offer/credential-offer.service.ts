@@ -1,7 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 import { msUntilCredentialOfferExpiry } from './credential-offer-expiry';
 import { CredentialOffer, WalletInvocationUrl } from './credential-offer.model';
-import { CannotContinueReason } from '../issuance-start/cannot-continue-reason';
 
 export type CredentialOfferStatus = 'idle' | 'loading' | 'ready' | 'ready-without-qr' | 'unavailable';
 
@@ -21,12 +20,10 @@ export class CredentialOfferService {
   private readonly _status = signal<CredentialOfferStatus>('idle');
   private readonly _offer = signal<CredentialOffer | null>(null);
   private readonly _walletInvocationUrl = signal<WalletInvocationUrl | null>(null);
-  private readonly _cannotContinueReason = signal<CannotContinueReason | null>(null);
 
   readonly status = this._status.asReadonly();
   readonly offer = this._offer.asReadonly();
   readonly walletInvocationUrl = this._walletInvocationUrl.asReadonly();
-  readonly cannotContinueReason = this._cannotContinueReason.asReadonly();
 
   private expiryTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -35,20 +32,18 @@ export class CredentialOfferService {
     this.clearExpiryTimer();
     this._offer.set(offer);
     this._walletInvocationUrl.set(url);
-    this._cannotContinueReason.set(null);
     this._status.set(url.length > MAX_QR_PAYLOAD_CHARS ? 'ready-without-qr' : 'ready');
     this.expiryTimer = setTimeout(
-      () => this.markUnavailable(CannotContinueReason.OfferUnavailable),
+      () => this.markUnavailable(),
       Math.max(msUntilCredentialOfferExpiry(offer, Date.now()), 0),
     );
   }
 
   /** Retira la oferta presentada y muestra el aviso de no disponible. */
-  markUnavailable(reason: CannotContinueReason): void {
+  markUnavailable(): void {
     this.clearExpiryTimer();
     this._offer.set(null);
     this._walletInvocationUrl.set(null);
-    this._cannotContinueReason.set(reason);
     this._status.set('unavailable');
   }
 

@@ -5,7 +5,6 @@ import { TranslateModule } from '@ngx-translate/core';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import { CredentialOfferComponent } from './credential-offer.component';
 import { CredentialOfferService, CredentialOfferStatus } from './credential-offer.service';
-import { CannotContinueReason } from '../issuance-start/cannot-continue-reason';
 
 expect.extend(toHaveNoViolations);
 
@@ -35,7 +34,6 @@ describe('CredentialOfferComponent a11y (AC-08, WCAG 2.1 AA)', () => {
             status: signal(initialStatus),
             offer: signal(null),
             walletInvocationUrl: signal(initialUrl),
-            cannotContinueReason: signal(initialStatus === 'unavailable' ? CannotContinueReason.OfferUnavailable : null),
           },
         },
         provideRouter([]),

@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 /**
  * Paso Datos. Ya no lee el usuario del navegador ni pinta etiquetas fijas por
  * tenant: la vista previa de la atestación la dará `GET /journey` (EUD-286).
- * Hasta entonces la ruta la protege `pendingJourneyGuard`.
+ * La ruta la protege `journeyStepGuard`.
  */
 @Component({
   selector: 'app-user-data',

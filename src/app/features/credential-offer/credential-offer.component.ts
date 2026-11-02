@@ -11,14 +11,14 @@ import { CREDENTIAL_OFFER_PRESENTATION_TTL_MS } from './credential-offer-expiry'
  *
  * Cuatro estados (`CredentialOfferService.status()`): `loading` (AC-04),
  * `ready` (AC-01/AC-02), `ready-without-qr` (ES-06) y `unavailable`
- * (AC-05, reutiliza el patrón visual + claves `issuanceEntryPoint.cannotContinue.*`
- * ya existentes en el catálogo, igual que `IssuanceInfoComponent`).
+ * (AC-05, aviso genérico con las claves `credentialOffer.unavailable.*`;
+ * EUD-286 lo rehace como QR caducado).
  *
  * La interfaz ya no guarda los datos del titular (design.md AD-3), así que no
  * tiene nada que enviar para pedir la oferta: al entrar o reintentar vuelve a
  * Inicio hasta que la oferta se pida al servicio del portal con
  * `POST /journey/confirmation` (EUD-286). La ruta la protege
- * `pendingJourneyGuard` mientras tanto.
+ * `journeyStepGuard`.
  */
 @Component({
   selector: 'app-credential-offer',
@@ -30,7 +30,6 @@ export class CredentialOfferComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
 
   protected readonly status = this.service.status;
-  protected readonly cannotContinueReason = this.service.cannotContinueReason;
   protected readonly qrDataUrl = signal<string | null>(null);
   protected readonly walletInvocationUrlValue = computed(() => this.service.walletInvocationUrl()?.url ?? null);
   /** Minutos de la ventana de presentación real (AD-6/NFR-S-163-01) — el aviso de validez refleja el TTL de código, no un texto decorativo independiente. */
