@@ -1,6 +1,8 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 
+// TODO (EUD-314): borrar ?code= en todas las rutas choca con el callback OIDC
+// del Verifier. Acotar esta guarda por ruta o dejar de eliminar `code`.
 /** Parámetros con los que la demo anterior pasaba la identidad del titular por la dirección. */
 const LEGACY_QUERY_PARAMS = ['u', 'code', 'identified'];
 
