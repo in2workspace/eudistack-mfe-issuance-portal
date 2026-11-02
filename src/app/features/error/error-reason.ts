@@ -9,6 +9,7 @@ export const ERROR_PATH = 'error';
  * `error.<caso>.*`.
  */
 export const ERROR_REASONS = [
+  'config-unavailable',
   'identification-failed',
   'not-entitled',
   'source-unavailable',

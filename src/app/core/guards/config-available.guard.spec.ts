@@ -20,10 +20,10 @@ describe('configuration guards', () => {
     return result instanceof UrlTree ? TestBed.inject(Router).serializeUrl(result) : (result as boolean);
   }
 
-  it('ES-01: sends every screen to the unavailable screen when the configuration is unavailable', () => {
+  it('ES-01: sends every screen to the configuration case of the error screen when the configuration is unavailable', () => {
     state.set({ status: 'unavailable' });
 
-    expect(run(configAvailableGuard)).toBe('/unavailable');
+    expect(run(configAvailableGuard)).toBe('/error/config-unavailable');
   });
 
   it('lets the screens through once the configuration is loaded', () => {

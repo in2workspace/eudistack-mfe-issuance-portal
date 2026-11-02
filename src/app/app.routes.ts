@@ -6,10 +6,11 @@ import { ERROR_PATH, errorReasonGuard } from './features/error/error-reason';
 
 export const routes: Routes = [
   {
-    // Configuración del portal no disponible (prd.md §3.4).
+    // Configuración del portal no disponible (prd.md §3.4): el único caso de
+    // la pantalla de error que no necesita la configuración del tenant.
     path: CONFIG_UNAVAILABLE_PATH,
-    loadComponent: () =>
-      import('./features/config-unavailable/config-unavailable.component').then((m) => m.ConfigUnavailableComponent),
+    loadComponent: () => import('./features/error/error.component').then((m) => m.ErrorComponent),
+    data: { reason: 'config-unavailable' },
     canActivate: [legacyQueryParamsGuard, configUnavailableGuard],
   },
   {

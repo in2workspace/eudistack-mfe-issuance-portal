@@ -44,6 +44,6 @@ describe('routes', () => {
   it('ES-01: every screen requires the configuration, except the unavailable one', () => {
     const parent = routes.find((r) => r.path === '' && r.children);
     expect(parent?.canActivateChild).toContain(configAvailableGuard);
-    expect(routes.find((r) => r.path === 'unavailable')?.canActivate).toContain(configUnavailableGuard);
+    expect(routes.find((r) => r.path === 'error/config-unavailable')?.canActivate).toContain(configUnavailableGuard);
   });
 });
