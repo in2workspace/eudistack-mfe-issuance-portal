@@ -2,7 +2,6 @@ import { Component, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { BrandingService } from '../../../core/branding/branding.service';
 import { resolveTenantIdentity } from '../../../core/branding/resolve-tenant-identity';
 import { resolveSupportEmail } from '../../../core/branding/resolve-support-email';
 import { environment } from '../../../../environments/environment';
@@ -34,7 +33,6 @@ interface IncidentForm {
 })
 export class IncidentsComponent {
   private router = inject(Router);
-  protected readonly branding = inject(BrandingService);
   protected readonly isDoctorTenant = resolveIsDoctorTenant();
   protected readonly supportEmail = resolveSupportEmail();
 

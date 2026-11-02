@@ -1,15 +1,4 @@
 export const environment = {
   production: true,
-  oidcAuthorizationEndpoint: window["env"]["oidc_authorization_endpoint"],
-  oidcClientId: window["env"]["oidc_client_id"],
-  oidcPortalRedirectUri: window["env"]["oidc_portal_redirect_uri"],
-  issuanceEntryPoint: window["env"]["issuance_entry_point"] ?? '',
-  entryPointTargetWithValidation: window["env"]["entry_point_target_with_validation"] ?? '',
-  entryPointTargetDirect: window["env"]["entry_point_target_direct"] ?? '',
-  credentialOfferUrl: window["env"]["credential_offer_url"],
-  credentialOfferLinkBase: window["env"]["credential_offer_link_base"],
-  identificationUrl: window["env"]["identification_url"],
-  identificationCorrelationMode: window["env"]["identification_correlation_mode"],
-  identificationCorrelationParam: window["env"]["identification_correlation_param"],
   tenant: window["env"]["tenant"],
 };

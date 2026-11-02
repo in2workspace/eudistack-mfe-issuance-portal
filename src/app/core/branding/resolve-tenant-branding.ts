@@ -121,7 +121,6 @@ export function resolveTenantBranding(result: TenantBrandingResult | null): Tena
       tokens: sanitizeTokens(branding),
       logoUrl,
       faviconUrl: sanitizeField(branding?.faviconUrl, DEFAULT_EUDISTACK_BRANDING.faviconUrl),
-      appName: sanitizeField(branding?.name, DEFAULT_EUDISTACK_BRANDING.appName),
       defaultLanguage: sanitizeField(i18n?.defaultLang, DEFAULT_EUDISTACK_BRANDING.defaultLanguage),
       supportedLanguages: sanitizeSupportedLanguages(i18n?.available),
     };

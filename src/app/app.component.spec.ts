@@ -1,10 +1,11 @@
 import { TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
 import { provideRouter, Router } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
 import { AppComponent } from './app.component';
-import { IssuanceStateService } from './core/services/issuance-state.service';
-import { IdentificationReturnService } from './features/identification/identification-return.service';
-import { IssuanceStartService } from './features/issuance-start/issuance-start.service';
-import { CannotContinueReason } from './features/issuance-start/cannot-continue-reason';
+import { PortalConfigService, PortalConfigState } from './core/config/portal-config.service';
+import { TenantLanguageService } from './core/branding/tenant-language.service';
+import { DEFAULT_EUDISTACK_BRANDING } from './core/branding/tenant-branding.model';
 
 describe('AppComponent', () => {
   const originalLocation = window.location;
@@ -17,103 +18,77 @@ describe('AppComponent', () => {
     });
   }
 
+  const configState = signal<PortalConfigState>({ status: 'loading' });
+
+  beforeEach(async () => {
+    sessionStorage.clear();
+    configState.set({ status: 'loading' });
+    await TestBed.configureTestingModule({
+      imports: [AppComponent, TranslateModule.forRoot()],
+      providers: [provideRouter([]), { provide: PortalConfigService, useValue: { state: configState } }],
+    }).compileComponents();
+  });
+
   afterEach(() => {
     Object.defineProperty(window, 'location', { writable: true, configurable: true, value: originalLocation });
+    sessionStorage.clear();
   });
 
-  describe('baseline rendering', () => {
-    beforeEach(async () => {
-      setUrl('/issuance-portal/', '');
-      await TestBed.configureTestingModule({
-        imports: [AppComponent],
-        providers: [provideRouter([])],
-      }).compileComponents();
-    });
-
-    it('should create the app', () => {
-      const fixture = TestBed.createComponent(AppComponent);
-      const app = fixture.componentInstance;
-      expect(app).toBeTruthy();
-    });
-
-    it('should render a router outlet', () => {
-      const fixture = TestBed.createComponent(AppComponent);
-      fixture.detectChanges();
-      const compiled = fixture.nativeElement as HTMLElement;
-      expect(compiled.querySelector('router-outlet')).toBeTruthy();
-    });
+  it('should create the app', () => {
+    setUrl('/issuance-portal/', '');
+    const fixture = TestBed.createComponent(AppComponent);
+    expect(fixture.componentInstance).toBeTruthy();
   });
 
-  describe('?identified=1 (EUD-164 certificate return gate)', () => {
-    let identificationReturn: { handleReturn: jest.Mock; outcome: jest.Mock; reason: jest.Mock };
-    let issuanceStart: { reportCannotContinue: jest.Mock };
-    let state: IssuanceStateService;
-    let router: Router;
+  it('should render a router outlet', () => {
+    setUrl('/issuance-portal/', '');
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('router-outlet')).toBeTruthy();
+  });
 
-    function configure(outcome: 'correlated' | 'rejected', reason: CannotContinueReason | null = null): void {
-      identificationReturn = {
-        handleReturn: jest.fn(),
-        outcome: jest.fn().mockReturnValue(outcome),
-        reason: jest.fn().mockReturnValue(reason),
-      };
-      issuanceStart = { reportCannotContinue: jest.fn() };
+  it('AC-08: renders the common header above every screen', () => {
+    setUrl('/issuance-portal/', '');
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();
 
-      TestBed.configureTestingModule({
-        imports: [AppComponent],
-        providers: [
-          provideRouter([]),
-          { provide: IdentificationReturnService, useValue: identificationReturn },
-          { provide: IssuanceStartService, useValue: issuanceStart },
-        ],
-      });
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelectorAll('header')).toHaveLength(1);
+    expect(element.querySelector('header img')).not.toBeNull();
+  });
 
-      state = TestBed.inject(IssuanceStateService);
-      router = TestBed.inject(Router);
-      jest.spyOn(router, 'navigate').mockResolvedValue(true);
-    }
+  it('AC-04, AC-08: the header keeps the tenant logo and language selector when the configuration is unavailable', () => {
+    setUrl('/issuance-portal/', '');
+    configState.set({ status: 'unavailable' });
+    TestBed.inject(TenantLanguageService).apply({ ...DEFAULT_EUDISTACK_BRANDING, supportedLanguages: ['es', 'en'] }, ['es']);
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();
 
-    afterEach(() => {
-      state.clearUser();
-    });
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('header img')).not.toBeNull();
+    expect(element.querySelectorAll('header select option')).toHaveLength(2);
+  });
 
-    it('AC-03: a correlated return sets the user and navigates to user-data', () => {
-      const encodedUser = btoa(encodeURIComponent(JSON.stringify({
-        id: 'DR-1', name: 'Dra. García', collegiateNumber: '123', dni: '12345678A', email: 'a@b.com',
-        phone: '+34600000000', college: 'Colegio', specialty: 'Esp', authMethod: 'claveMobile',
-      })));
-      setUrl('/issuance-portal/', '?' + new URLSearchParams({ identified: '1', u: encodedUser }).toString());
-      configure('correlated');
+  it.each([
+    ['?u=', `?u=${btoa(encodeURIComponent(JSON.stringify({ name: 'Dra. García', dni: '12345678A' })))}`],
+    ['?code=', '?code=abc123'],
+    ['?identified=1', '?identified=1'],
+  ])('EC-01: a %s address from the old demo is neither read nor stored', (_, search) => {
+    setUrl('/issuance-portal/', search);
+    sessionStorage.setItem('cgcom_identified_user', JSON.stringify({ name: 'Dra. García' }));
+    const getItem = jest.spyOn(Storage.prototype, 'getItem');
+    const setItem = jest.spyOn(Storage.prototype, 'setItem');
+    const router = TestBed.inject(Router);
+    const navigate = jest.spyOn(router, 'navigate');
 
-      const fixture = TestBed.createComponent(AppComponent);
-      fixture.detectChanges();
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();
 
-      expect(identificationReturn.handleReturn).toHaveBeenCalledTimes(1);
-      expect(state.authenticatedUser()).not.toBeNull();
-      expect(router.navigate).toHaveBeenCalledWith(['/user-data']);
-    });
+    expect(getItem).not.toHaveBeenCalled();
+    expect(setItem).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
 
-    it('AC-04: a rejected return does not set a user, reports the reason, and stays on "/"', () => {
-      setUrl('/issuance-portal/', '?identified=1');
-      configure('rejected', CannotContinueReason.NotCorrelated);
-
-      const fixture = TestBed.createComponent(AppComponent);
-      fixture.detectChanges();
-
-      expect(state.authenticatedUser()).toBeNull();
-      expect(issuanceStart.reportCannotContinue).toHaveBeenCalledWith(CannotContinueReason.NotCorrelated);
-      expect(router.navigate).toHaveBeenCalledWith(['/']);
-    });
-
-    it('the legacy demo branch (?code= at portal root) still navigates without going through the gate (R-3)', () => {
-      setUrl('/issuance-portal/', '?code=abc123');
-      configure('rejected');
-
-      const fixture = TestBed.createComponent(AppComponent);
-      fixture.detectChanges();
-
-      expect(identificationReturn.handleReturn).not.toHaveBeenCalled();
-      expect(state.authenticatedUser()).not.toBeNull();
-      expect(router.navigate).toHaveBeenCalledWith(['/']);
-    });
+    getItem.mockRestore();
+    setItem.mockRestore();
   });
 });

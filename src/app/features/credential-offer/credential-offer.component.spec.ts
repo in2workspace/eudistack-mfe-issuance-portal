@@ -4,7 +4,6 @@ import { signal } from '@angular/core';
 import { TranslateModule } from '@ngx-translate/core';
 import { CredentialOfferComponent } from './credential-offer.component';
 import { CredentialOfferService, CredentialOfferStatus } from './credential-offer.service';
-import { IssuanceStateService } from '../../core/services/issuance-state.service';
 import { CannotContinueReason } from '../issuance-start/cannot-continue-reason';
 
 // `qrcode` hace codificación PNG real (zlib) con latencia de E/S real — no es una
@@ -22,16 +21,12 @@ describe('CredentialOfferComponent', () => {
   let walletInvocationUrl: ReturnType<typeof signal<{ url: string; length: number } | null>>;
   let cannotContinueReason: ReturnType<typeof signal<CannotContinueReason | null>>;
   let serviceMock: { request: jest.Mock; retry: jest.Mock; cancelPendingWork: jest.Mock };
-  let stateMock: { authenticatedUser: () => typeof user | null; clearUser: jest.Mock };
-
-  const user = { name: 'Dra. García', email: 'a@b.com', collegiateNumber: '123', dni: '12345678A' };
 
   function configure(initialStatus: CredentialOfferStatus, initialUrl: { url: string; length: number } | null = null): void {
     status = signal(initialStatus);
     walletInvocationUrl = signal(initialUrl);
     cannotContinueReason = signal(initialStatus === 'unavailable' ? CannotContinueReason.OfferUnavailable : null);
     serviceMock = { request: jest.fn(), retry: jest.fn(), cancelPendingWork: jest.fn() };
-    stateMock = { authenticatedUser: () => user, clearUser: jest.fn() };
 
     TestBed.configureTestingModule({
       imports: [CredentialOfferComponent, TranslateModule.forRoot()],
@@ -40,7 +35,6 @@ describe('CredentialOfferComponent', () => {
           provide: CredentialOfferService,
           useValue: { ...serviceMock, status, offer: signal(null), walletInvocationUrl, cannotContinueReason },
         },
-        { provide: IssuanceStateService, useValue: stateMock },
         provideRouter([]),
       ],
     });
@@ -82,9 +76,14 @@ describe('CredentialOfferComponent', () => {
     // la respuesta), no el nombre de la clave de traducción en sí.
     expect(alert?.textContent).not.toMatch(/\b[45]\d{2}\b|Http|status:|body:/i);
 
+    // Sin datos del titular en el navegador, reintentar vuelve a Inicio
+    // en lugar de repetir la petición (hasta EUD-286).
+    const router = TestBed.inject(Router);
+    const navigateSpy = jest.spyOn(router, 'navigate').mockResolvedValue(true);
     const retryButton = compiled.querySelector('button');
     retryButton?.dispatchEvent(new Event('click'));
-    expect(serviceMock.retry).toHaveBeenCalledWith(expect.objectContaining({ name: user.name }));
+    expect(serviceMock.retry).not.toHaveBeenCalled();
+    expect(navigateSpy).toHaveBeenCalledWith(['/']);
   });
 
   it('AC-09: el enlace y el título usan el pipe de traducción (nunca un literal hardcodeado en el template)', () => {
@@ -136,7 +135,7 @@ describe('CredentialOfferComponent', () => {
     expect(notice?.textContent).toContain('credentialOffer.validity.notice');
   });
 
-  it('Cancelar limpia el usuario autenticado y vuelve al origen/raíz (recuperado del material demo, AD-5)', () => {
+  it('Cancelar vuelve a Inicio', () => {
     configure('ready', { url: 'https://o.example/w?credential_offer_uri=r', length: 40 });
     const router = TestBed.inject(Router);
     const navigateSpy = jest.spyOn(router, 'navigate').mockResolvedValue(true);
@@ -145,11 +144,10 @@ describe('CredentialOfferComponent', () => {
     const cancelButton = buttons.find((b) => b.textContent?.includes('credentialOffer.actions.cancel'));
     cancelButton?.dispatchEvent(new Event('click'));
 
-    expect(stateMock.clearUser).toHaveBeenCalled();
     expect(navigateSpy).toHaveBeenCalledWith(['/']);
   });
 
-  it('Marcar como completado vuelve al origen/raíz sin limpiar el usuario (recuperado del material demo, AD-5)', () => {
+  it('Marcar como completado vuelve a Inicio', () => {
     configure('ready', { url: 'https://o.example/w?credential_offer_uri=r', length: 40 });
     const router = TestBed.inject(Router);
     const navigateSpy = jest.spyOn(router, 'navigate').mockResolvedValue(true);
@@ -158,7 +156,6 @@ describe('CredentialOfferComponent', () => {
     const completeButton = buttons.find((b) => b.textContent?.includes('credentialOffer.actions.complete'));
     completeButton?.dispatchEvent(new Event('click'));
 
-    expect(stateMock.clearUser).not.toHaveBeenCalled();
     expect(navigateSpy).toHaveBeenCalledWith(['/']);
   });
 
@@ -170,24 +167,14 @@ describe('CredentialOfferComponent', () => {
     expect(serviceMock.cancelPendingWork).toHaveBeenCalled();
   });
 
-  it('sin usuario autenticado, redirige a la raíz en vez de solicitar la oferta', () => {
-    status = signal('idle');
-    walletInvocationUrl = signal(null);
-    cannotContinueReason = signal(null);
-    serviceMock = { request: jest.fn(), retry: jest.fn(), cancelPendingWork: jest.fn() };
+  it('AC-06: with no holder data in the browser, it goes back to Inicio instead of requesting the offer', () => {
+    configure('idle');
+    const router = TestBed.inject(Router);
+    const navigateSpy = jest.spyOn(router, 'navigate').mockResolvedValue(true);
 
-    TestBed.configureTestingModule({
-      imports: [CredentialOfferComponent, TranslateModule.forRoot()],
-      providers: [
-        { provide: CredentialOfferService, useValue: { ...serviceMock, status, offer: signal(null), walletInvocationUrl, cannotContinueReason } },
-        { provide: IssuanceStateService, useValue: { authenticatedUser: () => null } },
-        provideRouter([]),
-      ],
-    });
-
-    fixture = TestBed.createComponent(CredentialOfferComponent);
-    fixture.detectChanges();
+    fixture.componentInstance.ngOnInit();
 
     expect(serviceMock.request).not.toHaveBeenCalled();
+    expect(navigateSpy).toHaveBeenCalledWith(['/']);
   });
 });

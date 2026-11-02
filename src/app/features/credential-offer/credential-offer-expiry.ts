@@ -10,7 +10,7 @@ export const CREDENTIAL_OFFER_PRESENTATION_TTL_MS = 10 * 60 * 1000;
 /**
  * Milisegundos restantes hasta la caducidad (negativo si ya caducó) — única
  * fuente de la resta TTL/elapsed, para que `isCredentialOfferExpired` y el
- * temporizador real de `credential-offer.service.ts` (`armExpiryTimer`) no
+ * temporizador real de `CredentialOfferService.present()` no
  * dupliquen el cálculo (code-reviewer, auditoría EUD-163, hallazgo B1).
  */
 export function msUntilCredentialOfferExpiry(offer: CredentialOffer, now: number): number {

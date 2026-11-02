@@ -7,14 +7,8 @@ export interface CredentialOffer {
   obtainedAt: number;
 }
 
-export type CredentialOfferFailureReason =
-  | 'config_absent'
-  | 'endpoint_invalid'
-  | 'malformed'
-  | 'issuance_error'
-  | 'timeout'
-  | 'expired';
-
-export type CredentialOfferResult =
-  | { ok: true; offer: CredentialOffer }
-  | { ok: false; reason: CredentialOfferFailureReason };
+/** Enlace que llevan a la vez el QR, el botón del wallet y la caja para copiar. */
+export interface WalletInvocationUrl {
+  url: string;
+  length: number;
+}

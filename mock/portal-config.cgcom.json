@@ -1,0 +1,20 @@
+{
+  "texts": {
+    "es": {
+      "issuanceInfo.title": "Obtén tu DoctorID en tu cartera digital",
+      "portal": { "app_name": "Portal de emisión de DoctorID" }
+    },
+    "en": {
+      "issuanceInfo.title": "Get your DoctorID in your digital wallet",
+      "portal": { "app_name": "DoctorID Issuance Portal" }
+    }
+  },
+  "support": {
+    "email": "soporte@cgcom-identidad.es",
+    "phone": "900 123 456",
+    "schedule": "L-V 9:00-18:00",
+    "response_time": "48 horas"
+  },
+  "legal_links": {},
+  "wallet_url": "https://cgcom.127.0.0.1.nip.io:4443/wallet"
+}
