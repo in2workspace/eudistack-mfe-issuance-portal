@@ -1,6 +1,7 @@
 import { Route } from '@angular/router';
 import { routes } from './app.routes';
 import { configAvailableGuard, configUnavailableGuard } from './core/guards/config-available.guard';
+import { journeyStepGuard } from './core/journey/journey-step.guard';
 
 describe('routes', () => {
   /** Rutas de las pantallas: las hijas de la ruta que exige la configuración. */
@@ -22,14 +23,13 @@ describe('routes', () => {
     expect((loaded as { name: string }).name).toBe('IssuanceInfoComponent');
   });
 
-  it('"offer" lazy-loads CredentialOfferComponent and is protected by pendingJourneyGuard until EUD-287', async () => {
+  it('"offer" lazy-loads CredentialOfferComponent and is protected by journeyStepGuard', async () => {
     const offer = findRoute('offer');
 
     const loaded = await (offer.loadComponent as () => Promise<unknown>)();
 
     expect((loaded as { name: string }).name).toBe('CredentialOfferComponent');
-    expect(offer.canActivate).toBeDefined();
-    expect(offer.canActivate?.length).toBeGreaterThan(0);
+    expect(offer.canActivate).toEqual([journeyStepGuard]);
   });
 
   it('"qr" (ruta demo retirada por AD-5) ya no existe', () => {
