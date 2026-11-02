@@ -1,7 +1,9 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import { BehaviorSubject } from 'rxjs';
 import { ErrorComponent } from './error.component';
@@ -229,5 +231,77 @@ describe('ErrorComponent', () => {
 
   it('has no accessibility violations', async () => {
     expect(await axe(show('not-entitled'))).toHaveNoViolations();
+  });
+
+  /** Con los catálogos reales del producto: lo que ve el titular, no las claves. */
+  describe('with the real texts', () => {
+    function catalog(lang: string): Record<string, string> {
+      return JSON.parse(readFileSync(join(__dirname, '../../../assets/i18n', `${lang}.json`), 'utf-8')) as Record<string, string>;
+    }
+
+    function useLanguage(lang: string): void {
+      const translate = TestBed.inject(TranslateService);
+      translate.setTranslation(lang, catalog(lang));
+      translate.use(lang);
+    }
+
+    function textOf(element: HTMLElement, selector: string): string {
+      return element.querySelector(selector)?.textContent?.trim() ?? '';
+    }
+
+    it.each<[ErrorReason, string, string]>([
+      ['config-unavailable', 'Ahora no se puede continuar', 'Volver a intentarlo'],
+      ['identification-failed', 'No se ha completado la identificación', 'Volver a intentarlo'],
+      ['not-entitled', 'No constas con derecho a esta atestación', 'Volver al inicio'],
+      ['source-unavailable', 'Ahora no podemos comprobar tus datos', 'Volver a intentarlo'],
+      ['issuance-failed', 'No hemos podido generar tu atestación', 'Volver a intentarlo'],
+      ['onboarding-unavailable', 'No hemos podido preparar tu alta en el wallet', 'Generar un código nuevo'],
+      ['offer-not-renewable', 'Este código ya no se puede renovar', 'Volver al inicio'],
+      ['session-expired', 'Tu sesión ha caducado', 'Empezar de nuevo'],
+    ])('AC-03: %s shows the title «%s» and the action «%s»', (reason, title, action) => {
+      useLanguage('es');
+
+      const element = show(reason);
+
+      expect(textOf(element, 'h1')).toBe(title);
+      expect(textOf(element, 'button')).toBe(action);
+    });
+
+    it('AC-06: onboarding-unavailable says no attestation has been issued', () => {
+      useLanguage('es');
+
+      expect(textOf(show('onboarding-unavailable'), 'p')).toContain('No se ha emitido ninguna atestación');
+    });
+
+    it('AC-07: offer-not-renewable says there is nothing else to do if the attestation is already saved', () => {
+      useLanguage('es');
+
+      expect(textOf(show('offer-not-renewable'), 'p')).toContain(
+        'Si ya has guardado la atestación en tu wallet, no tienes que hacer nada más',
+      );
+    });
+
+    it('AC-10: not-entitled shows the tenant support details in the text', () => {
+      useLanguage('es');
+
+      const support = show('not-entitled').querySelector('[data-testid="error-support"]')?.textContent ?? '';
+
+      expect(support).toContain('soporte@cgcom.example');
+      expect(support).toContain('900 000 000');
+      expect(support).toContain('L-V 9-18');
+    });
+
+    describe.each(['es', 'en'])('in %s', (lang) => {
+      it.each(ERROR_REASONS)('AC-10: %s shows no code, status, system name or untranslated key', (reason) => {
+        useLanguage(lang);
+
+        const text = show(reason).textContent ?? '';
+
+        expect(text.trim().length).toBeGreaterThan(0);
+        expect(text).not.toMatch(
+          /\b[45]\d{2}\b|journey_closed|step_not_allowed|offer_not_renewable|onboarding_unavailable|config_unavailable|not_entitled|issuance_(rejected|unavailable)|authentic_source|Verifier|Wallet Unit Service|GET \/|POST \/|Problem|error\.|\{\{/,
+        );
+      });
+    });
   });
 });
