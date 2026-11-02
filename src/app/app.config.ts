@@ -8,13 +8,16 @@ import { AppMissingTranslationHandler } from './core/branding/missing-translatio
 import { initializeBranding } from './core/branding/branding.initializer';
 import { provideIssuancePortalApi } from './core/api/issuance-portal-api.providers';
 import { issuancePortalApiInterceptor } from './core/api/issuance-portal-api.interceptor';
+import { journeyErrorsInterceptor } from './core/journey/journey-errors.interceptor';
 import { PortalTranslateLoader } from './core/i18n/portal-translate.loader';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
-    provideHttpClient(withInterceptors([issuancePortalApiInterceptor])),
+    // El primero envuelve al segundo: journeyErrorsInterceptor ve los errores
+    // ya traducidos a ApiProblemError.
+    provideHttpClient(withInterceptors([journeyErrorsInterceptor, issuancePortalApiInterceptor])),
     provideIssuancePortalApi(),
     // Sin defaultLanguage: lo fija TenantLanguageService cuando ya hay
     // configuración, para que el primer catálogo cargado lleve los textos del
