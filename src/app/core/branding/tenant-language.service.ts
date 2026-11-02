@@ -1,5 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
+import { firstValueFrom } from 'rxjs';
 import { TenantBranding } from './tenant-branding.model';
 
 /** Idioma sin región, en minúsculas: `en-GB` → `en`. */
@@ -35,12 +36,14 @@ export class TenantLanguageService {
 
   /**
    * Vuelve a cargar los textos del idioma activo, para mezclar los del tenant
-   * cuando `GET /config` responde después del arranque.
+   * cuando `GET /config` responde después del arranque. Se resuelve cuando ya
+   * están aplicados y se rechaza si la recarga falla.
    */
-  reloadTexts(): void {
+  async reloadTexts(): Promise<void> {
     const lang = this._current();
     if (lang) {
-      this.translate.reloadLang(lang).subscribe(() => this.translate.use(lang));
+      await firstValueFrom(this.translate.reloadLang(lang));
+      this.translate.use(lang);
     }
   }
 

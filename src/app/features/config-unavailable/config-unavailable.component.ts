@@ -8,7 +8,8 @@ import { TenantLanguageService } from '../../core/branding/tenant-language.servi
  * Configuración del portal no disponible (prd.md §3.4): sin detalles
  * internos, con la cabecera del tenant. "Volver a intentarlo" vuelve a pedir
  * la configuración y, si responde, recarga los textos para añadir los del
- * tenant y va a Inicio.
+ * tenant y, solo cuando ya están, va a Inicio (AC-04). Si la recarga falla,
+ * se queda en esta pantalla.
  */
 @Component({
   selector: 'app-config-unavailable',
@@ -30,9 +31,11 @@ export class ConfigUnavailableComponent {
     try {
       const state = await this.config.load();
       if (state.status === 'loaded') {
-        this.language.reloadTexts();
+        await this.language.reloadTexts();
         await this.router.navigate(['/']);
       }
+    } catch {
+      // Sin los textos del tenant no se va a Inicio: el titular puede reintentar.
     } finally {
       this.retrying.set(false);
     }

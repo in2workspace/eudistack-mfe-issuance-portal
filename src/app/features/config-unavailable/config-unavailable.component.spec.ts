@@ -19,7 +19,7 @@ describe('ConfigUnavailableComponent', () => {
 
   beforeEach(() => {
     load = jest.fn();
-    reloadTexts = jest.fn();
+    reloadTexts = jest.fn().mockResolvedValue(undefined);
     TestBed.configureTestingModule({
       imports: [ConfigUnavailableComponent, TranslateModule.forRoot()],
       providers: [
@@ -52,6 +52,32 @@ describe('ConfigUnavailableComponent', () => {
 
     expect(reloadTexts).toHaveBeenCalledTimes(1);
     expect(router.navigate).toHaveBeenCalledWith(['/']);
+  });
+
+  it('AC-04: goes to Inicio only once the tenant texts are in place', async () => {
+    let textsLoaded!: () => void;
+    reloadTexts.mockReturnValue(new Promise<void>((r) => (textsLoaded = r)));
+    load.mockResolvedValue({ status: 'loaded', config });
+
+    const retry = fixture.componentInstance.onRetry();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(router.navigate).not.toHaveBeenCalled();
+
+    textsLoaded();
+    await retry;
+    expect(router.navigate).toHaveBeenCalledWith(['/']);
+  });
+
+  it('AC-04: if the tenant texts cannot be reloaded, retrying stays on this screen', async () => {
+    reloadTexts.mockRejectedValue(new Error('texts'));
+    load.mockResolvedValue({ status: 'loaded', config });
+
+    await fixture.componentInstance.onRetry();
+    fixture.detectChanges();
+
+    expect(router.navigate).not.toHaveBeenCalled();
+    expect(retryButton().disabled).toBe(false);
   });
 
   it('AC-04: if it is still unavailable, retrying stays on this screen', async () => {

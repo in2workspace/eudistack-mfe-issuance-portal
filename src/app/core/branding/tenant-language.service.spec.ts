@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { TranslateService } from '@ngx-translate/core';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { TenantLanguageService } from './tenant-language.service';
 import { DEFAULT_EUDISTACK_BRANDING, TenantBranding } from './tenant-branding.model';
 
@@ -46,14 +46,23 @@ describe('TenantLanguageService', () => {
     expect(service.current()).toBe('es');
   });
 
-  it('reloads the texts of the active language when the tenant texts arrive later', () => {
+  it('reloads the texts of the active language when the tenant texts arrive later', async () => {
     service.apply(brandingWith(['es', 'en']), ['en']);
     translateSpy.use.mockClear();
 
-    service.reloadTexts();
+    await service.reloadTexts();
 
     expect(translateSpy.reloadLang).toHaveBeenCalledWith('en');
     expect(translateSpy.use).toHaveBeenCalledWith('en');
+  });
+
+  it('rejects when the texts cannot be reloaded, without switching language', async () => {
+    service.apply(brandingWith(['es', 'en']), ['en']);
+    translateSpy.use.mockClear();
+    translateSpy.reloadLang.mockReturnValue(throwError(() => new Error('texts')));
+
+    await expect(service.reloadTexts()).rejects.toThrow('texts');
+    expect(translateSpy.use).not.toHaveBeenCalled();
   });
 
   it('falls back to the first language of the tenant for missing keys', () => {
