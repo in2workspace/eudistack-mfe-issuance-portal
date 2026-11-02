@@ -23,6 +23,21 @@ describe('validatePortalConfig', () => {
     expect(validatePortalConfig({ ...valid, wallet_url: walletUrl })).toBeNull();
   });
 
+  it.each(['https://cgcom.example/aviso-legal', '/terminos'])('accepts a legal link that is https or a path on the same host (%p)', (link) => {
+    expect(validatePortalConfig({ ...valid, legal_links: { terms: link } })).not.toBeNull();
+  });
+
+  it.each(['javascript:alert(1)', 'data:text/html,hi', 'http://cgcom.example/terminos', '//evil.example/terminos', '/\\evil.example', 'terminos', '', 42])(
+    'ES-02: rejects a legal link that is not https or a path on the same host (%p)',
+    (link) => {
+      expect(validatePortalConfig({ ...valid, legal_links: { legal_notice: 'https://cgcom.example/aviso', privacy: link } })).toBeNull();
+    },
+  );
+
+  it('does not validate the support email as a URL', () => {
+    expect(validatePortalConfig({ ...valid, support: { email: 'soporte@example.org', phone: '900 123 456' } })).not.toBeNull();
+  });
+
   it('does not need brand or languages, which come from the theme.json', () => {
     expect(validatePortalConfig(valid)).not.toBeNull();
   });
