@@ -1,6 +1,6 @@
 import { ApplicationConfig, provideAppInitializer, provideZoneChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
-import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { HttpInterceptorFn, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { MissingTranslationHandler, TranslateLoader, provideTranslateService } from '@ngx-translate/core';
 
 import { routes } from './app.routes';
@@ -12,15 +12,21 @@ import { journeyActivityInterceptor } from './core/journey/journey-activity.inte
 import { journeyErrorsInterceptor } from './core/journey/journey-errors.interceptor';
 import { PortalTranslateLoader } from './core/i18n/portal-translate.loader';
 
+/**
+ * Interceptores HTTP, en orden: cada uno envuelve a los siguientes, así que
+ * journeyErrorsInterceptor ve los errores ya traducidos a ApiProblemError.
+ */
+export const httpInterceptors: HttpInterceptorFn[] = [
+  journeyActivityInterceptor,
+  journeyErrorsInterceptor,
+  issuancePortalApiInterceptor,
+];
+
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
-    // Cada uno envuelve a los siguientes: journeyErrorsInterceptor ve los
-    // errores ya traducidos a ApiProblemError.
-    provideHttpClient(
-      withInterceptors([journeyActivityInterceptor, journeyErrorsInterceptor, issuancePortalApiInterceptor]),
-    ),
+    provideHttpClient(withInterceptors(httpInterceptors)),
     provideIssuancePortalApi(),
     // Sin defaultLanguage: lo fija TenantLanguageService cuando ya hay
     // configuración, para que el primer catálogo cargado lleve los textos del
