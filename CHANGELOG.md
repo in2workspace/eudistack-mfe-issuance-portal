@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - Guarda de los pasos (`journeyStepGuard`) con `GET /journey` en Datos y QR: el paso lo dice el servicio y, si no corresponde a la ruta, el titular va a la de su paso. Sin Access Token o con 401 va a Inicio; un recorrido terminado o retirado, también; un 410, a sesión caducada. La ruta de Comprobación (`entitlement`) queda lista para EUD-286.
   - 409 `step_not_allowed` y 410 `journey_closed` en cualquier llamada al servicio: el primero lleva a la ruta del paso que indica `GET /journey` y el segundo a sesión caducada. `offer_not_renewable` y los demás los trata la pantalla que llamó.
   - Aviso de caducidad a los 15 minutos sin llamadas al servicio: en Comprobación, Datos o QR, `GET /journey` decide y un 410 muestra la sesión caducada. La comprobación espera un minuto más, para no renovar un recorrido que el servicio está a punto de retirar.
+  - Los tokens del titular se descartan siempre que el recorrido acaba (design.md 0.2 §3.1, punto 7): con cualquier 410 `journey_closed` antes de mostrar la sesión caducada, al volver al inicio sin derecho y con el código no renovable. Hasta EUD-314, que provee `SESSION_ACTIONS`, el descarte no hace nada.
 
 ### Changed
 
