@@ -12,6 +12,8 @@ import { ISSUANCE_PORTAL_ACCESS_TOKEN } from '../api/issuance-portal-api.interce
 
 describe('JourneyInactivityService', () => {
   const FIFTEEN_MINUTES = 15 * 60 * 1000;
+  /** La comprobación se lanza a los 15 minutos más un minuto de margen. */
+  const PROBE_AT = FIFTEEN_MINUTES + 60 * 1000;
   let token: string | null;
   let url: string;
   let getJourney: jest.Mock<Observable<Journey>>;
@@ -51,24 +53,34 @@ describe('JourneyInactivityService', () => {
     getJourney.mockReturnValue(throwError(() => new ApiProblemError('journey_closed', 410, 'Journey closed')));
     service.touch();
 
-    await elapse(FIFTEEN_MINUTES);
+    await elapse(PROBE_AT);
 
     expect(getJourney).toHaveBeenCalledTimes(1);
     expect(toSessionExpired).toHaveBeenCalledTimes(1);
   });
 
-  it('does nothing before the 15 minutes', async () => {
+  it('does nothing before the 15 minutes and the margin', async () => {
     service.touch();
 
-    await elapse(FIFTEEN_MINUTES - 1);
+    await elapse(PROBE_AT - 1);
 
     expect(getJourney).not.toHaveBeenCalled();
+  });
+
+  it('AC-02: does not probe at exactly 15 minutes, so the probe cannot renew a journey the service is about to retire', async () => {
+    service.touch();
+
+    await elapse(FIFTEEN_MINUTES);
+    expect(getJourney).not.toHaveBeenCalled();
+
+    await elapse(60 * 1000);
+    expect(getJourney).toHaveBeenCalledTimes(1);
   });
 
   it('if the journey is still in progress, does not show the session expired case', async () => {
     service.touch();
 
-    await elapse(FIFTEEN_MINUTES);
+    await elapse(PROBE_AT);
 
     expect(getJourney).toHaveBeenCalledTimes(1);
     expect(toSessionExpired).not.toHaveBeenCalled();
@@ -85,7 +97,7 @@ describe('JourneyInactivityService', () => {
     await elapse(10 * 60 * 1000);
 
     expect(getJourney).not.toHaveBeenCalled();
-    await elapse(5 * 60 * 1000);
+    await elapse(6 * 60 * 1000);
     expect(getJourney).toHaveBeenCalledTimes(1);
   });
 
@@ -104,7 +116,7 @@ describe('JourneyInactivityService', () => {
     url = path;
     service.touch();
 
-    await elapse(FIFTEEN_MINUTES);
+    await elapse(PROBE_AT);
 
     expect(getJourney).not.toHaveBeenCalled();
     expect(toSessionExpired).not.toHaveBeenCalled();
@@ -114,7 +126,7 @@ describe('JourneyInactivityService', () => {
     token = null;
     service.touch();
 
-    await elapse(FIFTEEN_MINUTES);
+    await elapse(PROBE_AT);
 
     expect(getJourney).not.toHaveBeenCalled();
   });
@@ -123,7 +135,7 @@ describe('JourneyInactivityService', () => {
     url = path;
     service.touch();
 
-    await elapse(FIFTEEN_MINUTES);
+    await elapse(PROBE_AT);
 
     expect(getJourney).toHaveBeenCalledTimes(1);
   });

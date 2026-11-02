@@ -18,6 +18,14 @@ const STEP_PATHS: readonly string[] = Object.values(STEP_PATH);
 @Injectable({ providedIn: 'root' })
 export class JourneyInactivityService implements OnDestroy {
   static readonly INACTIVITY_MS = 15 * 60 * 1000;
+  /**
+   * La comprobación cuenta como actividad en el servicio. Si llegara justo a
+   * los 15 minutos de enviar la última petición, el servicio podría ver algo
+   * menos (actualiza `last_activity` al procesarla) y renovar el recorrido
+   * en lugar de darlo por caducado. Se espera además un minuto, la cadencia
+   * del proceso de retirada del servicio.
+   */
+  static readonly PROBE_MARGIN_MS = 60 * 1000;
 
   private readonly router = inject(Router);
   private readonly journeyApi = inject(JourneyApi);
@@ -26,10 +34,13 @@ export class JourneyInactivityService implements OnDestroy {
 
   private timer: ReturnType<typeof setTimeout> | null = null;
 
-  /** Hubo una llamada al servicio: vuelve a contar los 15 minutos. */
+  /** Hubo una llamada al servicio: vuelve a contar los 15 minutos (más el margen). */
   touch(): void {
     this.clear();
-    this.timer = setTimeout(() => void this.onInactive(), JourneyInactivityService.INACTIVITY_MS);
+    this.timer = setTimeout(
+      () => void this.onInactive(),
+      JourneyInactivityService.INACTIVITY_MS + JourneyInactivityService.PROBE_MARGIN_MS,
+    );
   }
 
   ngOnDestroy(): void {
