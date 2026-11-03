@@ -88,5 +88,8 @@
   "error.support.schedule": "Horario: {{schedule}}",
   "portal": {
     "app_name": "Portal de Emisión"
-  }
+  },
+  "incidents.sent.title": "Hemos recibido tu incidencia",
+  "incidents.sent.responseTime": "Te responderemos en {{responseTime}} por correo.",
+  "incidents.sent.home": "Volver al inicio"
 }

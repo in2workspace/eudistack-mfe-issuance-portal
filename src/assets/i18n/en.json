@@ -88,5 +88,8 @@
   "error.support.schedule": "Hours: {{schedule}}",
   "portal": {
     "app_name": "Issuance Portal"
-  }
+  },
+  "incidents.sent.title": "We have received your incident",
+  "incidents.sent.responseTime": "We will reply by email within {{responseTime}}.",
+  "incidents.sent.home": "Back to home"
 }
