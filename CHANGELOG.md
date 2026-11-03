@@ -17,11 +17,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - Aviso de caducidad a los 15 minutos sin llamadas al servicio: en Comprobación, Datos o QR, `GET /journey` decide y un 410 muestra la sesión caducada. La comprobación espera un minuto más, para no renovar un recorrido que el servicio está a punto de retirar.
   - Los tokens del titular se descartan siempre que el recorrido acaba (design.md 0.2 §3.1, punto 7): con cualquier 410 `journey_closed` antes de mostrar la sesión caducada, al volver al inicio sin derecho y con el código no renovable. Hasta EUD-314, que provee `SESSION_ACTIONS`, el descarte no hace nada.
 
+- **EUD-284 — Ayuda y Ayuda enviada**:
+  - Ayuda envía la incidencia al soporte del tenant con `POST /incidents`: nombre, correo, teléfono opcional, tipo (problema técnico, de acceso, gestión de credenciales u otro), asunto y descripción, con las longitudes del contrato. «Enviar incidencia» no se activa sin los obligatorios, con un correo sin formato válido ni mientras se envía. Si el envío falla (400, 429, 503 o red), un aviso sobre el formulario y lo escrito se conserva. El panel de soporte y el aviso del plazo vienen de `GET /config`, y cada dato que falta no se muestra.
+  - Ayuda enviada (`incidents/sent`), sin botón de volver, con el plazo de respuesta que devuelve el servicio. Solo se llega al enviar: un enlace directo o una recarga llevan a Inicio.
+
 ### Changed
+
+- **EUD-284 — Inicio con la configuración del tenant**: los enlaces legales y el correo, el teléfono y el horario de soporte vienen de `GET /config`, sin `href="#"` ni valores fijos o deducidos del nombre del tenant; lo que el tenant no define no se muestra. Vuelven «Pedir ayuda» en la cabecera principal y la franja «¿Necesitas ayuda?» con el correo de soporte y «Abrir incidencia», que llevan a Ayuda. «Empezar» llama a `SESSION_ACTIONS.restartLogin()`, que EUD-314 conecta con el Verifier; hasta entonces se queda en Inicio.
+- **EUD-284 — incidencias sin Access Token**: `POST /incidents` es público, así que el interceptor de la API no le añade el token aunque el titular se haya identificado, y no reinicia el temporizador de inactividad del recorrido.
 
 - **EUD-287 — configuración no disponible en la pantalla de error**: el caso pasa a `error/config-unavailable`, con la cabecera del tenant y el mismo reintento; el botón queda desactivado mientras reintenta.
 
 ### Removed
+
+- **EUD-284**: el envío simulado de Ayuda, su número de incidencia inventado y los contenidos de la demo que no están en los wireframes (teléfono gratuito, preguntas frecuentes y guía con `href="#"`, texto del número de colegiado), el botón «Contactar por Email» de Inicio y `resolve-support-email.ts`.
 
 - **EUD-287**: la pantalla `config-unavailable` y su ruta `unavailable`, `pendingJourneyGuard` y `cannot-continue-reason.ts`. La pantalla QR conserva su aviso de no disponible, sin motivo y con los textos en `credentialOffer.unavailable.*`, hasta que EUD-286 lo convierta en QR caducado.
 
