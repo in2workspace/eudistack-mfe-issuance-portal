@@ -111,6 +111,18 @@ describe('IssuanceInfoComponent', () => {
     expect(helpEmail?.getAttribute('href')).toBe('mailto:soporte@tenant.example');
   });
 
+  it.each(['soporte@tenant.example?bcc=copia@otro.example', 'soporte@tenant.example?body=hola', 'sop&cc=x@tenant.example'])(
+    'a support email with mailto parameters (%s) is shown as text, without a mailto link',
+    (email) => {
+      const compiled = render({ ...FULL_CONFIG, support: { email } });
+      const helpEmail = compiled.querySelector('[data-testid="help-email"]');
+
+      expect(helpEmail?.tagName).toBe('SPAN');
+      expect(helpEmail?.textContent?.trim()).toBe(email);
+      expect(compiled.querySelectorAll('a[href^="mailto:"]')).toHaveLength(0);
+    },
+  );
+
   it('AC-01: no link points to "#"', () => {
     const compiled = render(FULL_CONFIG);
 

@@ -12,6 +12,9 @@ const LEGAL_LINKS = [
   { key: 'accessibility', label: 'issuanceInfo.footer.accessibility' },
 ] as const;
 
+/** Una sola `@` y ningún carácter que cambie el sentido de un `mailto:`. */
+const PLAIN_EMAIL = /^[^\s@?&#%/\\]+@[^\s@?&#%/\\]+$/;
+
 /**
  * Pantalla de Inicio (prd.md §3.1, wireframes, Inicio): qué es la cartera,
  * cómo funciona el proceso, cómo pedir ayuda y el pie con el soporte y los
@@ -33,6 +36,16 @@ export class IssuanceInfoComponent {
 
   /** Datos de soporte del tenant; un dato que falta no se muestra. */
   protected readonly support = computed(() => this.portalConfig.config()?.support ?? {});
+
+  /**
+   * Enlace para escribir al soporte, solo con una dirección simple: sin `?`,
+   * `&`, `#` ni `%`, un correo mal configurado podría añadir destinatarios o
+   * cuerpo al `mailto:`. Si no lo es, el correo se muestra como texto.
+   */
+  protected readonly supportMailto = computed(() => {
+    const email = this.support().email;
+    return email && PLAIN_EMAIL.test(email) ? `mailto:${email}` : null;
+  });
 
   protected readonly hasSupport = computed(() => {
     const support = this.support();

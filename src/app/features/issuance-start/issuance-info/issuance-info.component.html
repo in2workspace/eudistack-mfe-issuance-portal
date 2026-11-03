@@ -192,7 +192,11 @@
       <p class="mt-4 text-lg text-brand-secondary-contrast/80">{{ 'issuanceInfo.help.description' | translate }}</p>
       @if (support().email; as email) {
         <p class="mt-4">
-          <a [href]="'mailto:' + email" class="font-semibold underline hover:no-underline" data-testid="help-email">{{ email }}</a>
+          @if (supportMailto(); as mailto) {
+            <a [href]="mailto" class="font-semibold underline hover:no-underline" data-testid="help-email">{{ email }}</a>
+          } @else {
+            <span class="font-semibold" data-testid="help-email">{{ email }}</span>
+          }
         </p>
       }
       <div class="mt-8 flex justify-center">
