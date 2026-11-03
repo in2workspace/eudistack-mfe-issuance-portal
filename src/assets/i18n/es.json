@@ -25,7 +25,7 @@
   "issuanceInfo.help.title": "¿Necesitas ayuda?",
   "issuanceInfo.help.description": "Nuestro equipo está disponible para resolver tus dudas y ayudarte en el proceso",
   "issuanceInfo.help.reportIncident": "Abrir incidencia",
-  "issuanceInfo.help.reportIncident.ariaLabel": "Abrir una incidencia para el soporte",
+  "issuanceInfo.help.reportIncident.ariaLabel": "Abrir incidencia en el soporte",
   "issuanceInfo.footer.legalNotice": "Aviso legal",
   "issuanceInfo.footer.privacyPolicy": "Política de privacidad",
   "issuanceInfo.footer.termsAndConditions": "Términos y condiciones",
