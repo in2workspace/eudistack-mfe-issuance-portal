@@ -1,10 +1,27 @@
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { axe, toHaveNoViolations } from 'jest-axe';
+import { PortalConfig } from '../../../core/api/generated/journey';
+import { PortalConfigService } from '../../../core/config/portal-config.service';
+import { SESSION_ACTIONS } from '../../../core/session/session-actions';
 import { IssuanceInfoComponent } from './issuance-info.component';
 
 expect.extend(toHaveNoViolations);
+
+/** Configuración completa, para que la comprobación cubra la franja de ayuda, los enlaces legales y el soporte. */
+const FULL_CONFIG: PortalConfig = {
+  wallet_url: 'https://wallet.example',
+  texts: {},
+  support: { email: 'soporte@tenant.example', phone: '911 000 000', schedule: 'L-V 8:00-15:00' },
+  legal_links: {
+    legal_notice: 'https://tenant.example/aviso',
+    privacy: 'https://tenant.example/privacidad',
+    terms: 'https://tenant.example/condiciones',
+    accessibility: 'https://tenant.example/accesibilidad',
+  },
+};
 
 describe('IssuanceInfoComponent a11y', () => {
   let fixture: ComponentFixture<IssuanceInfoComponent>;
@@ -12,7 +29,11 @@ describe('IssuanceInfoComponent a11y', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [IssuanceInfoComponent, TranslateModule.forRoot()],
-      providers: [provideRouter([])],
+      providers: [
+        provideRouter([]),
+        { provide: SESSION_ACTIONS, useValue: { restartLogin: jest.fn(), discardTokens: jest.fn() } },
+        { provide: PortalConfigService, useValue: { config: signal(FULL_CONFIG) } },
+      ],
     });
 
     fixture = TestBed.createComponent(IssuanceInfoComponent);

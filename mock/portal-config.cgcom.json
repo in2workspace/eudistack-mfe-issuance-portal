@@ -15,6 +15,11 @@
     "schedule": "L-V 9:00-18:00",
     "response_time": "48 horas"
   },
-  "legal_links": {},
+  "legal_links": {
+    "legal_notice": "https://cgcom.example/aviso-legal",
+    "privacy": "https://cgcom.example/privacidad",
+    "terms": "https://cgcom.example/condiciones",
+    "accessibility": "https://cgcom.example/accesibilidad"
+  },
   "wallet_url": "https://cgcom.127.0.0.1.nip.io:4443/wallet"
 }
