@@ -2,7 +2,7 @@ import { InjectionToken, inject } from '@angular/core';
 import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { catchError, throwError } from 'rxjs';
 import { ApiProblemError, NETWORK_ERROR, UNEXPECTED_ERROR } from './api-problem.error';
-import { ISSUANCE_PORTAL_API_BASE_PATH } from './issuance-portal-api.providers';
+import { ISSUANCE_PORTAL_API_BASE_PATH, isIncidentRequest } from './issuance-portal-api.providers';
 
 /**
  * Access Token del titular para las llamadas al servicio, o `null` si no hay.
@@ -18,13 +18,14 @@ export const ISSUANCE_PORTAL_ACCESS_TOKEN = new InjectionToken<() => string | nu
  * Token como `Authorization: Bearer` cuando lo hay y traduce cualquier error a
  * `ApiProblemError`. Sin cookie de sesión, no lleva `withCredentials` ni
  * cabecera anti-CSRF. El resto de peticiones (ficheros de idioma, theme.json)
- * pasan sin cambios y nunca llevan el token.
+ * pasan sin cambios y nunca llevan el token, como tampoco el envío de una
+ * incidencia, que es público.
  */
 export const issuancePortalApiInterceptor: HttpInterceptorFn = (req, next) => {
   if (!req.url.startsWith(`${ISSUANCE_PORTAL_API_BASE_PATH}/`)) {
     return next(req);
   }
-  const token = inject(ISSUANCE_PORTAL_ACCESS_TOKEN)();
+  const token = isIncidentRequest(req) ? null : inject(ISSUANCE_PORTAL_ACCESS_TOKEN)();
   const apiReq = token ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } }) : req;
   return next(apiReq).pipe(catchError((err: unknown) => throwError(() => toApiProblemError(err))));
 };

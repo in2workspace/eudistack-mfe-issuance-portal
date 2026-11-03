@@ -112,6 +112,17 @@ describe('JourneyInactivityService', () => {
     expect(touch).not.toHaveBeenCalled();
   });
 
+  it('EC-06 (EUD-284): sending an incident does not count as journey activity', () => {
+    const http = TestBed.inject(HttpClient);
+    const backend = TestBed.inject(HttpTestingController);
+    const touch = jest.spyOn(service, 'touch');
+
+    http.post('/issuance-portal/api/v1/incidents', {}).subscribe();
+    backend.expectOne('/issuance-portal/api/v1/incidents').flush({ response_time: '48 horas' });
+
+    expect(touch).not.toHaveBeenCalled();
+  });
+
   it.each(['/', '/incidents', '/error/not-entitled'])('EC-04: on %s there is no journey to watch', async (path) => {
     url = path;
     service.touch();

@@ -92,6 +92,40 @@ describe('issuancePortalApiInterceptor', () => {
     expect(error).toMatchObject({ type: NETWORK_ERROR, status: 0 });
   });
 
+  it('AC-09 (EUD-284): with an Access Token, sending an incident goes without it and the other calls keep it', () => {
+    accessToken = 'token-123';
+    http.post('/issuance-portal/api/v1/incidents', {}).subscribe();
+    http.get('/issuance-portal/api/v1/journey').subscribe();
+
+    const incident = controller.expectOne('/issuance-portal/api/v1/incidents');
+    const journey = controller.expectOne('/issuance-portal/api/v1/journey');
+    expect(incident.request.headers.has('Authorization')).toBe(false);
+    expect(journey.request.headers.get('Authorization')).toBe('Bearer token-123');
+    incident.flush({ response_time: '48 horas' });
+    journey.flush({});
+  });
+
+  it('AC-06 (EUD-284): an incident rejected by the limit still becomes a typed error', () => {
+    let error: unknown;
+    http.post('/issuance-portal/api/v1/incidents', {}).subscribe({ error: (e: unknown) => (error = e) });
+
+    controller
+      .expectOne('/issuance-portal/api/v1/incidents')
+      .flush({ type: 'too_many_requests', title: 'Too many requests', status: 429 }, { status: 429, statusText: 'Too Many Requests' });
+
+    expect(error).toBeInstanceOf(ApiProblemError);
+    expect(error).toMatchObject({ type: 'too_many_requests', status: 429 });
+  });
+
+  it('only the POST to /incidents is public: another method on that path keeps the Access Token', () => {
+    accessToken = 'token-123';
+    http.get('/issuance-portal/api/v1/incidents').subscribe();
+
+    const req = controller.expectOne('/issuance-portal/api/v1/incidents');
+    expect(req.request.headers.get('Authorization')).toBe('Bearer token-123');
+    req.flush({});
+  });
+
   it('a failure outside the service API is not translated', () => {
     let error: unknown;
     http.get('assets/i18n/xx.json').subscribe({ error: (e: unknown) => (error = e) });
