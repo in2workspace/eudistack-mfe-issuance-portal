@@ -19,7 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - **EUD-284 — Ayuda y Ayuda enviada**:
   - Ayuda envía la incidencia al soporte del tenant con `POST /incidents`: nombre, correo, teléfono opcional, tipo (problema técnico, de acceso, gestión de credenciales u otro), asunto y descripción, con las longitudes del contrato. «Enviar incidencia» no se activa sin los obligatorios, con un correo sin formato válido ni mientras se envía. Si el envío falla (400, 429, 503 o red), un aviso sobre el formulario y lo escrito se conserva. El panel de soporte y el aviso del plazo vienen de `GET /config`, y cada dato que falta no se muestra.
-  - Ayuda enviada (`incidents/sent`), sin botón de volver, con el plazo de respuesta que devuelve el servicio. Solo se llega al enviar: un enlace directo o una recarga llevan a Inicio.
+  - Ayuda enviada (`incidents/sent`), sin botón de volver, con el plazo de respuesta que devuelve el servicio, que se guarda solo en memoria. Solo se llega justo después de enviar: un enlace directo, una recarga o el historial llevan a Inicio.
 
 ### Changed
 

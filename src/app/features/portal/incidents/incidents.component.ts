@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { Incident, IncidentsApi } from '../../../core/api/generated/journey';
 import { PortalConfigService } from '../../../core/config/portal-config.service';
-import { INCIDENT_SENT_PATH, IncidentSentState } from './incident-sent.route';
+import { INCIDENT_SENT_PATH, IncidentSentStore } from './incident-sent.route';
 
 /** Tipos de incidencia del contrato, en el orden del formulario. */
 const INCIDENT_TYPES: readonly Incident.TypeEnum[] = ['technical', 'access', 'credentials', 'other'];
@@ -24,6 +24,7 @@ export class IncidentsComponent {
   private readonly router = inject(Router);
   private readonly incidents = inject(IncidentsApi);
   private readonly portalConfig = inject(PortalConfigService);
+  private readonly sent = inject(IncidentSentStore);
 
   protected readonly types = INCIDENT_TYPES;
 
@@ -65,8 +66,8 @@ export class IncidentsComponent {
     this.failed.set(false);
     this.incidents.sendIncident(this.toIncident()).subscribe({
       next: ({ response_time }) => {
-        const state: IncidentSentState = { responseTime: response_time };
-        void this.router.navigateByUrl(`/${INCIDENT_SENT_PATH}`, { state });
+        this.sent.set(response_time);
+        void this.router.navigateByUrl(`/${INCIDENT_SENT_PATH}`);
       },
       error: () => {
         // Cualquier fallo (400, 429, 503 o red) muestra el mismo aviso, sin detalles internos.

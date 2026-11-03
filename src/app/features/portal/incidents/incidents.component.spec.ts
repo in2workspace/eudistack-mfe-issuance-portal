@@ -7,6 +7,7 @@ import { NEVER, Observable, of, throwError } from 'rxjs';
 import { ApiProblemError, NETWORK_ERROR } from '../../../core/api/api-problem.error';
 import { IncidentsApi, PortalConfig, PortalConfigSupport } from '../../../core/api/generated/journey';
 import { PortalConfigService } from '../../../core/config/portal-config.service';
+import { IncidentSentStore } from './incident-sent.route';
 import { IncidentsComponent } from './incidents.component';
 
 expect.extend(toHaveNoViolations);
@@ -118,7 +119,8 @@ describe('IncidentsComponent', () => {
         subject: 'No puedo entrar',
         description: 'El Verifier no me deja continuar.',
       });
-      expect(navigateByUrl).toHaveBeenCalledWith('/incidents/sent', { state: { responseTime: '24 horas' } });
+      expect(navigateByUrl).toHaveBeenCalledWith('/incidents/sent');
+      expect(TestBed.inject(IncidentSentStore).take()).toBe('24 horas');
     });
 
     it('sends the phone when the holder writes it', async () => {
