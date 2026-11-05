@@ -1,14 +1,17 @@
 import { Routes } from '@angular/router';
-import { pendingJourneyGuard } from './core/guards/pending-journey.guard';
+import { journeyStepGuard } from './core/journey/journey-step.guard';
+import { DATA_PATH, QR_PATH } from './core/journey/journey-paths';
 import { CONFIG_UNAVAILABLE_PATH, configAvailableGuard, configUnavailableGuard } from './core/guards/config-available.guard';
 import { legacyQueryParamsGuard } from './core/guards/legacy-query-params.guard';
+import { ERROR_PATH, errorReasonGuard } from './features/error/error-reason';
 
 export const routes: Routes = [
   {
-    // Configuración del portal no disponible (prd.md §3.4).
+    // Configuración del portal no disponible (prd.md §3.4): el único caso de
+    // la pantalla de error que no necesita la configuración del tenant.
     path: CONFIG_UNAVAILABLE_PATH,
-    loadComponent: () =>
-      import('./features/config-unavailable/config-unavailable.component').then((m) => m.ConfigUnavailableComponent),
+    loadComponent: () => import('./features/error/error.component').then((m) => m.ErrorComponent),
+    data: { reason: 'config-unavailable' },
     canActivate: [legacyQueryParamsGuard, configUnavailableGuard],
   },
   {
@@ -24,23 +27,29 @@ export const routes: Routes = [
           ),
       },
       {
-        path: 'user-data',
+        path: DATA_PATH,
         data: { back: '' },
         loadComponent: () =>
           import('./features/portal/user-data/user-data.component').then(
             (m) => m.UserDataComponent,
           ),
-        canActivate: [pendingJourneyGuard],
+        canActivate: [journeyStepGuard],
       },
       {
         // EUD-163: sustituye la ruta demo 'qr' (AD-5) — presenta la oferta real
         // como QR + deeplink, con caducidad y timeout reales.
-        path: 'offer',
+        path: QR_PATH,
         loadComponent: () =>
           import('./features/credential-offer/credential-offer.component').then(
             (m) => m.CredentialOfferComponent,
           ),
-        canActivate: [pendingJourneyGuard],
+        canActivate: [journeyStepGuard],
+      },
+      {
+        // Pantalla de error única (prd.md §3.4), sin botón de volver.
+        path: `${ERROR_PATH}/:reason`,
+        loadComponent: () => import('./features/error/error.component').then((m) => m.ErrorComponent),
+        canActivate: [errorReasonGuard],
       },
       {
         path: 'incidents',

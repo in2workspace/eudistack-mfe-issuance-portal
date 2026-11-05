@@ -1,0 +1,39 @@
+@if (reason(); as reason) {
+  <main class="min-h-screen bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
+    <div class="mx-auto flex max-w-lg flex-col items-center gap-6 rounded-xl border bg-white p-8 text-center" role="alert">
+      <div class="flex h-16 w-16 items-center justify-center rounded-full bg-gray-100">
+        <svg class="h-8 w-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+        </svg>
+      </div>
+      <h1 class="text-2xl font-bold text-gray-900">{{ 'error.' + reason + '.title' | translate }}</h1>
+      <p class="text-gray-600">{{ 'error.' + reason + '.description' | translate }}</p>
+
+      @if (support(); as support) {
+        <div class="w-full rounded-lg border bg-gray-50 p-4 text-left text-sm text-gray-700" data-testid="error-support">
+          <p class="mb-2 font-semibold">{{ 'error.support.title' | translate }}</p>
+          <ul class="space-y-1">
+            @if (support.email) {
+              <li>{{ 'error.support.email' | translate: { email: support.email } }}</li>
+            }
+            @if (support.phone) {
+              <li>{{ 'error.support.phone' | translate: { phone: support.phone } }}</li>
+            }
+            @if (support.schedule) {
+              <li>{{ 'error.support.schedule' | translate: { schedule: support.schedule } }}</li>
+            }
+          </ul>
+        </div>
+      }
+
+      <button
+        type="button"
+        (click)="onAction()"
+        [disabled]="retrying()"
+        class="inline-flex h-10 items-center justify-center rounded-md bg-gray-900 px-6 text-sm font-medium text-white transition-colors hover:bg-gray-700 disabled:opacity-60"
+      >
+        {{ 'error.' + reason + '.action' | translate }}
+      </button>
+    </div>
+  </main>
+}

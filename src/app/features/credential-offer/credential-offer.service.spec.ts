@@ -1,6 +1,5 @@
 import { TestBed, fakeAsync, tick, discardPeriodicTasks } from '@angular/core/testing';
 import { CredentialOfferService, MAX_QR_PAYLOAD_CHARS } from './credential-offer.service';
-import { CannotContinueReason } from '../issuance-start/cannot-continue-reason';
 
 describe('CredentialOfferService', () => {
   let service: CredentialOfferService;
@@ -23,7 +22,6 @@ describe('CredentialOfferService', () => {
 
     expect(service.status()).toBe('ready');
     expect(service.walletInvocationUrl()).toEqual(url);
-    expect(service.cannotContinueReason()).toBeNull();
     discardPeriodicTasks();
     service.cancelPendingWork();
   }));
@@ -40,12 +38,11 @@ describe('CredentialOfferService', () => {
   it('marking it unavailable withdraws the offer and shows the notice', fakeAsync(() => {
     service.present({ reference: 'ref-1', obtainedAt: Date.now() }, url);
 
-    service.markUnavailable(CannotContinueReason.OfferTimeout);
+    service.markUnavailable();
 
     expect(service.status()).toBe('unavailable');
     expect(service.offer()).toBeNull();
     expect(service.walletInvocationUrl()).toBeNull();
-    expect(service.cannotContinueReason()).toBe(CannotContinueReason.OfferTimeout);
   }));
 
   it('NFR-S-163-03: never writes the offer to sessionStorage, localStorage or the console', fakeAsync(() => {
@@ -68,7 +65,6 @@ describe('CredentialOfferService', () => {
       tick(601 * 1000);
 
       expect(service.status()).toBe('unavailable');
-      expect(service.cannotContinueReason()).toBe(CannotContinueReason.OfferUnavailable);
     }));
 
     it('at 599 s it has not expired yet', fakeAsync(() => {

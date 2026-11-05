@@ -38,7 +38,7 @@ describe('Holder data in the browser', () => {
     return [...read(sessionStorage), ...read(localStorage)].join('\n');
   }
 
-  it.each(['/', '/identify', '/user-data', '/offer', '/incidents', '/unavailable', '/cliente'])(
+  it.each(['/', '/identify', '/user-data', '/offer', '/incidents', '/error/config-unavailable', '/error/session-expired', '/cliente'])(
     'AC-05: visiting %s leaves no holder data in the storage or the address',
     async (url) => {
       const harness = await RouterTestingHarness.create();
