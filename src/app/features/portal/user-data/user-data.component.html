@@ -1,34 +1,87 @@
 <div class="min-h-screen bg-gray-50">
   <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
     <div class="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border p-8">
-      <div class="text-center mb-8">
-        <div class="w-20 h-20 bg-brand-secondary rounded-full flex items-center justify-center mx-auto mb-6">
-          <svg class="w-10 h-10 text-brand-secondary-contrast" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      @if (loading()) {
+        <div role="status" aria-live="polite" class="flex flex-col items-center text-center py-12">
+          <svg class="w-10 h-10 text-brand-accent animate-spin mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
+          <p class="text-gray-600">{{ 'userData.loading' | translate }}</p>
         </div>
-        <h2 class="text-2xl font-bold text-gray-900 mb-2">Tus datos</h2>
-        <p class="text-gray-600">Confirma que tus datos son correctos antes de continuar</p>
-      </div>
+      } @else {
+        <div class="text-center">
+          <h1 class="text-2xl font-bold text-gray-900 mb-2">{{ 'userData.title' | translate }}</h1>
+          <p class="text-gray-600">{{ 'userData.subtitle' | translate }}</p>
+        </div>
 
-      <div class="flex gap-4">
-        <button
-          (click)="onCancel()"
-          class="flex-1 inline-flex items-center justify-center rounded-md text-sm font-medium h-9 px-4 py-2 border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
-        >
-          Cancelar
-        </button>
-        <button
-          (click)="onContinue()"
-          class="flex-1 inline-flex items-center justify-center rounded-md text-sm font-medium h-9 px-4 py-2 bg-brand-secondary hover:opacity-90 text-brand-secondary-contrast transition-colors"
-        >
-          Continuar
-          <svg class="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
-      </div>
+        <!-- Wireframes, Datos: solo lectura, exactamente lo que llevará la atestación (FR-04). -->
+        <section aria-labelledby="attestation-title" class="rounded-lg border border-gray-200 p-6">
+          <h2 id="attestation-title" class="text-lg font-semibold text-gray-900 mb-4">
+            {{ 'userData.attestation' | translate: { name: attestation()?.type_name ?? '' } }}
+          </h2>
+          @if (attestation()?.fields?.length) {
+            <dl class="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+              @for (field of attestation()!.fields; track $index) {
+                <div>
+                  <dt class="text-sm text-gray-500">{{ field.label }}</dt>
+                  <dd class="font-medium text-gray-900 break-words">{{ field.value }}</dd>
+                </div>
+              }
+            </dl>
+          }
+        </section>
+
+        <form (submit)="$event.preventDefault(); onContinue()" class="flex flex-col gap-6" novalidate>
+          <!-- FR-05: siempre visible, rellenado si se conoce; también el correo del wallet. -->
+          <div>
+            <label for="holder-email" class="block text-sm font-medium text-gray-700 mb-1">{{ 'userData.email.label' | translate }}</label>
+            <input
+              id="holder-email"
+              type="email"
+              autocomplete="email"
+              [formControl]="email"
+              [attr.aria-invalid]="email.touched && email.invalid"
+              [attr.aria-describedby]="email.touched && email.invalid ? 'holder-email-hint holder-email-error' : 'holder-email-hint'"
+              class="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-accent"
+            />
+            <p id="holder-email-hint" class="mt-1 text-sm text-gray-500">{{ 'userData.email.hint' | translate }}</p>
+            @if (email.touched && email.invalid) {
+              <p id="holder-email-error" class="mt-1 text-sm text-red-700">{{ 'userData.email.invalid' | translate }}</p>
+            }
+          </div>
+
+          <p class="rounded-md bg-gray-50 p-3 text-sm text-gray-600">{{ 'userData.fixAtSource' | translate }}</p>
+
+          <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
+            <button
+              type="button"
+              (click)="onCancel()"
+              [disabled]="withdrawing()"
+              class="inline-flex items-center justify-center rounded-md text-sm font-medium h-10 px-4 border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            >
+              {{ 'userData.cancel' | translate }}
+            </button>
+            <button
+              type="submit"
+              [disabled]="email.invalid || withdrawing()"
+              class="inline-flex items-center justify-center rounded-md text-sm font-medium h-10 px-4 bg-brand-secondary hover:opacity-90 text-brand-secondary-contrast transition-colors disabled:opacity-50"
+            >
+              {{ 'userData.continue' | translate }}
+            </button>
+          </div>
+        </form>
+      }
     </div>
   </div>
 </div>
+
+<app-confirm-dialog
+  [open]="cancelOpen()"
+  [title]="'userData.cancelDialog.title' | translate"
+  [description]="['userData.cancelDialog.description' | translate]"
+  [dismissLabel]="'userData.cancelDialog.keepGoing' | translate"
+  [confirmLabel]="'userData.cancelDialog.confirm' | translate"
+  (dismissed)="onKeepGoing()"
+  (confirmed)="onConfirmCancel()"
+/>
