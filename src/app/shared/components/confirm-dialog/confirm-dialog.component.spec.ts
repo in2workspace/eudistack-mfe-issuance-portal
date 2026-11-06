@@ -115,6 +115,45 @@ describe('ConfirmDialogComponent', () => {
     expect(document.activeElement?.id).toBe('opener');
   });
 
+  it('W1: with the focus outside the notice, Escape still closes it as the default option', () => {
+    openFromLink();
+    (document.activeElement as HTMLElement).blur();
+    expect(document.activeElement).toBe(document.body);
+
+    press('Escape');
+
+    expect(host.dismissals).toBe(1);
+    expect(query('[role="dialog"]')).toBeNull();
+  });
+
+  it('W1: with the focus outside the notice, Tab brings it back inside', () => {
+    openFromLink();
+    (document.activeElement as HTMLElement).blur();
+
+    const event = press('Tab');
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(buttons()[0]);
+  });
+
+  it('W1: a click on the backdrop keeps the focus on the default option', () => {
+    openFromLink();
+    const backdrop = query<HTMLElement>('[role="dialog"]')!.parentElement!;
+
+    const event = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+    backdrop.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(buttons()[0]);
+    expect(host.dismissals).toBe(0);
+  });
+
+  it('does not react to keys while closed', () => {
+    press('Escape');
+
+    expect(host.dismissals).toBe(0);
+  });
+
   it('AC-14: the default option closes without confirming and gives the focus back', () => {
     openFromLink();
 

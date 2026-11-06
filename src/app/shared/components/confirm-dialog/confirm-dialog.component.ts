@@ -1,4 +1,4 @@
-import { Component, ElementRef, effect, input, output, untracked, viewChild } from '@angular/core';
+import { Component, ElementRef, HostListener, effect, input, output, untracked, viewChild } from '@angular/core';
 
 let nextId = 0;
 
@@ -10,7 +10,9 @@ let nextId = 0;
  * Accesible (ac.md EC-09, WCAG 2.1 AA): se anuncia como diálogo con su
  * título y su texto, el foco empieza en la opción por defecto y queda
  * atrapado dentro, Escape equivale a la opción por defecto y, al cerrarse, el
- * foco vuelve al elemento que lo abrió. Es un componente propio y no el
+ * foco vuelve al elemento que lo abrió. Las teclas se escuchan en todo el
+ * documento mientras está abierto y un clic en el fondo no saca el foco del
+ * aviso (review W1). Es un componente propio y no el
  * `<dialog>` nativo para poder probar el foco atrapado en los tests unitarios.
  *
  * Quien lo usa decide cuándo se abre y se cierra con `open`.
@@ -19,14 +21,13 @@ let nextId = 0;
   selector: 'app-confirm-dialog',
   template: `
     @if (open()) {
-      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4" (mousedown)="onBackdrop($event)">
         <div
           #panel
           role="dialog"
           aria-modal="true"
           [attr.aria-labelledby]="titleId"
           [attr.aria-describedby]="descriptionId"
-          (keydown)="onKeydown($event)"
           class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl"
         >
           <h2 [id]="titleId" class="text-lg font-semibold text-gray-900">{{ title() }}</h2>
@@ -93,12 +94,25 @@ export class ConfirmDialogComponent {
     effect(() => this.defaultButton()?.nativeElement.focus());
   }
 
+  /** Mientras está abierto, Escape y Tab se tratan aunque el foco haya salido del aviso. */
+  @HostListener('document:keydown', ['$event'])
   protected onKeydown(event: KeyboardEvent): void {
+    if (!this.open()) {
+      return;
+    }
     if (event.key === 'Escape') {
       event.preventDefault();
       this.dismissed.emit();
     } else if (event.key === 'Tab') {
       this.keepFocusInside(event);
+    }
+  }
+
+  /** Un clic fuera del panel no se lleva el foco: vuelve a la opción por defecto. */
+  protected onBackdrop(event: MouseEvent): void {
+    if (event.target === event.currentTarget) {
+      event.preventDefault();
+      this.defaultButton()?.nativeElement.focus();
     }
   }
 
