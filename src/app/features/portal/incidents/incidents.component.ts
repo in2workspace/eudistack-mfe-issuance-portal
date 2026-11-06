@@ -4,7 +4,8 @@ import { Router } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { Incident, IncidentsApi } from '../../../core/api/generated/journey';
 import { PortalConfigService } from '../../../core/config/portal-config.service';
-import { INCIDENT_SENT_PATH, IncidentSentStore } from './incident-sent.route';
+import { INCIDENT_SENT_PATH } from './incident-sent.route';
+import { IncidentSentStore } from './incident-sent.store';
 
 /** Tipos de incidencia del contrato, en el orden del formulario. */
 const INCIDENT_TYPES: readonly Incident.TypeEnum[] = ['technical', 'access', 'credentials', 'other'];

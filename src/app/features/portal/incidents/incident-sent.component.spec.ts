@@ -5,12 +5,8 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import { IncidentSentComponent } from './incident-sent.component';
-import {
-  INCIDENT_SENT_PATH,
-  IncidentSentStore,
-  incidentResponseTimeResolver,
-  incidentSentGuard,
-} from './incident-sent.route';
+import { INCIDENT_SENT_PATH, incidentResponseTimeResolver, incidentSentGuard } from './incident-sent.route';
+import { IncidentSentStore } from './incident-sent.store';
 
 expect.extend(toHaveNoViolations);
 

@@ -7,7 +7,7 @@ import { NEVER, Observable, of, throwError } from 'rxjs';
 import { ApiProblemError, NETWORK_ERROR } from '../../../core/api/api-problem.error';
 import { IncidentsApi, PortalConfig, PortalConfigSupport } from '../../../core/api/generated/journey';
 import { PortalConfigService } from '../../../core/config/portal-config.service';
-import { IncidentSentStore } from './incident-sent.route';
+import { IncidentSentStore } from './incident-sent.store';
 import { IncidentsComponent } from './incidents.component';
 
 expect.extend(toHaveNoViolations);
