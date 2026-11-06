@@ -10,6 +10,7 @@ import { ApiProblemError, NETWORK_ERROR, UNEXPECTED_ERROR } from '../../core/api
 import { EntitlementApi, EntitlementResult } from '../../core/api/generated/authentic-source';
 import { journeyStepGuard } from '../../core/journey/journey-step.guard';
 import { routes } from '../../app.routes';
+import { SESSION_ACTIONS } from '../../core/session/session-actions';
 
 expect.extend(toHaveNoViolations);
 
@@ -17,6 +18,7 @@ describe('EntitlementComponent', () => {
   let fixture: ComponentFixture<EntitlementComponent>;
   let verifyEntitlement: jest.Mock<Observable<EntitlementResult>>;
   let navigate: jest.SpyInstance;
+  let discardTokens: jest.Mock;
 
   function create(response: Observable<EntitlementResult>): void {
     verifyEntitlement.mockReturnValue(response);
@@ -30,9 +32,14 @@ describe('EntitlementComponent', () => {
 
   beforeEach(() => {
     verifyEntitlement = jest.fn();
+    discardTokens = jest.fn();
     TestBed.configureTestingModule({
       imports: [EntitlementComponent, TranslateModule.forRoot()],
-      providers: [provideRouter([]), { provide: EntitlementApi, useValue: { verifyEntitlement } }],
+      providers: [
+        provideRouter([]),
+        { provide: EntitlementApi, useValue: { verifyEntitlement } },
+        { provide: SESSION_ACTIONS, useValue: { restartLogin: jest.fn(), discardTokens } },
+      ],
     });
     navigate = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
   });
@@ -65,6 +72,19 @@ describe('EntitlementComponent', () => {
     create(of({ result: 'not_confirmed', reason: 'identifier_mismatch' }));
 
     expect(navigate).toHaveBeenCalledWith(['/', 'error', 'not-entitled'], { replaceUrl: true });
+  });
+
+  it('W4: with result not_confirmed discards the tokens before leaving, the journey is over', () => {
+    create(of({ result: 'not_confirmed', reason: 'not_entitled' }));
+
+    expect(discardTokens).toHaveBeenCalledTimes(1);
+    expect(discardTokens.mock.invocationCallOrder[0]).toBeLessThan(navigate.mock.invocationCallOrder[0]);
+  });
+
+  it('keeps the tokens when the entitlement is confirmed', () => {
+    create(of({ result: 'confirmed' }));
+
+    expect(discardTokens).not.toHaveBeenCalled();
   });
 
   it.each([

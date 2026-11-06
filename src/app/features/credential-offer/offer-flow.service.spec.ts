@@ -148,12 +148,13 @@ describe('OfferFlowService', () => {
       expect(navigate).toHaveBeenCalledWith(['/', 'user-data']);
     });
 
-    it('AC-07: offer_not_renewable forgets the email and goes to the not renewable case', async () => {
+    it('AC-07, W4: offer_not_renewable forgets the email, discards the tokens and goes to the not renewable case', async () => {
       journeyApi.confirmAndIssue.mockReturnValue(problem('offer_not_renewable', 409));
 
       await flow().enter();
 
       expect(store.email()).toBeNull();
+      expect(discardTokens).toHaveBeenCalledTimes(1);
       expect(navigate).toHaveBeenCalledWith(['/', 'error', 'offer-not-renewable']);
     });
 

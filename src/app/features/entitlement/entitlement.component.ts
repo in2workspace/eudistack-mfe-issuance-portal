@@ -10,6 +10,7 @@ import {
 } from '../../core/api/api-problem.error';
 import { EntitlementApi, EntitlementResult } from '../../core/api/generated/authentic-source';
 import { DATA_PATH } from '../../core/journey/journey-paths';
+import { SESSION_ACTIONS } from '../../core/session/session-actions';
 import { errorUrl } from '../error/error-reason';
 
 /**
@@ -34,6 +35,7 @@ const RETRYABLE_FAILURES: readonly string[] = [AUTHENTIC_SOURCE_UNAVAILABLE, NET
 export class EntitlementComponent implements OnInit {
   private readonly entitlementApi = inject(EntitlementApi);
   private readonly router = inject(Router);
+  private readonly session = inject(SESSION_ACTIONS);
   private readonly destroyRef = inject(DestroyRef);
 
   ngOnInit(): void {
@@ -50,7 +52,9 @@ export class EntitlementComponent implements OnInit {
     if (result.result === 'confirmed') {
       this.leaveTo(['/', DATA_PATH]);
     } else {
-      // El servicio ya ha retirado el recorrido; la pantalla de error descarta los tokens.
+      // El servicio ya ha retirado el recorrido: los tokens se descartan ya,
+      // no solo al pulsar «Volver al inicio» (design.md §3.1, punto 7; review W4).
+      this.session.discardTokens();
       this.leaveTo(errorUrl('not-entitled'));
     }
   }

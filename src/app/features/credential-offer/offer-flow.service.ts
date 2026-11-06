@@ -160,8 +160,10 @@ export class OfferFlowService {
     if (reason) {
       void this.router.navigate(errorUrl(reason));
     } else if (error.type === OFFER_NOT_RENEWABLE) {
-      // El recorrido ha terminado en el servicio; la pantalla de error descarta los tokens.
+      // El recorrido ha terminado en el servicio: el correo y los tokens se
+      // descartan ya (design.md §3.1, punto 7; review W4).
       this.store.clear();
+      this.session.discardTokens();
       void this.router.navigate(errorUrl('offer-not-renewable'));
     } else if (error.type === EMAIL_REQUIRED || error.type === EMAIL_INVALID) {
       this.store.rejectEmail();
