@@ -94,6 +94,15 @@ describe('IncidentsComponent', () => {
       expect(sendIncident).not.toHaveBeenCalled();
     });
 
+    it.each(['name', 'subject', 'description'])('stays disabled and sends nothing when %s has only spaces', async (field) => {
+      render();
+      fill({ ...VALID, [field]: '   ' });
+
+      expect(submitButton().disabled).toBe(true);
+      await submit();
+      expect(sendIncident).not.toHaveBeenCalled();
+    });
+
     it('stays disabled with an email without a valid format, and says so', () => {
       render();
       fill({ ...VALID, email: 'ana.example.org' });

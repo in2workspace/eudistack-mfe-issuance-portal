@@ -1,5 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { Incident, IncidentsApi } from '../../../core/api/generated/journey';
@@ -9,6 +9,11 @@ import { IncidentSentStore } from './incident-sent.store';
 
 /** Tipos de incidencia del contrato, en el orden del formulario. */
 const INCIDENT_TYPES: readonly Incident.TypeEnum[] = ['technical', 'access', 'credentials', 'other'];
+
+/** Obligatorio con texto: un campo solo con espacios cuenta como vacío, igual que en el servicio. */
+function requiredText(control: AbstractControl<string>): ValidationErrors | null {
+  return control.value.trim() === '' ? { required: true } : null;
+}
 
 /**
  * Ayuda (prd.md §3.2, wireframes, Ayuda): el titular envía una incidencia al
@@ -33,14 +38,14 @@ export class IncidentsComponent {
   protected readonly maxLength = { name: 200, phone: 30, subject: 200, description: 5000 } as const;
 
   protected readonly form = new FormGroup({
-    name: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(this.maxLength.name)] }),
+    name: new FormControl('', { nonNullable: true, validators: [requiredText, Validators.maxLength(this.maxLength.name)] }),
     email: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.email] }),
     phone: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(this.maxLength.phone)] }),
     type: new FormControl<Incident.TypeEnum | ''>('', { nonNullable: true, validators: [Validators.required] }),
-    subject: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(this.maxLength.subject)] }),
+    subject: new FormControl('', { nonNullable: true, validators: [requiredText, Validators.maxLength(this.maxLength.subject)] }),
     description: new FormControl('', {
       nonNullable: true,
-      validators: [Validators.required, Validators.maxLength(this.maxLength.description)],
+      validators: [requiredText, Validators.maxLength(this.maxLength.description)],
     }),
   });
 
