@@ -2,6 +2,7 @@ import { Component, computed, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { PortalConfigService } from '../../../core/config/portal-config.service';
+import { hasSupportDetails } from '../../../core/config/support-details';
 import { SESSION_ACTIONS } from '../../../core/session/session-actions';
 
 /** Enlaces legales del pie, en el orden de los wireframes, con su clave de texto. */
@@ -47,10 +48,7 @@ export class IssuanceInfoComponent {
     return email && PLAIN_EMAIL.test(email) ? `mailto:${email}` : null;
   });
 
-  protected readonly hasSupport = computed(() => {
-    const support = this.support();
-    return Boolean(support.email || support.phone || support.schedule);
-  });
+  protected readonly hasSupport = computed(() => hasSupportDetails(this.support()));
 
   /** Solo los enlaces legales que trae la configuración, ya validados como https o del mismo origen. */
   protected readonly legalLinks = computed(() => {

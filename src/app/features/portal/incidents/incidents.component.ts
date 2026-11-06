@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { Incident, IncidentsApi } from '../../../core/api/generated/journey';
 import { PortalConfigService } from '../../../core/config/portal-config.service';
+import { hasSupportDetails } from '../../../core/config/support-details';
 import { INCIDENT_SENT_PATH } from './incident-sent.route';
 import { IncidentSentStore } from './incident-sent.store';
 
@@ -55,10 +56,7 @@ export class IncidentsComponent {
   /** Datos de soporte del tenant; un dato que falta no se muestra. */
   protected readonly support = computed(() => this.portalConfig.config()?.support ?? {});
 
-  protected readonly hasSupport = computed(() => {
-    const support = this.support();
-    return Boolean(support.email || support.phone || support.schedule);
-  });
+  protected readonly hasSupport = computed(() => hasSupportDetails(this.support()));
 
   onCancel(): Promise<boolean> {
     return this.router.navigate(['/']);
