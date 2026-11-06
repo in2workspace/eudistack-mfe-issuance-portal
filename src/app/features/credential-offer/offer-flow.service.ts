@@ -16,8 +16,8 @@ import {
 import { JourneyApi, Offer } from '../../core/api/generated/journey';
 import { PortalConfigService } from '../../core/config/portal-config.service';
 import { JourneyIssuanceStore, OfferCall } from '../../core/journey/journey-issuance.store';
-import { JourneyNavigator, isJourneyClosed } from '../../core/journey/journey-navigator';
-import { DATA_PATH } from '../../core/journey/journey-paths';
+import { JourneyNavigator, isJourneyClosed, stepUrl } from '../../core/journey/journey-navigator';
+import { DATA_PATH, QR_PATH } from '../../core/journey/journey-paths';
 import { SESSION_ACTIONS } from '../../core/session/session-actions';
 import { ErrorReason, errorUrl } from '../error/error-reason';
 import { CredentialOfferService } from './credential-offer.service';
@@ -143,7 +143,8 @@ export class OfferFlowService {
   /**
    * La llamada pendiente se conserva para que la pantalla de error la repita
    * (EC-04). `journey_closed` y `step_not_allowed` los resuelve el
-   * interceptor de EUD-287, y el 401, EUD-314.
+   * interceptor de EUD-287, salvo cuando su destino es la propia QR
+   * (`presentCurrentOffer`), y el 401, EUD-314.
    */
   private async onFailure(call: OfferCall, error: unknown): Promise<void> {
     if (!(error instanceof ApiProblemError)) {
@@ -159,17 +160,28 @@ export class OfferFlowService {
     } else if (error.type === EMAIL_REQUIRED || error.type === EMAIL_INVALID) {
       this.store.rejectEmail();
       void this.router.navigate(['/', DATA_PATH]);
-    } else if (error.type === STEP_NOT_ALLOWED && call === 'offers') {
-      // El código anterior aún vale según el servicio (desfase de reloj): se vuelve a presentar (ES-02).
+    } else if (error.type === STEP_NOT_ALLOWED) {
+      // El servicio ya tiene una oferta vigente (desfase de reloj en un código
+      // nuevo, o una confirmación repetida con atrás y adelante): se presenta (ES-02).
       await this.presentCurrentOffer();
     }
   }
 
+  /**
+   * Sin oferta, el interceptor de EUD-287 lleva a la ruta del paso. Si esa
+   * ruta es la propia QR, el router no navega y la pantalla se quedaría en
+   * «generando»: se va al caso de emisión, que deja reintentar (review W2).
+   */
   private async presentCurrentOffer(): Promise<void> {
     const journey = await this.readJourney();
-    if (journey?.offer && !this.destroyed) {
+    if (!journey || this.destroyed) {
+      return;
+    }
+    if (journey.offer) {
       this.store.offerReceived();
       this.present(journey.offer);
+    } else if (stepUrl(journey).at(-1) === QR_PATH) {
+      void this.router.navigate(errorUrl('issuance-failed'));
     }
   }
 

@@ -159,7 +159,6 @@ describe('OfferFlowService', () => {
 
     it.each([
       ['journey_closed', 410],
-      ['step_not_allowed', 409],
       ['unauthenticated', 401],
     ])('ES-06: %s is left to the journey interceptor or the login', async (type, status) => {
       journeyApi.confirmAndIssue.mockReturnValue(problem(type, status));
@@ -168,6 +167,36 @@ describe('OfferFlowService', () => {
 
       expect(navigate).not.toHaveBeenCalled();
       expect(journeyApi.getJourney).not.toHaveBeenCalled();
+    });
+
+    it('W2: step_not_allowed on a repeated confirmation presents the offer the service already holds', async () => {
+      const current = ticketOffer('current');
+      journeyApi.confirmAndIssue.mockReturnValue(problem('step_not_allowed', 409));
+      journeyApi.getJourney.mockReturnValue(journey({ state: 'completed', step: 'offer_obtained', offer: current }));
+
+      await flow().enter();
+
+      expect(presenter.address()?.url).toBe(current.onboarding_url);
+      expect(store.pendingCall()).toBeNull();
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it('W2: step_not_allowed with no offer and the step in QR goes to the issuance case instead of waiting forever', async () => {
+      journeyApi.confirmAndIssue.mockReturnValue(problem('step_not_allowed', 409));
+      journeyApi.getJourney.mockReturnValue(journey({ state: 'completed', step: 'offer_obtained' }));
+
+      await flow().enter();
+
+      expect(navigate).toHaveBeenCalledWith(['/', 'error', 'issuance-failed']);
+    });
+
+    it('W2: step_not_allowed with the step elsewhere is left to the journey interceptor', async () => {
+      journeyApi.confirmAndIssue.mockReturnValue(problem('step_not_allowed', 409));
+      journeyApi.getJourney.mockReturnValue(journey({ step: 'identified' }));
+
+      await flow().enter();
+
+      expect(navigate).not.toHaveBeenCalled();
     });
 
     it('ES-03: with no wallet_url and no onboarding_url goes to the issuance case, without QR', async () => {
