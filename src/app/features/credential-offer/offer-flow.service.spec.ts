@@ -7,6 +7,7 @@ import { Journey, JourneyApi, Offer, PortalConfig } from '../../core/api/generat
 import { PortalConfigService } from '../../core/config/portal-config.service';
 import { JourneyIssuanceStore } from '../../core/journey/journey-issuance.store';
 import { JourneyNavigator } from '../../core/journey/journey-navigator';
+import { SESSION_ACTIONS } from '../../core/session/session-actions';
 import { CredentialOfferService } from './credential-offer.service';
 import { OfferFlowService } from './offer-flow.service';
 
@@ -41,7 +42,8 @@ class HostComponent {
 }
 
 describe('OfferFlowService', () => {
-  let journeyApi: { getJourney: jest.Mock; confirmAndIssue: jest.Mock; newOffer: jest.Mock };
+  let journeyApi: { getJourney: jest.Mock; confirmAndIssue: jest.Mock; newOffer: jest.Mock; withdrawJourney: jest.Mock };
+  let discardTokens: jest.Mock;
   let toSessionExpired: jest.Mock;
   let navigate: jest.SpyInstance;
   let walletUrl: string | undefined;
@@ -50,13 +52,15 @@ describe('OfferFlowService', () => {
 
   beforeEach(() => {
     walletUrl = WALLET;
-    journeyApi = { getJourney: jest.fn(), confirmAndIssue: jest.fn(), newOffer: jest.fn() };
+    journeyApi = { getJourney: jest.fn(), confirmAndIssue: jest.fn(), newOffer: jest.fn(), withdrawJourney: jest.fn() };
+    discardTokens = jest.fn();
     toSessionExpired = jest.fn().mockResolvedValue(true);
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
         { provide: JourneyApi, useValue: journeyApi },
         { provide: JourneyNavigator, useValue: { toSessionExpired } },
+        { provide: SESSION_ACTIONS, useValue: { restartLogin: jest.fn(), discardTokens } },
         { provide: PortalConfigService, useValue: { config: () => ({ wallet_url: walletUrl }) as PortalConfig } },
       ],
     });
@@ -308,6 +312,48 @@ describe('OfferFlowService', () => {
       await flow().enter();
 
       expect(navigate).toHaveBeenCalledWith(['/']);
+    });
+  });
+
+  describe('He terminado (AC-15)', () => {
+    beforeEach(() => store.confirm('maria@example.org'));
+
+    it('ends the journey, forgets the email, discards the tokens and goes to Inicio', async () => {
+      journeyApi.withdrawJourney.mockReturnValue(journey({ state: 'completed', step: 'offer_obtained' }));
+
+      await flow().finish();
+
+      expect(journeyApi.withdrawJourney).toHaveBeenCalledTimes(1);
+      expect(store.email()).toBeNull();
+      expect(discardTokens).toHaveBeenCalledTimes(1);
+      expect(navigate).toHaveBeenCalledWith(['/']);
+    });
+
+    it('ES-05: if the withdrawal fails, discards the tokens and goes to Inicio anyway', async () => {
+      journeyApi.withdrawJourney.mockReturnValue(problem(NETWORK_ERROR, 0));
+
+      await flow().finish();
+
+      expect(discardTokens).toHaveBeenCalledTimes(1);
+      expect(navigate).toHaveBeenCalledWith(['/']);
+    });
+
+    it('ES-05: with a 410 leaves the navigation to the journey interceptor', async () => {
+      journeyApi.withdrawJourney.mockReturnValue(problem('journey_closed', 410));
+
+      await flow().finish();
+
+      expect(store.email()).toBeNull();
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it('stops the countdown', async () => {
+      journeyApi.withdrawJourney.mockReturnValue(journey());
+      const cancel = jest.spyOn(presenter, 'cancelPendingWork');
+
+      await flow().finish();
+
+      expect(cancel).toHaveBeenCalled();
     });
   });
 });

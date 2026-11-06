@@ -18,6 +18,7 @@ import { PortalConfigService } from '../../core/config/portal-config.service';
 import { JourneyIssuanceStore, OfferCall } from '../../core/journey/journey-issuance.store';
 import { JourneyNavigator, isJourneyClosed } from '../../core/journey/journey-navigator';
 import { DATA_PATH } from '../../core/journey/journey-paths';
+import { SESSION_ACTIONS } from '../../core/session/session-actions';
 import { ErrorReason, errorUrl } from '../error/error-reason';
 import { CredentialOfferService } from './credential-offer.service';
 import { resolveOfferAddress } from './resolve-offer-address';
@@ -52,6 +53,7 @@ export class OfferFlowService {
   private readonly presenter = inject(CredentialOfferService);
   private readonly navigator = inject(JourneyNavigator);
   private readonly router = inject(Router);
+  private readonly session = inject(SESSION_ACTIONS);
   private destroyed = false;
 
   constructor() {
@@ -85,6 +87,26 @@ export class OfferFlowService {
     this.store.requestNewOffer();
     this.presenter.startLoading();
     return this.request('offers');
+  }
+
+  /**
+   * «He terminado» (ac.md AC-15): termina el recorrido y descarta los tokens
+   * (design.md §3.1, punto 7). Si la retirada falla, los tokens se descartan
+   * igual (ES-05). Con un 410, el interceptor ya lleva a la sesión caducada.
+   */
+  async finish(): Promise<void> {
+    this.presenter.cancelPendingWork();
+    try {
+      await firstValueFrom(this.journeyApi.withdrawJourney());
+    } catch (error: unknown) {
+      if (isJourneyClosed(error)) {
+        this.store.clear();
+        return;
+      }
+    }
+    this.store.clear();
+    this.session.discardTokens();
+    void this.router.navigate(['/']);
   }
 
   private async request(call: OfferCall): Promise<void> {
