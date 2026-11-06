@@ -41,6 +41,7 @@
   "credentialOffer.unavailable.retry": "Try again",
   "credentialOffer.unavailable.description": "You cannot continue right now. Try again.",
   "credentialOffer.title": "Your attestation is ready",
+  "entitlement.checking": "We are checking your entitlement to the attestation",
   "credentialOffer.loading": "We are preparing your attestation…",
   "credentialOffer.loading.ariaLabel": "Preparing your attestation, please wait",
   "credentialOffer.instructions": "Scan the QR code with your Digital Wallet, or tap the link if you are already on your phone",

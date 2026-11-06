@@ -1,6 +1,6 @@
 /**
- * Rutas de los pasos del recorrido (wireframes, navegación). Comprobación aún
- * no tiene pantalla: la crea EUD-286 con esta ruta.
+ * Rutas de los pasos del recorrido (wireframes, navegación): Comprobación,
+ * Datos y QR.
  */
 export const ENTITLEMENT_PATH = 'entitlement';
 export const DATA_PATH = 'user-data';

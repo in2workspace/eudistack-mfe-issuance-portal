@@ -6,6 +6,8 @@ export const NETWORK_ERROR = 'network_error';
 export const JOURNEY_CLOSED = 'journey_closed';
 /** `type` del 409: el paso pedido no corresponde al recorrido. */
 export const STEP_NOT_ALLOWED = 'step_not_allowed';
+/** `type` del 503 de `POST /entitlement`: la fuente auténtica no respondió o respondió con error. */
+export const AUTHENTIC_SOURCE_UNAVAILABLE = 'authentic_source_unavailable';
 
 /**
  * Error tipado de cualquier llamada al servicio del portal de emisión. Las
