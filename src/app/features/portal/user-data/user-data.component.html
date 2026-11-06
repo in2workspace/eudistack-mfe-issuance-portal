@@ -64,7 +64,7 @@
             </button>
             <button
               type="submit"
-              [disabled]="email.invalid || withdrawing()"
+              [disabled]="email.invalid || withdrawing() || continuing()"
               class="inline-flex items-center justify-center rounded-md text-sm font-medium h-10 px-4 bg-brand-secondary hover:opacity-90 text-brand-secondary-contrast transition-colors disabled:opacity-50"
             >
               {{ 'userData.continue' | translate }}

@@ -82,8 +82,14 @@ export class OfferFlowService {
     }
   }
 
-  /** «Generar un código nuevo» con el QR caducado (AC-06). */
-  newCode(): Promise<void> {
+  /**
+   * «Generar un código nuevo» con el QR caducado (AC-06). Solo con el QR
+   * caducado: una segunda pulsación, ya generando, no pide otro (EC-07).
+   */
+  async newCode(): Promise<void> {
+    if (this.presenter.status() !== 'expired') {
+      return;
+    }
     this.store.requestNewOffer();
     this.presenter.startLoading();
     return this.request('offers');

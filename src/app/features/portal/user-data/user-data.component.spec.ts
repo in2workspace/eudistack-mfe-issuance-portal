@@ -156,6 +156,39 @@ describe('UserDataComponent', () => {
   });
 
   describe('Continuar', () => {
+    it('EC-07: a second click while going to QR does not navigate again', () => {
+      // La navegación a QR sigue en curso mientras la guarda consulta GET /journey.
+      navigate.mockReturnValue(new Promise(() => undefined));
+      create();
+
+      button('Continuar').click();
+      button('Continuar').click();
+
+      expect(navigate).toHaveBeenCalledTimes(1);
+      fixture.detectChanges();
+      expect(button('Continuar').disabled).toBe(true);
+    });
+
+    it('EC-07: if QR does not let the holder in, Continuar works again', async () => {
+      navigate.mockResolvedValue(false);
+      create();
+
+      button('Continuar').click();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(button('Continuar').disabled).toBe(false);
+    });
+
+    it('N3: an email with spaces around it is valid and is kept without them', () => {
+      create();
+      type(' maria@example.org ');
+
+      click('Continuar');
+
+      expect(store.email()).toBe('maria@example.org');
+    });
+
     it('AC-01: keeps the email in memory, asks QR for the confirmation and goes to QR', () => {
       create();
       type('maria@example.org');

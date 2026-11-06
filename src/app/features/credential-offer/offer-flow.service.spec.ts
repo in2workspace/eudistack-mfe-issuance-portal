@@ -250,6 +250,7 @@ describe('OfferFlowService', () => {
     it('AC-08: after a failed new code, entering QR again asks for a new code, not a confirmation', async () => {
       store.confirm('maria@example.org');
       store.offerReceived();
+      presenter.present({ url: `${WALLET}/t/old`, expiresAt: Date.now() - 1000 });
       journeyApi.newOffer.mockReturnValueOnce(problem('onboarding_unavailable', 503)).mockReturnValueOnce(of(ticketOffer('new')));
       await flow().newCode();
 
@@ -262,6 +263,26 @@ describe('OfferFlowService', () => {
   });
 
   describe('new code (AC-06)', () => {
+    beforeEach(() => presenter.present({ url: `${WALLET}/t/old`, expiresAt: Date.now() - 1000 }));
+
+    it('EC-07: a second click while the new code is being generated asks for no other', async () => {
+      journeyApi.newOffer.mockReturnValue(new Subject<Offer>());
+      const flowUnderTest = flow();
+
+      void flowUnderTest.newCode();
+      await flowUnderTest.newCode();
+
+      expect(journeyApi.newOffer).toHaveBeenCalledTimes(1);
+    });
+
+    it('EC-07: asks for nothing while the code is still valid', async () => {
+      presenter.present({ url: `${WALLET}/t/current`, expiresAt: Date.now() + 60_000 });
+
+      await flow().newCode();
+
+      expect(journeyApi.newOffer).not.toHaveBeenCalled();
+    });
+
     it('asks POST /journey/offers and presents the new address', async () => {
       journeyApi.newOffer.mockReturnValue(of(ticketOffer('new')));
 

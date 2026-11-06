@@ -12,6 +12,15 @@ import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialo
 import { JourneyIssuanceStore } from '../../../core/journey/journey-issuance.store';
 
 /**
+ * Formato de correo sin contar los espacios de los extremos, que se quitan al
+ * confirmar: un correo autocompletado con un espacio al final es válido
+ * (review N3).
+ */
+function trimmedEmail(control: AbstractControl<string>): ValidationErrors | null {
+  return Validators.email({ value: control.value.trim() } as AbstractControl);
+}
+
+/**
  * Paso Datos (wireframes, Datos): la vista previa de la atestación tal como
  * la devuelve `GET /journey`, sin etiquetas fijas por tenant, y el correo,
  * siempre visible y rellenado si se conoce (prd.md FR-04, FR-05). Continuar
@@ -35,14 +44,16 @@ export class UserDataComponent implements OnInit {
   protected readonly loading = signal(true);
   protected readonly cancelOpen = signal(false);
   protected readonly withdrawing = signal(false);
+  /** Continuar ya ha llevado a QR: una segunda pulsación no navega otra vez (ac.md EC-07). */
+  protected readonly continuing = signal(false);
   protected readonly email = new FormControl('', {
     nonNullable: true,
-    validators: [Validators.required, Validators.email, (control) => this.rejectedByService(control)],
+    validators: [Validators.required, trimmedEmail, (control) => this.rejectedByService(control)],
   });
 
   /** El correo que el servicio rechazó (400) sigue sin ser válido hasta que el titular lo cambie (ac.md ES-04). */
   private rejectedByService(control: AbstractControl<string>): ValidationErrors | null {
-    return this.store.emailRejected() && control.value === this.store.email() ? { rejected: true } : null;
+    return this.store.emailRejected() && control.value.trim() === this.store.email() ? { rejected: true } : null;
   }
 
   ngOnInit(): void {
@@ -68,11 +79,13 @@ export class UserDataComponent implements OnInit {
   }
 
   protected onContinue(): void {
-    if (this.email.invalid) {
+    if (this.email.invalid || this.continuing()) {
       return;
     }
+    this.continuing.set(true);
     this.store.confirm(this.email.value.trim());
-    void this.router.navigate(['/', QR_PATH]);
+    // Si la guarda de QR no deja pasar, el titular sigue en Datos y puede volver a intentarlo.
+    void this.router.navigate(['/', QR_PATH]).finally(() => this.continuing.set(false));
   }
 
   protected onCancel(): void {
