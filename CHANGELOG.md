@@ -10,6 +10,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **EUD-286 — Comprobación, Datos y QR conectados con el servicio del portal**:
+  - Comprobación (`entitlement`), con la guarda de pasos y botón de volver a Inicio: indicador de espera mientras `POST /entitlement` comprueba el derecho; `confirmed` pasa a Datos, `not_confirmed` al caso sin derecho y 503 `authentic_source_unavailable`, un fallo de red o un error sin Problem al caso de fuente no disponible, cuyo reintento repite la comprobación. Sale sin dejar Comprobación en el historial.
+  - Datos muestra el nombre y los campos de la atestación tal como los da `GET /journey`, sin etiquetas fijas por tenant, y el correo, siempre visible y rellenado si se conoce. Continuar no se activa sin un correo válido; el correo se guarda solo en memoria y QR pide la confirmación. Cancelar pide confirmación en un aviso; «Sí, cancelar» retira el recorrido, descarta los tokens y vuelve a Inicio, también si la retirada falla.
+  - QR muestra la dirección de alta tal cual (`onboarding_url`) con la cuenta atrás hasta `onboarding_expires_at` o, si el tenant no usa el alta con ticket, `<wallet_url>/protocol/callback?credential_offer_uri=…` hasta `expires_at`. Sin una dirección que funcione, va al caso de emisión. Al llegar a cero, el QR se atenúa y aparece «Generar un código nuevo» (`POST /journey/offers`). Al recargar, presenta la oferta que tiene el servicio; sin oferta ni correo en memoria, vuelve a Datos.
+  - Errores de QR: emisión rechazada o no disponible, red o error sin Problem y alta no preparada van a su caso, y su acción repite la llamada que falló (confirmación o código nuevo) sin volver a identificarse. `offer_not_renewable` va al código no renovable; un correo rechazado (400) vuelve a Datos marcado; `step_not_allowed` al pedir un código nuevo vuelve a presentar la oferta vigente.
+  - En el móvil (menos de 768 px y `pointer: coarse`), «Abrir en mi wallet» va primero y abre el wallet en la misma pestaña. En el ordenador el QR es la acción principal y «¿Prefieres usar el wallet en este ordenador?» (o el botón principal, sin QR) abre el aviso de ordenador personal; el wallet solo se abre con «Continuar en este ordenador».
+  - «He terminado» termina el recorrido, descarta los tokens, olvida el correo y vuelve a Inicio, también si la retirada falla.
+  - Aviso modal accesible (`app-confirm-dialog`): foco inicial en la opción por defecto, foco atrapado, Escape como opción por defecto y foco devuelto a quien lo abrió.
+
 - **EUD-287 — pantalla de error, control de pasos y caducidad de la sesión**:
   - Pantalla de error única (`error/<caso>`) con los ocho casos de prd.md §3.4: configuración no disponible, identificación no completada, derecho no confirmado (con el contacto del soporte de `GET /config`), fuente auténtica no disponible, emisión rechazada, alta en el wallet no preparada, código no renovable y sesión caducada. Cada uno con su título, su texto y su acción principal, sin códigos ni nombres de sistemas. Un caso desconocido va a Inicio. Volver al Verifier y descartar los tokens pasan por `SESSION_ACTIONS`, que rellena EUD-314; hasta entonces van a Inicio y no hacen nada.
   - Guarda de los pasos (`journeyStepGuard`) con `GET /journey` en Datos y QR: el paso lo dice el servicio y, si no corresponde a la ruta, el titular va a la de su paso. Sin Access Token o con 401 va a Inicio; un recorrido terminado o retirado, también; un 410, a sesión caducada. La ruta de Comprobación (`entitlement`) queda lista para EUD-286.
@@ -23,12 +32,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **EUD-286 — recorrido `completed` en QR**: el servicio pasa el recorrido a `completed` con la primera oferta. La guarda y la ruta del paso lo llevan a QR, no a Inicio, para que el código nuevo, los reintentos de la pantalla de error y el 409 `step_not_allowed` sigan en QR. Una sesión caducada olvida también el correo escrito en Datos. `npm run api:sync` copia el contrato de Fuente auténtica de `EUD-330-fuente-autentica`.
+
 - **EUD-284 — Inicio con la configuración del tenant**: los enlaces legales y el correo, el teléfono y el horario de soporte vienen de `GET /config`, sin `href="#"` ni valores fijos o deducidos del nombre del tenant; lo que el tenant no define no se muestra. Vuelven «Pedir ayuda» en la cabecera principal y la franja «¿Necesitas ayuda?» con el correo de soporte y «Abrir incidencia», que llevan a Ayuda. «Empezar» llama a `SESSION_ACTIONS.restartLogin()`, que EUD-314 conecta con el Verifier; hasta entonces se queda en Inicio.
 - **EUD-284 — incidencias sin Access Token**: `POST /incidents` es público, así que el interceptor de la API no le añade el token aunque el titular se haya identificado, y no reinicia el temporizador de inactividad del recorrido.
 
 - **EUD-287 — configuración no disponible en la pantalla de error**: el caso pasa a `error/config-unavailable`, con la cabecera del tenant y el mismo reintento; el botón queda desactivado mientras reintenta.
 
 ### Removed
+
+- **EUD-286**: la ventana fija de 10 minutos de la oferta (`obtainedAt`, `CREDENTIAL_OFFER_PRESENTATION_TTL_MS`), el aviso de no disponible de QR y sus textos `credentialOffer.unavailable.*`, los botones Cancelar y «Marcar como completado» de QR, el `target="_blank"` del enlace al wallet y los `aria-label` que no contenían el texto visible.
 
 - **EUD-284**: el envío simulado de Ayuda, su número de incidencia inventado y los contenidos de la demo que no están en los wireframes (teléfono gratuito, preguntas frecuentes y guía con `href="#"`, texto del número de colegiado), el botón «Contactar por Email» de Inicio y `resolve-support-email.ts`.
 
