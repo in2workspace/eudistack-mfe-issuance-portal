@@ -7,8 +7,16 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { TranslateModule } from '@ngx-translate/core';
 import { routes } from './app.routes';
 import { PortalConfigService, PortalConfigState } from './core/config/portal-config.service';
-import { IncidentsApi, PortalConfig } from './core/api/generated/journey';
+import { IncidentsApi, Journey, JourneyApi, PortalConfig } from './core/api/generated/journey';
+import { EntitlementApi } from './core/api/generated/authentic-source';
+import { ISSUANCE_PORTAL_ACCESS_TOKEN } from './core/api/issuance-portal-api.interceptor';
+import { CredentialOfferService } from './features/credential-offer/credential-offer.service';
 import { of } from 'rxjs';
+
+jest.mock('qrcode', () => ({
+  __esModule: true,
+  default: { toDataURL: jest.fn().mockResolvedValue('data:image/png;base64,mocked') },
+}));
 
 /**
  * AC-05 / NFR-2: recorre todas las rutas y comprueba que ni el
@@ -42,7 +50,7 @@ describe('Holder data in the browser', () => {
     return [...read(sessionStorage), ...read(localStorage)].join('\n');
   }
 
-  it.each(['/', '/identify', '/user-data', '/offer', '/incidents', '/incidents/sent', '/error/config-unavailable', '/error/session-expired', '/cliente'])(
+  it.each(['/', '/identify', '/entitlement', '/user-data', '/offer', '/incidents', '/incidents/sent', '/error/config-unavailable', '/error/session-expired', '/cliente'])(
     'AC-05: visiting %s leaves no holder data in the storage or the address',
     async (url) => {
       const harness = await RouterTestingHarness.create();
@@ -92,6 +100,75 @@ describe('Holder data in the browser', () => {
     for (const value of [...Object.values(written), '72 horas']) {
       expect(browser).not.toContain(value);
     }
+  });
+
+  describe('NFR-1 (EUD-286): Comprobación, Datos and QR', () => {
+    const email = 'maria.holder@example.org';
+    const onboardingUrl = 'https://wallet.cgcom.example/t/Zk3q9Xw2Lp7Rt4Vb8Nc1Ha';
+    const attestation = {
+      type_name: 'DoctorID',
+      fields: [
+        { label: 'Nombre', value: 'María Holder Privada' },
+        { label: 'Número de colegiado', value: '282809999' },
+      ],
+      email_required: true,
+    };
+    let journey: Journey;
+
+    beforeEach(() => {
+      journey = { state: 'in_progress', step: 'identified' };
+      const offer = {
+        credential_offer_uri: 'openid-credential-offer://?credential_offer_uri=https%3A%2F%2Fissuer.example%2Foffer%2F1',
+        expires_at: new Date(Date.now() + 600_000).toISOString(),
+        onboarding_url: onboardingUrl,
+        onboarding_expires_at: new Date(Date.now() + 300_000).toISOString(),
+      };
+      TestBed.overrideProvider(ISSUANCE_PORTAL_ACCESS_TOKEN, { useValue: () => 'test-access-token' });
+      TestBed.overrideProvider(EntitlementApi, {
+        useValue: {
+          verifyEntitlement: () => {
+            journey = { state: 'in_progress', step: 'entitlement_confirmed', attestation };
+            return of({ result: 'confirmed', attestation });
+          },
+        },
+      });
+      TestBed.overrideProvider(JourneyApi, {
+        useValue: {
+          getJourney: () => of(journey),
+          confirmAndIssue: () => {
+            journey = { state: 'completed', step: 'offer_obtained', attestation, offer };
+            return of(offer);
+          },
+        },
+      });
+    });
+
+    afterEach(() => TestBed.inject(CredentialOfferService).cancelPendingWork());
+
+    it('the email, the attestation data and the onboarding address stay out of the browser', async () => {
+      const harness = await RouterTestingHarness.create();
+      await harness.navigateByUrl('/entitlement');
+      await harness.fixture.whenStable();
+      expect(TestBed.inject(Router).url).toBe('/user-data');
+
+      harness.detectChanges();
+      const input = (harness.routeNativeElement as HTMLElement).querySelector('#holder-email') as HTMLInputElement;
+      input.value = email;
+      input.dispatchEvent(new Event('input'));
+      harness.detectChanges();
+      (harness.routeNativeElement as HTMLElement).querySelector<HTMLButtonElement>('button[type="submit"]')!.click();
+      await harness.fixture.whenStable();
+      harness.detectChanges();
+
+      expect(TestBed.inject(Router).url).toBe('/offer');
+      // QR pide la oferta al entrar: se deja terminar esa llamada.
+      await harness.fixture.whenStable();
+      expect(TestBed.inject(CredentialOfferService).address()?.url).toBe(onboardingUrl);
+      const browser = [storageContents(), TestBed.inject(Router).url, JSON.stringify(history.state ?? {})].join('\n');
+      for (const value of [email, onboardingUrl, 'María Holder Privada', '282809999']) {
+        expect(browser).not.toContain(value);
+      }
+    });
   });
 
   it('keeps any other query parameter', async () => {
