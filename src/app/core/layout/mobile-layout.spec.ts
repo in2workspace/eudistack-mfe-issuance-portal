@@ -57,4 +57,16 @@ describe('OPEN_WALLET', () => {
 
     expect(assign).toHaveBeenCalledWith('https://wallet.example/t/abc');
   });
+
+  it.each(['javascript:alert(1)', 'http://wallet.example/t/abc', 'data:text/html,hi', 'not a url'])(
+    'B1: never opens %s',
+    (url) => {
+      const assign = jest.fn();
+      TestBed.configureTestingModule({ providers: [{ provide: DOCUMENT, useValue: { defaultView: { location: { assign } } } }] });
+
+      TestBed.inject(OPEN_WALLET)(url);
+
+      expect(assign).not.toHaveBeenCalled();
+    },
+  );
 });

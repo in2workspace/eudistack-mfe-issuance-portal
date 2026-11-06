@@ -12,17 +12,25 @@ const WALLET_CALLBACK_PATH = 'protocol/callback';
  *
  * - Con `onboarding_url` (el tenant usa el alta con ticket), esa dirección
  *   tal cual, sin construir ni añadir nada, hasta `onboarding_expires_at`.
+ *   Solo se acepta si es `https:` y del wallet del tenant (el origen de
+ *   `wallet_url`), como dice el contrato: llega al QR, al enlace y a
+ *   `location.assign`, que no pasa por el saneador de Angular (review B1).
  * - Sin ella, la dirección del wallet del tenant con el valor del parámetro
  *   `credential_offer_uri` del enlace recibido, sin modificarlo, codificado
  *   como URL, hasta `expires_at`.
  *
  * Devuelve `null` si no se puede dar una dirección que funcione (ac.md
- * ES-03): falta el parámetro o `wallet_url`, o la caducidad no es una fecha.
- * Nunca construye la dirección del wallet si la oferta trae `onboarding_url`.
+ * ES-03): la dirección de alta no es del wallet del tenant o no trae su
+ * caducidad, falta el parámetro o `wallet_url`, o la caducidad no es una
+ * fecha. Nunca construye la dirección del wallet si la oferta trae
+ * `onboarding_url`.
  */
 export function resolveOfferAddress(offer: Offer, walletUrl: string | null | undefined): OfferAddress | null {
   if (offer.onboarding_url) {
-    return withExpiry(offer.onboarding_url, offer.onboarding_expires_at ?? offer.expires_at);
+    if (!offer.onboarding_expires_at || !isWalletAddress(offer.onboarding_url, walletUrl)) {
+      return null;
+    }
+    return withExpiry(offer.onboarding_url, offer.onboarding_expires_at);
   }
   const offerUri = credentialOfferUri(offer.credential_offer_uri);
   if (!offerUri || !walletUrl) {
@@ -30,6 +38,21 @@ export function resolveOfferAddress(offer: Offer, walletUrl: string | null | und
   }
   const wallet = walletUrl.replace(/\/+$/, '');
   return withExpiry(`${wallet}/${WALLET_CALLBACK_PATH}?${CREDENTIAL_OFFER_URI}=${encodeURIComponent(offerUri)}`, offer.expires_at);
+}
+
+/** `https:` y en el mismo origen que el wallet del tenant. */
+function isWalletAddress(address: string, walletUrl: string | null | undefined): boolean {
+  const url = parseUrl(address);
+  const wallet = walletUrl ? parseUrl(walletUrl) : null;
+  return url?.protocol === 'https:' && wallet !== null && url.origin === wallet.origin;
+}
+
+function parseUrl(value: string): URL | null {
+  try {
+    return new URL(value);
+  } catch {
+    return null;
+  }
 }
 
 function credentialOfferUri(link: string): string | null {

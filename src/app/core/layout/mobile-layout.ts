@@ -29,11 +29,25 @@ export class MobileLayout {
 /**
  * Abre el wallet del tenant en la misma pestaña (design.md §6: en otra
  * pestaña no funciona en el móvil). Inyectable para poder probarlo.
+ * `location.assign` no pasa por el saneador de Angular: solo abre
+ * direcciones `https:` (review B1).
  */
 export const OPEN_WALLET = new InjectionToken<(url: string) => void>('OPEN_WALLET', {
   providedIn: 'root',
   factory: () => {
     const view = inject(DOCUMENT).defaultView;
-    return (url: string) => view?.location.assign(url);
+    return (url: string) => {
+      if (isHttps(url)) {
+        view?.location.assign(url);
+      }
+    };
   },
 });
+
+function isHttps(value: string): boolean {
+  try {
+    return new URL(value).protocol === 'https:';
+  } catch {
+    return false;
+  }
+}

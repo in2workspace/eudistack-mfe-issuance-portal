@@ -180,6 +180,15 @@ describe('OfferFlowService', () => {
       expect(navigate).toHaveBeenCalledWith(['/', 'error', 'issuance-failed']);
     });
 
+    it('B1, ES-03: an onboarding address outside the tenant wallet goes to the issuance case, without QR', async () => {
+      journeyApi.confirmAndIssue.mockReturnValue(of({ ...ticketOffer(), onboarding_url: 'javascript:alert(document.domain)' }));
+
+      await flow().enter();
+
+      expect(presenter.address()).toBeNull();
+      expect(navigate).toHaveBeenCalledWith(['/', 'error', 'issuance-failed']);
+    });
+
     it('does not present or navigate once the holder has left QR', async () => {
       const response = new Subject<Offer>();
       journeyApi.confirmAndIssue.mockReturnValue(response);

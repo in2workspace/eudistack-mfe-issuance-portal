@@ -104,7 +104,7 @@ describe('Holder data in the browser', () => {
 
   describe('NFR-1 (EUD-286): Comprobación, Datos and QR', () => {
     const email = 'maria.holder@example.org';
-    const onboardingUrl = 'https://wallet.cgcom.example/t/Zk3q9Xw2Lp7Rt4Vb8Nc1Ha';
+    const onboardingUrl = 'https://cgcom.example/t/Zk3q9Xw2Lp7Rt4Vb8Nc1Ha';
     const attestation = {
       type_name: 'DoctorID',
       fields: [

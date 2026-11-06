@@ -25,8 +25,33 @@ describe('resolveOfferAddress', () => {
       });
     });
 
-    it('AC-09: never builds the wallet address, even without wallet_url', () => {
-      expect(resolveOfferAddress(withTicket, undefined)?.url).toBe(withTicket.onboarding_url);
+    it('AC-02: accepts an onboarding address under the wallet path of the same origin', () => {
+      expect(resolveOfferAddress(withTicket, `${WALLET}/wallet`)?.url).toBe(withTicket.onboarding_url);
+    });
+
+    it('AC-09: never builds the wallet address: without wallet_url it gives no address at all', () => {
+      expect(resolveOfferAddress(withTicket, undefined)).toBeNull();
+      expect(resolveOfferAddress(withTicket, '')).toBeNull();
+    });
+
+    it.each([
+      ['javascript:', 'javascript:alert(document.domain)'],
+      ['http:', 'http://wallet.sandbox.dev.eudistack.net/t/Zk3q9Xw2'],
+      ['another host', 'https://evil.example/t/Zk3q9Xw2'],
+      ['another port', 'https://wallet.sandbox.dev.eudistack.net:8443/t/Zk3q9Xw2'],
+      ['not an address', 'not a url'],
+    ])('B1, ES-03: rejects an onboarding address with %s', (_case, onboardingUrl) => {
+      expect(resolveOfferAddress(offer({ onboarding_url: onboardingUrl, onboarding_expires_at: ONBOARDING_EXPIRES_AT }), WALLET)).toBeNull();
+    });
+
+    it('B1, ES-03: does not build the wallet address when the onboarding address is rejected', () => {
+      const result = resolveOfferAddress(offer({ onboarding_url: 'https://evil.example/t/x', onboarding_expires_at: ONBOARDING_EXPIRES_AT }), WALLET);
+
+      expect(result).toBeNull();
+    });
+
+    it('N1: gives no address when onboarding_expires_at is missing', () => {
+      expect(resolveOfferAddress(offer({ onboarding_url: withTicket.onboarding_url }), WALLET)).toBeNull();
     });
   });
 
