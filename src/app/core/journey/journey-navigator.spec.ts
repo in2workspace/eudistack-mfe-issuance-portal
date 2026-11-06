@@ -34,8 +34,21 @@ describe('JourneyNavigator', () => {
     expect(stepUrl({ state: 'in_progress', step })).toEqual(url);
   });
 
-  it('a journey no longer in progress goes to Inicio', () => {
+  it('a withdrawn journey goes to Inicio', () => {
     expect(stepUrl({ state: 'withdrawn', step: 'entitlement_confirmed' })).toEqual(['/']);
+    expect(stepUrl({ state: 'withdrawn', step: 'offer_obtained' })).toEqual(['/']);
+  });
+
+  it('EC-01 (EUD-286): a completed journey with the offer obtained goes to QR', () => {
+    expect(stepUrl({ state: 'completed', step: 'offer_obtained' })).toEqual(['/', 'offer']);
+  });
+
+  it('EC-01 (EUD-286): a 409 step_not_allowed on a completed journey goes to QR', async () => {
+    getJourney.mockReturnValue(of({ state: 'completed', step: 'offer_obtained' }));
+
+    await navigator.toCurrentStep();
+
+    expect(navigate).toHaveBeenCalledWith(['/', 'offer']);
   });
 
   it('ES-01, EC-07: goes to the session expired case after discarding the tokens', async () => {

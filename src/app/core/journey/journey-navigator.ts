@@ -14,9 +14,19 @@ export const STEP_PATH: Record<Journey.StepEnum, string> = {
   offer_obtained: QR_PATH,
 };
 
-/** Adónde va el titular según el recorrido: la ruta de su paso o, si ya no está en curso, Inicio. */
+/**
+ * Recorrido en el que el titular sigue teniendo un paso: en curso o, tras la
+ * primera oferta, `completed` con `offer_obtained`. El servicio pasa el
+ * recorrido a `completed` al entregar la primera oferta, pero el titular sigue
+ * en QR y puede pedir un código nuevo (EUD-286, decisión 6 de ac.md).
+ */
+export function isJourneyActive(journey: Journey): boolean {
+  return journey.state === 'in_progress' || (journey.state === 'completed' && journey.step === 'offer_obtained');
+}
+
+/** Adónde va el titular según el recorrido: la ruta de su paso o, si ya no tiene paso, Inicio. */
 export function stepUrl(journey: Journey): string[] {
-  return journey.state === 'in_progress' ? ['/', STEP_PATH[journey.step]] : ['/'];
+  return isJourneyActive(journey) ? ['/', STEP_PATH[journey.step]] : ['/'];
 }
 
 export function isJourneyClosed(error: unknown): boolean {

@@ -11,7 +11,7 @@ const features = join(platformDev, 'docs', '02_discovery', 'features');
 
 const contracts = {
   'journey.openapi.yaml': 'EUD-262-servicio-portal-emision',
-  'authentic-source.openapi.yaml': 'EUD-261-fuente-autentica',
+  'authentic-source.openapi.yaml': 'EUD-330-fuente-autentica',
 };
 
 for (const [target, feature] of Object.entries(contracts)) {
