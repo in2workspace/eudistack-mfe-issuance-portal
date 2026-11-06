@@ -2,23 +2,16 @@ import { Component, OnDestroy, OnInit, computed, effect, inject, signal } from '
 import { Router } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import QRCode from 'qrcode';
-import { CredentialOfferService } from './credential-offer.service';
+import { CredentialOfferService, MAX_QR_PAYLOAD_CHARS } from './credential-offer.service';
+import { formatCountdown } from './credential-offer-expiry';
 import { CredentialOfferUrlBoxComponent } from '../../shared/components/credential-offer-url-box/credential-offer-url-box.component';
-import { CREDENTIAL_OFFER_PRESENTATION_TTL_MS } from './credential-offer-expiry';
 
 /**
- * Pantalla de presentación de la oferta de credencial (EUD-163).
- *
- * Cuatro estados (`CredentialOfferService.status()`): `loading` (AC-04),
- * `ready` (AC-01/AC-02), `ready-without-qr` (ES-06) y `unavailable`
- * (AC-05, aviso genérico con las claves `credentialOffer.unavailable.*`;
- * EUD-286 lo rehace como QR caducado).
- *
- * La interfaz ya no guarda los datos del titular (design.md AD-3), así que no
- * tiene nada que enviar para pedir la oferta: al entrar o reintentar vuelve a
- * Inicio hasta que la oferta se pida al servicio del portal con
- * `POST /journey/confirmation` (EUD-286). La ruta la protege
- * `journeyStepGuard`.
+ * Paso QR (wireframes, QR; design.md §3.3). Estados de
+ * `CredentialOfferService.status()`: generando, listo, sin QR (la dirección
+ * supera el límite del QR) y caducado (QR atenuado y «Generar un código
+ * nuevo»). La cuenta atrás va hasta la caducidad que da el servicio. La ruta
+ * la protege `journeyStepGuard`.
  */
 @Component({
   selector: 'app-credential-offer',
@@ -30,29 +23,31 @@ export class CredentialOfferComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
 
   protected readonly status = this.service.status;
+  protected readonly address = computed(() => this.service.address()?.url ?? null);
+  protected readonly countdown = computed(() => formatCountdown(this.service.remainingSeconds()));
   protected readonly qrDataUrl = signal<string | null>(null);
-  protected readonly walletInvocationUrlValue = computed(() => this.service.walletInvocationUrl()?.url ?? null);
-  /** Minutos de la ventana de presentación real (AD-6/NFR-S-163-01) — el aviso de validez refleja el TTL de código, no un texto decorativo independiente. */
-  protected readonly validityMinutes = CREDENTIAL_OFFER_PRESENTATION_TTL_MS / 60_000;
+  /** El QR no se ha podido generar: se muestran el botón y el enlace igualmente (ac.md AC-05). */
+  protected readonly qrFailed = signal(false);
+  protected readonly withoutQr = computed(() => this.status() === 'ready-without-qr' || this.qrFailed());
 
   constructor() {
-    // Genera el QR solo en 'ready' (no en 'ready-without-qr', ES-06) —
-    // efecto reactivo a la URL de invocación, no a un ngOnInit puntual,
-    // para que un retry() con oferta nueva regenere el QR.
+    // El QR se genera para cada dirección que cabe en él, y se conserva
+    // (atenuado) cuando caduca.
     effect(() => {
-      const status = this.status();
-      const url = this.service.walletInvocationUrl();
-      if (status === 'ready' && url) {
-        QRCode.toDataURL(url.url, { width: 280, errorCorrectionLevel: 'H', margin: 2 }).then((dataUrl) => {
-          this.qrDataUrl.set(dataUrl);
-        });
-      } else {
-        this.qrDataUrl.set(null);
+      const url = this.address();
+      this.qrDataUrl.set(null);
+      this.qrFailed.set(false);
+      if (url && url.length <= MAX_QR_PAYLOAD_CHARS) {
+        QRCode.toDataURL(url, { width: 280, errorCorrectionLevel: 'H', margin: 2 }).then(
+          (dataUrl) => this.qrDataUrl.set(dataUrl),
+          () => this.qrFailed.set(true),
+        );
       }
     });
   }
 
   ngOnInit(): void {
+    // Hasta que QR pida la oferta al servicio (EUD-286, tarea 5), vuelve a Inicio.
     void this.router.navigate(['/']);
   }
 
@@ -60,7 +55,8 @@ export class CredentialOfferComponent implements OnInit, OnDestroy {
     this.service.cancelPendingWork();
   }
 
-  onRetry(): void {
+  onNewCode(): void {
+    // EUD-286, tarea 5: pide un código nuevo con POST /journey/offers.
     void this.router.navigate(['/']);
   }
 

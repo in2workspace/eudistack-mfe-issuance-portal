@@ -1,14 +1,11 @@
 /**
- * Oferta de credencial obtenida del proceso de emisión (EUD-3/EUD-4).
- * `reference` es el valor devuelto por el emisor, sin alterar (AC-03).
+ * Dirección que llevan a la vez el QR, el botón para abrir el wallet y la caja
+ * para copiar (design.md §3.3), con el momento en que caduca: la dirección de
+ * alta tal cual con su caducidad, o la del wallet del tenant construida con
+ * el enlace de la oferta, con la caducidad de la oferta.
  */
-export interface CredentialOffer {
-  reference: string;
-  obtainedAt: number;
-}
-
-/** Enlace que llevan a la vez el QR, el botón del wallet y la caja para copiar. */
-export interface WalletInvocationUrl {
+export interface OfferAddress {
   url: string;
-  length: number;
+  /** Milisegundos desde la época (`Date.now()`) en que la dirección deja de servir. */
+  expiresAt: number;
 }

@@ -1,46 +1,25 @@
-import { CREDENTIAL_OFFER_PRESENTATION_TTL_MS, isCredentialOfferExpired, msUntilCredentialOfferExpiry } from './credential-offer-expiry';
+import { formatCountdown, isOfferAddressExpired, secondsUntilExpiry } from './credential-offer-expiry';
 
-describe('isCredentialOfferExpired', () => {
-  const obtainedAt = 1_000_000;
+describe('credential offer expiry', () => {
+  const address = { url: 'https://wallet.example/t/abc', expiresAt: 1_000_000 };
 
-  it('a 599 s desde la obtención NO ha expirado (NFR-S-163-01)', () => {
-    const now = obtainedAt + 599_000;
-
-    expect(isCredentialOfferExpired({ reference: 'ref', obtainedAt }, now)).toBe(false);
+  it('counts the whole seconds left until the expiry the service gives', () => {
+    expect(secondsUntilExpiry(address, 1_000_000 - 90_000)).toBe(90);
+    expect(secondsUntilExpiry(address, 1_000_000 - 90_500)).toBe(91);
   });
 
-  it('a 601 s desde la obtención SÍ ha expirado (ES-03, NFR-S-163-01)', () => {
-    const now = obtainedAt + 601_000;
-
-    expect(isCredentialOfferExpired({ reference: 'ref', obtainedAt }, now)).toBe(true);
+  it('expires exactly at the expiry and stays at zero after it', () => {
+    expect(isOfferAddressExpired(address, 999_999)).toBe(false);
+    expect(isOfferAddressExpired(address, 1_000_000)).toBe(true);
+    expect(secondsUntilExpiry(address, 2_000_000)).toBe(0);
   });
 
-  it('exactamente en el límite de la ventana (600 s) todavía no expira — sin renovación deslizante', () => {
-    const now = obtainedAt + CREDENTIAL_OFFER_PRESENTATION_TTL_MS;
-
-    expect(isCredentialOfferExpired({ reference: 'ref', obtainedAt }, now)).toBe(false);
-  });
-
-  it('la ventana es de 10 minutos exactos', () => {
-    expect(CREDENTIAL_OFFER_PRESENTATION_TTL_MS).toBe(10 * 60 * 1000);
-  });
-});
-
-// Auditoría EUD-163 (code-reviewer, hallazgo B1): única fuente de la resta
-// TTL/elapsed, compartida por isCredentialOfferExpired y por el temporizador
-// real de credential-offer.service.ts (armExpiryTimer) — antes duplicada.
-describe('msUntilCredentialOfferExpiry', () => {
-  const obtainedAt = 1_000_000;
-
-  it('a 599 s quedan 1000 ms', () => {
-    expect(msUntilCredentialOfferExpiry({ reference: 'ref', obtainedAt }, obtainedAt + 599_000)).toBe(1000);
-  });
-
-  it('a 601 s el remanente es negativo', () => {
-    expect(msUntilCredentialOfferExpiry({ reference: 'ref', obtainedAt }, obtainedAt + 601_000)).toBe(-1000);
-  });
-
-  it('exactamente en el límite (600 s) el remanente es 0', () => {
-    expect(msUntilCredentialOfferExpiry({ reference: 'ref', obtainedAt }, obtainedAt + CREDENTIAL_OFFER_PRESENTATION_TTL_MS)).toBe(0);
+  it.each([
+    [582, '09:42'],
+    [60, '01:00'],
+    [5, '00:05'],
+    [0, '00:00'],
+  ])('shows %i seconds as %s', (seconds, text) => {
+    expect(formatCountdown(seconds)).toBe(text);
   });
 });

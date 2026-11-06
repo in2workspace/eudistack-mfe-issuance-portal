@@ -1,61 +1,80 @@
 import { Injectable, signal } from '@angular/core';
-import { msUntilCredentialOfferExpiry } from './credential-offer-expiry';
-import { CredentialOffer, WalletInvocationUrl } from './credential-offer.model';
-
-export type CredentialOfferStatus = 'idle' | 'loading' | 'ready' | 'ready-without-qr' | 'unavailable';
-
-/** Por encima de esta longitud, el QR no es fiable — degrada a 'ready-without-qr' (ES-06, NFR-U-163-01). */
-export const MAX_QR_PAYLOAD_CHARS = 1200;
+import { isOfferAddressExpired, secondsUntilExpiry } from './credential-offer-expiry';
+import { OfferAddress } from './credential-offer.model';
 
 /**
- * Estado de presentación de la oferta en la pantalla QR (EUD-163): cargando,
- * lista, sin QR por longitud y no disponible, con la caducidad real de la
- * oferta. Ya no pide la oferta: la petición de la demo (`/api/bootstrap` con
- * los datos del titular desde el navegador) se retiró, y EUD-286 la pide al
- * servicio con `POST /journey/confirmation` y la presenta con `present()`.
- * La oferta vive solo en memoria (NFR-S-163-03).
+ * Estados de la pantalla QR (wireframes, QR): generando, listo, sin QR y
+ * caducado. El alta no preparada y los errores de emisión no son estados de
+ * esta pantalla: llevan a la pantalla de error (EUD-287).
+ */
+export type CredentialOfferStatus = 'loading' | 'ready' | 'ready-without-qr' | 'expired';
+
+/** Por encima de esta longitud el QR no es fiable: se muestra sin QR (ac.md AC-05). */
+export const MAX_QR_PAYLOAD_CHARS = 1200;
+
+const TICK_MS = 1000;
+
+/**
+ * Presentación de la dirección del QR con su cuenta atrás (EUD-286). La
+ * cuenta atrás va hasta la caducidad que da el servicio y se recalcula con el
+ * reloj en cada segundo, para no desviarse si el navegador retrasa el
+ * temporizador. Al llegar a cero, la dirección se conserva para atenuar el
+ * QR y la pantalla ofrece un código nuevo. Solo en memoria (design.md AD-3).
  */
 @Injectable({ providedIn: 'root' })
 export class CredentialOfferService {
-  private readonly _status = signal<CredentialOfferStatus>('idle');
-  private readonly _offer = signal<CredentialOffer | null>(null);
-  private readonly _walletInvocationUrl = signal<WalletInvocationUrl | null>(null);
+  private readonly _status = signal<CredentialOfferStatus>('loading');
+  private readonly _address = signal<OfferAddress | null>(null);
+  private readonly _remainingSeconds = signal(0);
 
   readonly status = this._status.asReadonly();
-  readonly offer = this._offer.asReadonly();
-  readonly walletInvocationUrl = this._walletInvocationUrl.asReadonly();
+  readonly address = this._address.asReadonly();
+  readonly remainingSeconds = this._remainingSeconds.asReadonly();
 
-  private expiryTimer: ReturnType<typeof setTimeout> | null = null;
+  private ticker: ReturnType<typeof setInterval> | null = null;
 
-  /** Presenta una oferta y arma su caducidad: al vencer, la retira y la marca como no disponible (ES-03). */
-  present(offer: CredentialOffer, url: WalletInvocationUrl): void {
-    this.clearExpiryTimer();
-    this._offer.set(offer);
-    this._walletInvocationUrl.set(url);
-    this._status.set(url.length > MAX_QR_PAYLOAD_CHARS ? 'ready-without-qr' : 'ready');
-    this.expiryTimer = setTimeout(
-      () => this.markUnavailable(),
-      Math.max(msUntilCredentialOfferExpiry(offer, Date.now()), 0),
-    );
+  /** QR (generando): mientras se pide la oferta. */
+  startLoading(): void {
+    this.stopTicker();
+    this._address.set(null);
+    this._remainingSeconds.set(0);
+    this._status.set('loading');
   }
 
-  /** Retira la oferta presentada y muestra el aviso de no disponible. */
-  markUnavailable(): void {
-    this.clearExpiryTimer();
-    this._offer.set(null);
-    this._walletInvocationUrl.set(null);
-    this._status.set('unavailable');
+  /** Presenta una dirección y arranca su cuenta atrás. Si ya ha caducado, entra caducada (ac.md EC-06). */
+  present(address: OfferAddress): void {
+    this.stopTicker();
+    this._address.set(address);
+    this._status.set(address.url.length > MAX_QR_PAYLOAD_CHARS ? 'ready-without-qr' : 'ready');
+    if (!this.refresh()) {
+      this.ticker = setInterval(() => this.refresh(), TICK_MS);
+    }
   }
 
-  /** Llamar desde `ngOnDestroy()` del componente consumidor — cancela el temporizador de caducidad pendiente. */
+  /** Llamar desde `ngOnDestroy()` de la pantalla: para la cuenta atrás. */
   cancelPendingWork(): void {
-    this.clearExpiryTimer();
+    this.stopTicker();
   }
 
-  private clearExpiryTimer(): void {
-    if (this.expiryTimer !== null) {
-      clearTimeout(this.expiryTimer);
-      this.expiryTimer = null;
+  /** Recalcula lo que queda; devuelve `true` si la dirección ha caducado. */
+  private refresh(): boolean {
+    const address = this._address();
+    if (!address) {
+      return true;
+    }
+    this._remainingSeconds.set(secondsUntilExpiry(address, Date.now()));
+    if (isOfferAddressExpired(address, Date.now())) {
+      this.stopTicker();
+      this._status.set('expired');
+      return true;
+    }
+    return false;
+  }
+
+  private stopTicker(): void {
+    if (this.ticker !== null) {
+      clearInterval(this.ticker);
+      this.ticker = null;
     }
   }
 }
