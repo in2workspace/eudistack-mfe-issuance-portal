@@ -7,6 +7,7 @@ import { axe, toHaveNoViolations } from 'jest-axe';
 import QRCode from 'qrcode';
 import { CredentialOfferComponent } from './credential-offer.component';
 import { CredentialOfferService, MAX_QR_PAYLOAD_CHARS } from './credential-offer.service';
+import { OfferFlowService } from './offer-flow.service';
 
 expect.extend(toHaveNoViolations);
 
@@ -29,12 +30,17 @@ function catalog(lang: string): Record<string, string> {
 describe('CredentialOfferComponent', () => {
   let fixture: ComponentFixture<CredentialOfferComponent>;
   let service: CredentialOfferService;
+  let flow: { enter: jest.Mock; newCode: jest.Mock };
 
   beforeEach(() => {
+    flow = { enter: jest.fn().mockResolvedValue(undefined), newCode: jest.fn().mockResolvedValue(undefined) };
     (QRCode.toDataURL as jest.Mock).mockClear().mockResolvedValue('data:image/png;base64,mocked');
     TestBed.configureTestingModule({
       imports: [CredentialOfferComponent, TranslateModule.forRoot()],
       providers: [provideRouter([])],
+    });
+    TestBed.overrideComponent(CredentialOfferComponent, {
+      set: { providers: [{ provide: OfferFlowService, useValue: flow }] },
     });
     const translate = TestBed.inject(TranslateService);
     translate.setTranslation('es', catalog('es'));
@@ -125,6 +131,23 @@ describe('CredentialOfferComponent', () => {
     expect(element.querySelector('img[width="280"]')).toBeNull();
     expect(element.textContent).toContain('No se ha podido generar el código.');
     expect(element.querySelector('a[href]')).not.toBeNull();
+  });
+
+  it('asks the flow for the offer when the screen opens', async () => {
+    await render();
+
+    expect(flow.enter).toHaveBeenCalledTimes(1);
+  });
+
+  it('AC-06: «Generar un código nuevo» asks the flow for a new code', async () => {
+    present(-1);
+    const element = await render();
+
+    Array.from(element.querySelectorAll('button'))
+      .find((b) => b.textContent?.trim() === 'Generar un código nuevo')!
+      .click();
+
+    expect(flow.newCode).toHaveBeenCalledTimes(1);
   });
 
   it('stops the countdown when the screen is left', async () => {

@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import QRCode from 'qrcode';
 import { CredentialOfferService, MAX_QR_PAYLOAD_CHARS } from './credential-offer.service';
+import { OfferFlowService } from './offer-flow.service';
 import { formatCountdown } from './credential-offer-expiry';
 import { CredentialOfferUrlBoxComponent } from '../../shared/components/credential-offer-url-box/credential-offer-url-box.component';
 
@@ -10,16 +11,19 @@ import { CredentialOfferUrlBoxComponent } from '../../shared/components/credenti
  * Paso QR (wireframes, QR; design.md §3.3). Estados de
  * `CredentialOfferService.status()`: generando, listo, sin QR (la dirección
  * supera el límite del QR) y caducado (QR atenuado y «Generar un código
- * nuevo»). La cuenta atrás va hasta la caducidad que da el servicio. La ruta
- * la protege `journeyStepGuard`.
+ * nuevo»). La cuenta atrás va hasta la caducidad que da el servicio. La
+ * oferta la pide `OfferFlowService` al entrar. La ruta la protege
+ * `journeyStepGuard`.
  */
 @Component({
   selector: 'app-credential-offer',
   imports: [TranslateModule, CredentialOfferUrlBoxComponent],
+  providers: [OfferFlowService],
   templateUrl: './credential-offer.component.html',
 })
 export class CredentialOfferComponent implements OnInit, OnDestroy {
   private readonly service = inject(CredentialOfferService);
+  private readonly flow = inject(OfferFlowService);
   private readonly router = inject(Router);
 
   protected readonly status = this.service.status;
@@ -47,8 +51,7 @@ export class CredentialOfferComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    // Hasta que QR pida la oferta al servicio (EUD-286, tarea 5), vuelve a Inicio.
-    void this.router.navigate(['/']);
+    void this.flow.enter();
   }
 
   ngOnDestroy(): void {
@@ -56,8 +59,7 @@ export class CredentialOfferComponent implements OnInit, OnDestroy {
   }
 
   onNewCode(): void {
-    // EUD-286, tarea 5: pide un código nuevo con POST /journey/offers.
-    void this.router.navigate(['/']);
+    void this.flow.newCode();
   }
 
   onComplete(): void {

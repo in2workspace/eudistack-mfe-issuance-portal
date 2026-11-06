@@ -10,7 +10,7 @@ import { ApiProblemError, NETWORK_ERROR } from '../../../core/api/api-problem.er
 import { AttestationPreview, Journey, JourneyApi } from '../../../core/api/generated/journey';
 import { JourneyNavigator } from '../../../core/journey/journey-navigator';
 import { SESSION_ACTIONS } from '../../../core/session/session-actions';
-import { JourneyIssuanceStore } from '../../journey-issuance/journey-issuance.store';
+import { JourneyIssuanceStore } from '../../../core/journey/journey-issuance.store';
 
 expect.extend(toHaveNoViolations);
 

@@ -9,7 +9,7 @@ import { JourneyNavigator, isJourneyClosed } from '../../../core/journey/journey
 import { QR_PATH } from '../../../core/journey/journey-paths';
 import { SESSION_ACTIONS } from '../../../core/session/session-actions';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
-import { JourneyIssuanceStore } from '../../journey-issuance/journey-issuance.store';
+import { JourneyIssuanceStore } from '../../../core/journey/journey-issuance.store';
 
 /**
  * Paso Datos (wireframes, Datos): la vista previa de la atestación tal como

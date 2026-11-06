@@ -5,6 +5,7 @@ import { JourneyNavigator, stepUrl } from './journey-navigator';
 import { ApiProblemError, NETWORK_ERROR } from '../api/api-problem.error';
 import { Journey, JourneyApi } from '../api/generated/journey';
 import { SESSION_ACTIONS } from '../session/session-actions';
+import { JourneyIssuanceStore } from './journey-issuance.store';
 
 describe('JourneyNavigator', () => {
   let getJourney: jest.Mock<Observable<Journey>>;
@@ -37,6 +38,16 @@ describe('JourneyNavigator', () => {
   it('a withdrawn journey goes to Inicio', () => {
     expect(stepUrl({ state: 'withdrawn', step: 'entitlement_confirmed' })).toEqual(['/']);
     expect(stepUrl({ state: 'withdrawn', step: 'offer_obtained' })).toEqual(['/']);
+  });
+
+  it('NFR-1 (EUD-286): expireSession forgets the email the holder wrote in Datos', () => {
+    const store = TestBed.inject(JourneyIssuanceStore);
+    store.confirm('maria@example.org');
+
+    navigator.expireSession();
+
+    expect(store.email()).toBeNull();
+    expect(store.pendingCall()).toBeNull();
   });
 
   it('EC-01 (EUD-286): a completed journey with the offer obtained goes to QR', () => {
