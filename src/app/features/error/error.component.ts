@@ -5,6 +5,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { combineLatest, map } from 'rxjs';
 import { TenantLanguageService } from '../../core/branding/tenant-language.service';
 import { PortalConfigService } from '../../core/config/portal-config.service';
+import { hasSupportDetails } from '../../core/config/support-details';
 import { ENTITLEMENT_PATH, QR_PATH } from '../../core/journey/journey-paths';
 import { SESSION_ACTIONS } from '../../core/session/session-actions';
 import { ErrorReason, isErrorReason } from './error-reason';
@@ -44,7 +45,7 @@ export class ErrorComponent {
       return null;
     }
     const support = this.portalConfig.config()?.support;
-    return support?.email || support?.phone || support?.schedule ? support : null;
+    return hasSupportDetails(support) ? support : null;
   });
 
   async onAction(): Promise<void> {

@@ -1,172 +1,145 @@
-<div class="min-h-screen bg-gray-50">
-  <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-    <div class="grid lg:grid-cols-3 gap-8">
+<main class="min-h-screen bg-gray-50">
+  <div class="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">
+    <div class="grid gap-8 lg:grid-cols-3">
       <!-- Formulario -->
       <div class="lg:col-span-2">
-        @if (!submitted()) {
-          <div class="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border p-8">
-            <div class="mb-8">
-              <h2 class="text-2xl font-bold text-gray-900 mb-2">¿Necesitas ayuda?</h2>
-              <p class="text-gray-600">Completa el formulario y nuestro equipo te responderá lo antes posible.</p>
+        <div class="flex flex-col gap-6 rounded-xl border bg-white p-8">
+          <h1 class="text-2xl font-bold text-gray-900">{{ 'incidents.title' | translate }}</h1>
+
+          @if (failed()) {
+            <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800" role="alert" data-testid="incident-failed">
+              {{ 'incidents.failed' | translate }}
             </div>
+          }
 
-            <form (ngSubmit)="onSubmit()" #incidentForm="ngForm" class="space-y-6">
-              <div class="grid md:grid-cols-2 gap-6">
-                <div>
-                  <label for="name" class="flex items-center gap-2 text-sm leading-none font-medium mb-2">Nombre completo *</label>
-                  <input id="name" name="name" type="text" required [(ngModel)]="formData.name"
-                    class="flex h-9 w-full min-w-0 rounded-md border border-gray-300 px-3 py-1 text-sm bg-white mt-2 focus:outline-none focus:ring-2 focus:ring-brand-accent/30 focus:border-brand-accent"
-                    placeholder="Tu nombre" />
-                </div>
-                <div>
-                  <label for="email" class="flex items-center gap-2 text-sm leading-none font-medium mb-2">Email *</label>
-                  <input id="email" name="email" type="email" required [(ngModel)]="formData.email"
-                    class="flex h-9 w-full min-w-0 rounded-md border border-gray-300 px-3 py-1 text-sm bg-white mt-2 focus:outline-none focus:ring-2 focus:ring-brand-accent/30 focus:border-brand-accent"
-                    placeholder="tu@email.com" />
-                </div>
-              </div>
-
-              <div class="grid md:grid-cols-2 gap-6">
-                <div>
-                  <label for="phone" class="flex items-center gap-2 text-sm leading-none font-medium mb-2">Teléfono</label>
-                  <input id="phone" name="phone" type="tel" [(ngModel)]="formData.phone"
-                    class="flex h-9 w-full min-w-0 rounded-md border border-gray-300 px-3 py-1 text-sm bg-white mt-2 focus:outline-none focus:ring-2 focus:ring-brand-accent/30 focus:border-brand-accent"
-                    placeholder="+34 600 000 000" />
-                </div>
-                <div>
-                  <label for="incidentType" class="flex items-center gap-2 text-sm leading-none font-medium mb-2">Tipo de incidencia *</label>
-                  <select id="incidentType" name="incidentType" required [(ngModel)]="formData.incidentType"
-                    class="mt-2 w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-brand-accent/30 bg-white">
-                    <option value="">Selecciona un tipo</option>
-                    @for (type of incidentTypes; track type.value) {
-                      <option [value]="type.value">{{ type.label }}</option>
-                    }
-                  </select>
-                </div>
-              </div>
-
+          <form [formGroup]="form" (ngSubmit)="onSubmit()" class="space-y-6" novalidate>
+            <div class="grid gap-6 md:grid-cols-2">
               <div>
-                <label for="subject" class="flex items-center gap-2 text-sm leading-none font-medium mb-2">Asunto *</label>
-                <input id="subject" name="subject" type="text" required [(ngModel)]="formData.subject"
-                  class="flex h-9 w-full min-w-0 rounded-md border border-gray-300 px-3 py-1 text-sm bg-white mt-2 focus:outline-none focus:ring-2 focus:ring-brand-accent/30 focus:border-brand-accent"
-                  placeholder="Resume tu consulta" />
+                <label for="name" class="text-sm font-medium">{{ 'incidents.field.name' | translate }} *</label>
+                <input
+                  id="name"
+                  type="text"
+                  formControlName="name"
+                  autocomplete="name"
+                  required
+                  [attr.maxlength]="maxLength.name"
+                  class="mt-2 flex h-9 w-full rounded-md border border-gray-300 bg-white px-3 py-1 text-sm focus:border-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent/30"
+                />
               </div>
-
               <div>
-                <label for="description" class="flex items-center gap-2 text-sm leading-none font-medium mb-2">Descripción del problema *</label>
-                <textarea id="description" name="description" required [(ngModel)]="formData.description" rows="6"
-                  class="flex w-full min-w-0 rounded-md border border-gray-300 px-3 py-2 text-sm bg-white mt-2 focus:outline-none focus:ring-2 focus:ring-brand-accent/30 focus:border-brand-accent"
-                  placeholder="Describe detalladamente el problema que estás experimentando...">
-                </textarea>
+                <label for="email" class="text-sm font-medium">{{ 'incidents.field.email' | translate }} *</label>
+                <input
+                  id="email"
+                  type="email"
+                  formControlName="email"
+                  autocomplete="email"
+                  required
+                  [attr.aria-invalid]="form.controls.email.touched && form.controls.email.invalid"
+                  [attr.aria-describedby]="form.controls.email.touched && form.controls.email.hasError('email') ? 'email-error' : null"
+                  class="mt-2 flex h-9 w-full rounded-md border border-gray-300 bg-white px-3 py-1 text-sm focus:border-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent/30"
+                />
+                @if (form.controls.email.touched && form.controls.email.hasError('email')) {
+                  <p id="email-error" class="mt-1 text-xs text-red-700">{{ 'incidents.field.email.invalid' | translate }}</p>
+                }
               </div>
-
-              <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p class="text-sm text-gray-700">
-                  <strong>Tiempo de respuesta:</strong> Intentaremos responder a tu solicitud en un plazo de 24-48 horas laborables.
-                </p>
-              </div>
-
-              <div class="flex gap-4">
-                <button
-                  type="button"
-                  (click)="onBack()"
-                  class="flex-1 inline-flex items-center justify-center rounded-md text-sm font-medium h-9 px-4 py-2 border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  class="flex-1 inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium h-9 px-4 py-2 bg-brand-secondary hover:opacity-90 text-brand-secondary-contrast transition-colors"
-                >
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                  </svg>
-                  Enviar Incidencia
-                </button>
-              </div>
-            </form>
-          </div>
-        } @else {
-          <div class="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border p-8 text-center">
-            <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
             </div>
-            <h2 class="text-2xl font-bold text-gray-900 mb-4">¡Incidencia Enviada!</h2>
-            <p class="text-gray-600 mb-2">Hemos recibido tu solicitud correctamente.</p>
-            <p class="text-gray-600 mb-8">Recibirás una respuesta en <strong>{{ formData.email }}</strong> en un plazo de 24-48 horas laborables.</p>
-            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-              <p class="text-sm text-gray-700"><strong>Número de ticket:</strong> {{ ticketNumber }}</p>
+
+            <div class="grid gap-6 md:grid-cols-2">
+              <div>
+                <label for="phone" class="text-sm font-medium">{{ 'incidents.field.phone' | translate }}</label>
+                <input
+                  id="phone"
+                  type="tel"
+                  formControlName="phone"
+                  autocomplete="tel"
+                  [attr.maxlength]="maxLength.phone"
+                  class="mt-2 flex h-9 w-full rounded-md border border-gray-300 bg-white px-3 py-1 text-sm focus:border-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent/30"
+                />
+              </div>
+              <div>
+                <label for="type" class="text-sm font-medium">{{ 'incidents.field.type' | translate }} *</label>
+                <select
+                  id="type"
+                  formControlName="type"
+                  required
+                  class="mt-2 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-accent/30"
+                >
+                  <option value="">{{ 'incidents.field.type.placeholder' | translate }}</option>
+                  @for (type of types; track type) {
+                    <option [value]="type">{{ 'incidents.type.' + type | translate }}</option>
+                  }
+                </select>
+              </div>
             </div>
-            <button
-              (click)="onBack()"
-              class="inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium h-9 px-4 py-2 bg-brand-secondary hover:opacity-90 text-brand-secondary-contrast transition-colors"
-            >
-              Volver al Inicio
-            </button>
-          </div>
-        }
+
+            <div>
+              <label for="subject" class="text-sm font-medium">{{ 'incidents.field.subject' | translate }} *</label>
+              <input
+                id="subject"
+                type="text"
+                formControlName="subject"
+                required
+                [attr.maxlength]="maxLength.subject"
+                class="mt-2 flex h-9 w-full rounded-md border border-gray-300 bg-white px-3 py-1 text-sm focus:border-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent/30"
+              />
+            </div>
+
+            <div>
+              <label for="description" class="text-sm font-medium">{{ 'incidents.field.description' | translate }} *</label>
+              <textarea
+                id="description"
+                formControlName="description"
+                rows="6"
+                required
+                [attr.maxlength]="maxLength.description"
+                class="mt-2 flex w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent/30"
+              ></textarea>
+            </div>
+
+            @if (support().response_time; as responseTime) {
+              <p class="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-gray-700" data-testid="incident-response-time">
+                {{ 'incidents.responseTime' | translate: { responseTime } }}
+              </p>
+            }
+
+            <div class="flex gap-4">
+              <button
+                type="button"
+                (click)="onCancel()"
+                class="inline-flex h-9 flex-1 items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+              >
+                {{ 'incidents.cancel' | translate }}
+              </button>
+              <button
+                type="submit"
+                [disabled]="form.invalid || sending()"
+                data-testid="incident-submit"
+                class="inline-flex h-9 flex-1 items-center justify-center gap-2 rounded-md bg-brand-secondary px-4 py-2 text-sm font-medium text-brand-secondary-contrast transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {{ 'incidents.submit' | translate }}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
 
-      <!-- Información de contacto -->
-      <div class="space-y-6">
-        <div class="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border p-6">
-          <h3 class="font-bold text-gray-900 mb-4">Otros Canales de Contacto</h3>
-          <div class="space-y-4">
-            <div class="flex items-start gap-3">
-              <svg class="w-5 h-5 text-brand-accent flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-              </svg>
-              <div>
-                <p class="font-semibold text-gray-900">Teléfono</p>
-                <p class="text-sm text-gray-600">900 123 456</p>
-                <p class="text-xs text-gray-500">Gratuito desde España</p>
-              </div>
-            </div>
-            <div class="flex items-start gap-3">
-              <svg class="w-5 h-5 text-brand-accent flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-              </svg>
-              <div>
-                <p class="font-semibold text-gray-900">Email</p>
-                <p class="text-sm text-gray-600">{{ supportEmail }}</p>
-              </div>
-            </div>
-            <div class="flex items-start gap-3">
-              <svg class="w-5 h-5 text-brand-accent flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <div>
-                <p class="font-semibold text-gray-900">Horario</p>
-                <p class="text-sm text-gray-600">Lunes a Viernes</p>
-                <p class="text-sm text-gray-600">9:00 - 18:00 (CET)</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="bg-amber-50 border border-amber-200 rounded-xl p-6">
-          <h4 class="font-bold text-gray-900 mb-3">Antes de contactar</h4>
+      <!-- Soporte -->
+      @if (hasSupport()) {
+        <aside class="h-fit rounded-xl border bg-white p-6" data-testid="incident-support" aria-labelledby="support-title">
+          <h2 id="support-title" class="mb-4 font-bold text-gray-900">{{ 'incidents.support.title' | translate }}</h2>
           <ul class="space-y-2 text-sm text-gray-700">
-            <li class="flex items-start gap-2">
-              <span class="text-brand-accent mt-1">•</span>
-              <span>Consulta nuestras <a href="#" class="text-brand-accent font-semibold hover:underline">Preguntas Frecuentes</a></span>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-brand-accent mt-1">•</span>
-              <span>Revisa la <a href="#" class="text-brand-accent font-semibold hover:underline">Guía de Usuario</a></span>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-brand-accent mt-1">•</span>
-              <span>Ten a mano tu {{ isDoctorTenant ? 'número de colegiado' : 'número de empleado' }}</span>
-            </li>
+            @if (support().email; as email) {
+              <li>{{ 'incidents.support.email' | translate: { email } }}</li>
+            }
+            @if (support().phone; as phone) {
+              <li>{{ 'incidents.support.phone' | translate: { phone } }}</li>
+            }
+            @if (support().schedule; as schedule) {
+              <li>{{ 'incidents.support.schedule' | translate: { schedule } }}</li>
+            }
           </ul>
-        </div>
-      </div>
+        </aside>
+      }
     </div>
   </div>
-</div>
+</main>

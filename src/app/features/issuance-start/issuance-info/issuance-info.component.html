@@ -26,11 +26,11 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
           </svg>
         </button>
-        <!-- TEMPORAL: botón "Canal de soporte" oculto hasta decidir si se muestra (Inicio y Ayuda: EUD-284). Para recuperarlo, quitar este comentario.
         <button
           type="button"
           class="inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-2 rounded-md border border-brand-secondary-contrast bg-brand-secondary-contrast/10 px-6 py-3 text-base font-semibold text-brand-secondary-contrast transition-colors hover:bg-brand-secondary-contrast/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-secondary-contrast"
-          [attr.aria-label]="'issuanceInfo.hero.supportChannel.ariaLabel' | translate"
+          [attr.aria-label]="'issuanceInfo.hero.help.ariaLabel' | translate"
+          data-testid="hero-help"
           (click)="navigateToIncidents()"
         >
           <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -41,9 +41,8 @@
               d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
             />
           </svg>
-          {{ 'issuanceInfo.hero.supportChannel' | translate }}
+          {{ 'issuanceInfo.hero.help' | translate }}
         </button>
-        -->
       </div>
     </div>
   </section>
@@ -178,7 +177,7 @@
     </div>
   </section>
 
-  <!-- TEMPORAL: sección "¿Necesitas ayuda?" oculta hasta decidir si se muestra (Inicio y Ayuda: EUD-284). Para recuperarla, quitar este comentario.
+  <!-- ¿Necesitas ayuda? -->
   <section class="bg-white px-6 py-16">
     <div class="mx-auto max-w-3xl rounded-2xl bg-brand-secondary p-12 text-center text-brand-secondary-contrast">
       <svg class="mx-auto h-16 w-16" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -191,11 +190,21 @@
       </svg>
       <h2 class="mt-6 text-2xl font-bold sm:text-3xl">{{ 'issuanceInfo.help.title' | translate }}</h2>
       <p class="mt-4 text-lg text-brand-secondary-contrast/80">{{ 'issuanceInfo.help.description' | translate }}</p>
-      <div class="mt-8 flex flex-col justify-center gap-4 sm:flex-row">
+      @if (support().email; as email) {
+        <p class="mt-4">
+          @if (supportMailto(); as mailto) {
+            <a [href]="mailto" class="font-semibold underline hover:no-underline" data-testid="help-email">{{ email }}</a>
+          } @else {
+            <span class="font-semibold" data-testid="help-email">{{ email }}</span>
+          }
+        </p>
+      }
+      <div class="mt-8 flex justify-center">
         <button
           type="button"
           class="inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-2 rounded-md bg-white px-6 py-3 text-base font-semibold text-brand-accent transition-colors hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
           [attr.aria-label]="'issuanceInfo.help.reportIncident.ariaLabel' | translate"
+          data-testid="help-incident"
           (click)="navigateToIncidents()"
         >
           <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -208,40 +217,40 @@
           </svg>
           {{ 'issuanceInfo.help.reportIncident' | translate }}
         </button>
-        <button
-          type="button"
-          class="inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-2 rounded-md border border-brand-secondary-contrast bg-brand-secondary-contrast/10 px-6 py-3 text-base font-semibold text-brand-secondary-contrast transition-colors hover:bg-brand-secondary-contrast/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-secondary-contrast"
-          [attr.aria-label]="'issuanceInfo.help.contactEmail.ariaLabel' | translate"
-          (click)="contactByEmail()"
-        >
-          {{ 'issuanceInfo.help.contactEmail' | translate }}
-        </button>
       </div>
     </div>
   </section>
-  -->
 
   <!-- Footer -->
   <footer class="bg-slate-900 px-6 py-12 text-slate-300">
     <div class="mx-auto max-w-5xl">
       <div class="grid gap-8 md:grid-cols-2">
-        <div>
-          <h3 class="mb-4 font-bold text-white">{{ 'issuanceInfo.footer.usefulLinks' | translate }}</h3>
-          <ul class="space-y-2 text-sm">
-            <li><a href="#" class="hover:text-white">{{ 'issuanceInfo.footer.legalNotice' | translate }}</a></li>
-            <li><a href="#" class="hover:text-white">{{ 'issuanceInfo.footer.privacyPolicy' | translate }}</a></li>
-            <li><a href="#" class="hover:text-white">{{ 'issuanceInfo.footer.termsAndConditions' | translate }}</a></li>
-            <li><a href="#" class="hover:text-white">{{ 'issuanceInfo.footer.accessibility' | translate }}</a></li>
-          </ul>
-        </div>
-        <div>
-          <h3 class="mb-4 font-bold text-white">{{ 'issuanceInfo.footer.support' | translate }}</h3>
-          <ul class="space-y-2 text-sm">
-            <li>{{ 'issuanceInfo.footer.supportEmail' | translate: { email: supportEmail } }}</li>
-            <li>{{ 'issuanceInfo.footer.supportPhone' | translate }}</li>
-            <li>{{ 'issuanceInfo.footer.supportSchedule' | translate }}</li>
-          </ul>
-        </div>
+        @if (legalLinks().length > 0) {
+          <div data-testid="footer-legal">
+            <h3 class="mb-4 font-bold text-white">{{ 'issuanceInfo.footer.usefulLinks' | translate }}</h3>
+            <ul class="space-y-2 text-sm">
+              @for (link of legalLinks(); track link.label) {
+                <li><a [href]="link.href" class="hover:text-white">{{ link.label | translate }}</a></li>
+              }
+            </ul>
+          </div>
+        }
+        @if (hasSupport()) {
+          <div data-testid="footer-support">
+            <h3 class="mb-4 font-bold text-white">{{ 'issuanceInfo.footer.support' | translate }}</h3>
+            <ul class="space-y-2 text-sm">
+              @if (support().email; as email) {
+                <li>{{ 'issuanceInfo.footer.supportEmail' | translate: { email } }}</li>
+              }
+              @if (support().phone; as phone) {
+                <li>{{ 'issuanceInfo.footer.supportPhone' | translate: { phone } }}</li>
+              }
+              @if (support().schedule; as schedule) {
+                <li>{{ 'issuanceInfo.footer.supportSchedule' | translate: { schedule } }}</li>
+              }
+            </ul>
+          </div>
+        }
       </div>
       <div class="mt-8 border-t border-slate-800 pt-8 text-center text-sm">
         <p>

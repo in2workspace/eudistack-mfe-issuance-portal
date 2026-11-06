@@ -1,10 +1,29 @@
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { axe, toHaveNoViolations } from 'jest-axe';
+import { PortalConfig } from '../../../core/api/generated/journey';
+import { PortalConfigService } from '../../../core/config/portal-config.service';
+import { SESSION_ACTIONS } from '../../../core/session/session-actions';
 import { IssuanceInfoComponent } from './issuance-info.component';
 
 expect.extend(toHaveNoViolations);
+
+/** Configuración completa, para que la comprobación cubra la franja de ayuda, los enlaces legales y el soporte. */
+const FULL_CONFIG: PortalConfig = {
+  wallet_url: 'https://wallet.example',
+  texts: {},
+  support: { email: 'soporte@tenant.example', phone: '911 000 000', schedule: 'L-V 8:00-15:00' },
+  legal_links: {
+    legal_notice: 'https://tenant.example/aviso',
+    privacy: 'https://tenant.example/privacidad',
+    terms: 'https://tenant.example/condiciones',
+    accessibility: 'https://tenant.example/accesibilidad',
+  },
+};
 
 describe('IssuanceInfoComponent a11y', () => {
   let fixture: ComponentFixture<IssuanceInfoComponent>;
@@ -12,7 +31,11 @@ describe('IssuanceInfoComponent a11y', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [IssuanceInfoComponent, TranslateModule.forRoot()],
-      providers: [provideRouter([])],
+      providers: [
+        provideRouter([]),
+        { provide: SESSION_ACTIONS, useValue: { restartLogin: jest.fn(), discardTokens: jest.fn() } },
+        { provide: PortalConfigService, useValue: { config: signal(FULL_CONFIG) } },
+      ],
     });
 
     fixture = TestBed.createComponent(IssuanceInfoComponent);
@@ -51,4 +74,25 @@ describe('IssuanceInfoComponent a11y', () => {
 
     expect(results).toHaveNoViolations();
   });
+
+  it.each(['es', 'en'])(
+    'WCAG 2.5.3: in %s, the accessible name of every button contains its visible text',
+    (lang) => {
+      const texts = JSON.parse(readFileSync(join(__dirname, `../../../../assets/i18n/${lang}.json`), 'utf-8'));
+      const translate = TestBed.inject(TranslateService);
+      translate.setTranslation(lang, texts);
+      translate.use(lang);
+      fixture.detectChanges();
+
+      const buttons = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button[aria-label]'));
+      expect(buttons.length).toBeGreaterThanOrEqual(3);
+      for (const button of buttons) {
+        const visible = button.textContent?.trim().toLowerCase() ?? '';
+        expect({ visible, name: button.getAttribute('aria-label')?.toLowerCase() }).toEqual({
+          visible,
+          name: expect.stringContaining(visible),
+        });
+      }
+    },
+  );
 });

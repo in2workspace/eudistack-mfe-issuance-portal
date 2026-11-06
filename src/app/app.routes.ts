@@ -4,6 +4,12 @@ import { DATA_PATH, QR_PATH } from './core/journey/journey-paths';
 import { CONFIG_UNAVAILABLE_PATH, configAvailableGuard, configUnavailableGuard } from './core/guards/config-available.guard';
 import { legacyQueryParamsGuard } from './core/guards/legacy-query-params.guard';
 import { ERROR_PATH, errorReasonGuard } from './features/error/error-reason';
+import {
+  INCIDENT_SENT_PATH,
+  INCIDENTS_PATH,
+  incidentResponseTimeResolver,
+  incidentSentGuard,
+} from './features/portal/incidents/incident-sent.route';
 
 export const routes: Routes = [
   {
@@ -52,10 +58,18 @@ export const routes: Routes = [
         canActivate: [errorReasonGuard],
       },
       {
-        path: 'incidents',
+        path: INCIDENTS_PATH,
         data: { back: '' },
         loadComponent: () =>
           import('./features/portal/incidents/incidents.component').then((m) => m.IncidentsComponent),
+      },
+      {
+        // Ayuda enviada, sin botón de volver; solo se llega al enviar una incidencia.
+        path: INCIDENT_SENT_PATH,
+        loadComponent: () =>
+          import('./features/portal/incidents/incident-sent.component').then((m) => m.IncidentSentComponent),
+        canActivate: [incidentSentGuard],
+        resolve: { responseTime: incidentResponseTimeResolver },
       },
     ],
   },

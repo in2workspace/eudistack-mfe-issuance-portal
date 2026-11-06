@@ -2,6 +2,7 @@ import { Route } from '@angular/router';
 import { routes } from './app.routes';
 import { configAvailableGuard, configUnavailableGuard } from './core/guards/config-available.guard';
 import { journeyStepGuard } from './core/journey/journey-step.guard';
+import { incidentResponseTimeResolver, incidentSentGuard } from './features/portal/incidents/incident-sent.route';
 
 describe('routes', () => {
   /** Rutas de las pantallas: las hijas de la ruta que exige la configuración. */
@@ -30,6 +31,18 @@ describe('routes', () => {
 
     expect((loaded as { name: string }).name).toBe('CredentialOfferComponent');
     expect(offer.canActivate).toEqual([journeyStepGuard]);
+  });
+
+  it('"incidents/sent" lazy-loads IncidentSentComponent, only after sending an incident, without a back button', async () => {
+    const sent = findRoute('incidents/sent');
+
+    const loaded = await (sent.loadComponent as () => Promise<unknown>)();
+
+    expect((loaded as { name: string }).name).toBe('IncidentSentComponent');
+    expect(sent.canActivate).toEqual([incidentSentGuard]);
+    expect(sent.resolve).toEqual({ responseTime: incidentResponseTimeResolver });
+    expect(sent.data?.['back']).toBeUndefined();
+    expect(findRoute('incidents').data?.['back']).toBe('');
   });
 
   it('"qr" (ruta demo retirada por AD-5) ya no existe', () => {
