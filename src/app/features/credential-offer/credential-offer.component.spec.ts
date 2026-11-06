@@ -64,7 +64,7 @@ describe('CredentialOfferComponent', () => {
   });
 
   afterEach(() => {
-    service.cancelPendingWork();
+    service.reset();
     fixture?.nativeElement.remove();
   });
 
@@ -288,14 +288,13 @@ describe('CredentialOfferComponent', () => {
     });
   });
 
-  it('stops the countdown when the screen is left', async () => {
-    const cancel = jest.spyOn(service, 'cancelPendingWork');
+  it('W5: leaving QR, for any reason, forgets the address with the ticket', async () => {
     present(582);
     await render();
 
     fixture.destroy();
 
-    expect(cancel).toHaveBeenCalled();
+    expect(service.address()).toBeNull();
   });
 
   it('N14: no element has an accessible name that hides its visible text', async () => {

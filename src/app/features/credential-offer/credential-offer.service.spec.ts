@@ -11,7 +11,7 @@ describe('CredentialOfferService', () => {
   });
 
   afterEach(() => {
-    service.cancelPendingWork();
+    service.reset();
     jest.useRealTimers();
   });
 
@@ -75,13 +75,15 @@ describe('CredentialOfferService', () => {
     expect(service.address()).toBeNull();
   });
 
-  it('cancelPendingWork() stops the countdown when the screen is left', () => {
+  it('W5: reset() forgets the address with the ticket and stops the countdown when QR is left', () => {
     service.present(address(3));
 
-    service.cancelPendingWork();
+    service.reset();
     jest.advanceTimersByTime(5000);
 
-    expect(service.status()).toBe('ready');
+    expect(service.address()).toBeNull();
+    expect(service.remainingSeconds()).toBe(0);
+    expect(service.status()).toBe('loading');
   });
 
   it('NFR-1: never writes the address to sessionStorage, localStorage or the console', () => {

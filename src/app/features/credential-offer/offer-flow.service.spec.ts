@@ -69,7 +69,7 @@ describe('OfferFlowService', () => {
     presenter = TestBed.inject(CredentialOfferService);
   });
 
-  afterEach(() => presenter.cancelPendingWork());
+  afterEach(() => presenter.reset());
 
   function flow(): OfferFlowService {
     return TestBed.createComponent(HostComponent).componentInstance.flow;
@@ -407,13 +407,13 @@ describe('OfferFlowService', () => {
       expect(navigate).not.toHaveBeenCalled();
     });
 
-    it('stops the countdown', async () => {
+    it('W5: forgets the address with the ticket and stops the countdown', async () => {
       journeyApi.withdrawJourney.mockReturnValue(journey());
-      const cancel = jest.spyOn(presenter, 'cancelPendingWork');
+      presenter.present({ url: `${WALLET}/t/abc`, expiresAt: Date.now() + 60_000 });
 
       await flow().finish();
 
-      expect(cancel).toHaveBeenCalled();
+      expect(presenter.address()).toBeNull();
     });
   });
 });

@@ -143,7 +143,7 @@ describe('Holder data in the browser', () => {
       });
     });
 
-    afterEach(() => TestBed.inject(CredentialOfferService).cancelPendingWork());
+    afterEach(() => TestBed.inject(CredentialOfferService).reset());
 
     it('the email, the attestation data and the onboarding address stay out of the browser', async () => {
       const harness = await RouterTestingHarness.create();

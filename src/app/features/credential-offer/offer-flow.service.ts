@@ -101,7 +101,7 @@ export class OfferFlowService {
    * igual (ES-05). Con un 410, el interceptor ya lleva a la sesión caducada.
    */
   async finish(): Promise<void> {
-    this.presenter.cancelPendingWork();
+    this.presenter.reset();
     try {
       await firstValueFrom(this.journeyApi.withdrawJourney());
     } catch (error: unknown) {

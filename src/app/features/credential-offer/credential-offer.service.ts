@@ -51,9 +51,16 @@ export class CredentialOfferService {
     }
   }
 
-  /** Llamar desde `ngOnDestroy()` de la pantalla: para la cuenta atrás. */
-  cancelPendingWork(): void {
+  /**
+   * Al salir de QR, por cualquier motivo: para la cuenta atrás y olvida la
+   * dirección, que lleva el ticket de alta o el enlace de la oferta. Volver a
+   * QR siempre empieza generando (review W5; design.md AD-3).
+   */
+  reset(): void {
     this.stopTicker();
+    this._address.set(null);
+    this._remainingSeconds.set(0);
+    this._status.set('loading');
   }
 
   /** Recalcula lo que queda; devuelve `true` si la dirección ha caducado. */

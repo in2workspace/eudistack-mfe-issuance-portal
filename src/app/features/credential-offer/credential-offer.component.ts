@@ -64,7 +64,7 @@ export class CredentialOfferComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.service.cancelPendingWork();
+    this.service.reset();
   }
 
   onNewCode(): void {
