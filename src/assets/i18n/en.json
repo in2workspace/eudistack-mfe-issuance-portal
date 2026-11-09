@@ -37,7 +37,7 @@
   "issuanceInfo.footer.supportPhone": "Phone: {{phone}}",
   "issuanceInfo.footer.supportSchedule": "Hours: {{schedule}}",
   "issuanceInfo.footer.developedBy": "Developed by",
-  "credentialOffer.title": "Scan the code with your wallet",
+  "credentialOffer.title": "Scan the code with your phone's camera",
   "credentialOffer.mobile.title": "Add your attestation to your wallet",
   "credentialOffer.mobile.otherDevice": "Using another device? Scan this code:",
   "credentialOffer.openWallet": "Open in my wallet",
