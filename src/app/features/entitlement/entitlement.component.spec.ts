@@ -55,7 +55,7 @@ describe('EntitlementComponent', () => {
   it('AC-16: shows the waiting indicator while the entitlement is checked, calling POST /entitlement once', () => {
     create(NEVER);
 
-    const status = fixture.nativeElement.querySelector('[role="status"]') as HTMLElement;
+    const status = fixture.nativeElement.querySelector('output') as HTMLElement;
     expect(status.textContent).toContain('entitlement.checking');
     expect(verifyEntitlement).toHaveBeenCalledTimes(1);
     expect(verifyEntitlement).toHaveBeenCalledWith();

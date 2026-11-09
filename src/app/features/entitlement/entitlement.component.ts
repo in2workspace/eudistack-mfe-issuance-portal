@@ -20,7 +20,7 @@ import { errorUrl } from '../error/error-reason';
  * igual. `journey_closed` y `step_not_allowed` los resuelve el interceptor de
  * EUD-287 y el 401, EUD-314: aquí no se pinta nada para ellos.
  */
-const RETRYABLE_FAILURES: readonly string[] = [AUTHENTIC_SOURCE_UNAVAILABLE, NETWORK_ERROR, UNEXPECTED_ERROR];
+const RETRYABLE_FAILURES: ReadonlySet<string> = new Set([AUTHENTIC_SOURCE_UNAVAILABLE, NETWORK_ERROR, UNEXPECTED_ERROR]);
 
 /**
  * Paso Comprobación (wireframes, Comprobación): mientras el módulo de fuente
@@ -60,7 +60,7 @@ export class EntitlementComponent implements OnInit {
   }
 
   private onFailure(error: unknown): void {
-    if (error instanceof ApiProblemError && RETRYABLE_FAILURES.includes(error.type)) {
+    if (error instanceof ApiProblemError && RETRYABLE_FAILURES.has(error.type)) {
       this.leaveTo(errorUrl('source-unavailable'));
     }
   }

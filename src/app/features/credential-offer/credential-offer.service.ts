@@ -33,12 +33,9 @@ export class CredentialOfferService {
 
   private ticker: ReturnType<typeof setInterval> | null = null;
 
-  /** QR (generando): mientras se pide la oferta. */
+  /** QR (generando): mientras se pide la oferta. Empieza sin dirección, como tras `reset()`. */
   startLoading(): void {
-    this.stopTicker();
-    this._address.set(null);
-    this._remainingSeconds.set(0);
-    this._status.set('loading');
+    this.reset();
   }
 
   /** Presenta una dirección y arranca su cuenta atrás. Si ya ha caducado, entra caducada (ac.md EC-06). */

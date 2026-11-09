@@ -134,7 +134,7 @@ export class ConfirmDialogComponent {
       return;
     }
     const first = focusable[0];
-    const last = focusable[focusable.length - 1];
+    const last = focusable.at(-1) ?? first;
     const active = document.activeElement;
     if (event.shiftKey && (active === first || !focusable.includes(active as HTMLElement))) {
       event.preventDefault();

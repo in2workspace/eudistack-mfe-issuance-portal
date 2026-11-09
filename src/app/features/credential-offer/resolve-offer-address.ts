@@ -36,7 +36,7 @@ export function resolveOfferAddress(offer: Offer, walletUrl: string | null | und
   if (!offerUri || !walletUrl) {
     return null;
   }
-  const wallet = walletUrl.replace(/\/+$/, '');
+  const wallet = withoutTrailingSlashes(walletUrl);
   return withExpiry(`${wallet}/${WALLET_CALLBACK_PATH}?${CREDENTIAL_OFFER_URI}=${encodeURIComponent(offerUri)}`, offer.expires_at);
 }
 
@@ -53,6 +53,15 @@ function parseUrl(value: string): URL | null {
   } catch {
     return null;
   }
+}
+
+/** Sin expresión regular, para no depender de la vuelta atrás con entradas largas. */
+function withoutTrailingSlashes(url: string): string {
+  let end = url.length;
+  while (end > 0 && url[end - 1] === '/') {
+    end--;
+  }
+  return url.slice(0, end);
 }
 
 function credentialOfferUri(link: string): string | null {

@@ -240,7 +240,7 @@ describe('CredentialOfferComponent', () => {
       const element = await render();
 
       expect(element.querySelector('img[width="280"]')?.classList).toContain('opacity-30');
-      expect(element.querySelector('[role="status"]')?.textContent).toContain('El código ha caducado.');
+      expect(element.querySelector('output')?.textContent).toContain('El código ha caducado.');
       expect(element.querySelector('a[href]')).toBeNull();
       expect(element.querySelector('app-credential-offer-url-box')).toBeNull();
       expect(buttonWith(element, '¿Prefieres usar el wallet en este ordenador?')).toBeUndefined();
