@@ -100,6 +100,7 @@
   "error.session-expired.title": "Your session has expired",
   "error.session-expired.description": "Too much time has passed without activity and your details have been deleted. You need to start again.",
   "error.session-expired.action": "Start again",
+  "error.backHome": "Back to start",
   "error.support.title": "Support contact",
   "error.support.email": "Email: {{email}}",
   "error.support.phone": "Phone: {{phone}}",

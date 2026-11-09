@@ -34,6 +34,16 @@
       >
         {{ 'error.' + reason + '.action' | translate }}
       </button>
+      @if (canGoHome()) {
+        <button
+          type="button"
+          (click)="onGoHome()"
+          [disabled]="retrying()"
+          class="-mt-2 inline-flex h-10 items-center justify-center rounded-md border border-gray-300 bg-white px-6 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-60"
+        >
+          {{ 'error.backHome' | translate }}
+        </button>
+      }
     </div>
   </main>
 }

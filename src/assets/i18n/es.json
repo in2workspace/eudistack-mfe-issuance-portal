@@ -100,6 +100,7 @@
   "error.session-expired.title": "Tu sesión ha caducado",
   "error.session-expired.description": "Ha pasado demasiado tiempo sin actividad y tus datos se han borrado. Tienes que empezar de nuevo.",
   "error.session-expired.action": "Empezar de nuevo",
+  "error.backHome": "Volver al inicio",
   "error.support.title": "Contacto del soporte",
   "error.support.email": "Correo: {{email}}",
   "error.support.phone": "Teléfono: {{phone}}",
