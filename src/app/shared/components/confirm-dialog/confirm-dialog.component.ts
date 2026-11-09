@@ -41,14 +41,14 @@ let nextId = 0;
               #defaultButton
               type="button"
               (click)="dismissed.emit()"
-              class="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-accent"
+              [class]="emphasis() === 'dismiss' ? primaryClass : secondaryClass"
             >
               {{ dismissLabel() }}
             </button>
             <button
               type="button"
               (click)="confirmed.emit()"
-              class="inline-flex items-center justify-center rounded-md bg-brand-secondary px-4 py-2 text-sm font-medium text-brand-secondary-contrast hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-brand-accent"
+              [class]="emphasis() === 'dismiss' ? secondaryClass : primaryClass"
             >
               {{ confirmLabel() }}
             </button>
@@ -66,9 +66,20 @@ export class ConfirmDialogComponent {
   /** Opción por defecto: cierra sin hacer nada. */
   readonly dismissLabel = input.required<string>();
   readonly confirmLabel = input.required<string>();
+  /**
+   * Qué opción se resalta como botón principal: la que confirma (por defecto)
+   * o la de por defecto, cuando es la que se recomienda (el aviso de
+   * ordenador personal, wireframes QR).
+   */
+  readonly emphasis = input<'confirm' | 'dismiss'>('confirm');
 
   readonly dismissed = output<void>();
   readonly confirmed = output<void>();
+
+  protected readonly primaryClass =
+    'inline-flex items-center justify-center rounded-md bg-brand-secondary px-4 py-2 text-sm font-medium text-brand-secondary-contrast hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-brand-accent';
+  protected readonly secondaryClass =
+    'inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-accent';
 
   protected readonly titleId = `confirm-dialog-title-${nextId}`;
   protected readonly descriptionId = `confirm-dialog-description-${nextId++}`;

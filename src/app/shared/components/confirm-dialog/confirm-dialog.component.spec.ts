@@ -15,6 +15,7 @@ expect.extend(toHaveNoViolations);
       [description]="['Usa el wallet solo en un ordenador personal.', 'Si sigues, cierra la sesión del wallet al terminar.']"
       dismissLabel="Usar el móvil"
       confirmLabel="Continuar en este ordenador"
+      [emphasis]="emphasis()"
       (dismissed)="dismissals = dismissals + 1; open.set(false)"
       (confirmed)="confirmations = confirmations + 1; open.set(false)"
     />
@@ -22,6 +23,7 @@ expect.extend(toHaveNoViolations);
 })
 class HostComponent {
   readonly open = signal(false);
+  readonly emphasis = signal<'confirm' | 'dismiss'>('confirm');
   dismissals = 0;
   confirmations = 0;
 }
@@ -173,6 +175,21 @@ describe('ConfirmDialogComponent', () => {
 
     expect(host.confirmations).toBe(1);
     expect(host.dismissals).toBe(0);
+  });
+
+  it('highlights the confirm option by default', () => {
+    openFromLink();
+
+    expect(buttons()[1].className).toContain('bg-brand-secondary');
+    expect(buttons()[0].className).not.toContain('bg-brand-secondary');
+  });
+
+  it('highlights the default option when asked to (personal computer notice)', () => {
+    host.emphasis.set('dismiss');
+    openFromLink();
+
+    expect(buttons()[0].className).toContain('bg-brand-secondary');
+    expect(buttons()[1].className).not.toContain('bg-brand-secondary');
   });
 
   it('NFR-3: has no accessibility violations while open', async () => {

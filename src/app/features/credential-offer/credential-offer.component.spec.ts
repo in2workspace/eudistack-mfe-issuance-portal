@@ -115,7 +115,7 @@ describe('CredentialOfferComponent', () => {
 
       const element = await render();
 
-      expect(element.querySelector('h1')?.textContent).toContain('Escanea el código con tu wallet');
+      expect(element.querySelector('h1')?.textContent).toContain('Escanea el código con la cámara de tu móvil');
       expect(QRCode.toDataURL).toHaveBeenCalledWith(ONBOARDING_URL, expect.anything());
       expect(element.querySelector('img[width="280"]')).not.toBeNull();
       expect((element.querySelector('app-credential-offer-url-box input') as HTMLInputElement).value).toBe(ONBOARDING_URL);
@@ -143,6 +143,15 @@ describe('CredentialOfferComponent', () => {
       expect(dialog(element)?.textContent).toContain('Si sigues, cierra la sesión del wallet al terminar.');
       expect(document.activeElement?.textContent?.trim()).toBe('Usar el móvil');
       expect(openWallet).not.toHaveBeenCalled();
+    });
+
+    it('AC-14: «Usar el móvil», the recommended option, is the highlighted one', async () => {
+      present(582);
+      const element = await render();
+      click(element, '¿Prefieres usar el wallet en este ordenador?');
+
+      expect(buttonWith(element, 'Usar el móvil')!.className).toContain('bg-brand-secondary');
+      expect(buttonWith(element, 'Continuar en este ordenador')!.className).not.toContain('bg-brand-secondary');
     });
 
     it('AC-14: «Usar el móvil» goes back to the QR without opening the wallet', async () => {
