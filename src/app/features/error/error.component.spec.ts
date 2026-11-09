@@ -12,7 +12,7 @@ import { Journey, JourneyApi } from '../../core/api/generated/journey';
 import { ApiProblemError, NETWORK_ERROR } from '../../core/api/api-problem.error';
 import { ISSUANCE_PORTAL_ACCESS_TOKEN } from '../../core/api/issuance-portal-api.interceptor';
 import { JourneyIssuanceStore } from '../../core/journey/journey-issuance.store';
-import { Observable, of, throwError } from 'rxjs';
+import { Observable, asyncScheduler, observeOn, of, throwError } from 'rxjs';
 import { PortalConfigService, PortalConfigState } from '../../core/config/portal-config.service';
 import { TenantLanguageService } from '../../core/branding/tenant-language.service';
 import { SESSION_ACTIONS, SessionActions } from '../../core/session/session-actions';
@@ -329,6 +329,11 @@ describe('ErrorComponent', () => {
       return Array.from(element.querySelectorAll('button')).find((b) => b.textContent?.trim() === 'error.backHome');
     }
 
+    /** Un error HTTP llega siempre de forma asíncrona, como aquí. */
+    function failsLikeHttp(error: ApiProblemError): Observable<never> {
+      return throwError(() => error).pipe(observeOn(asyncScheduler));
+    }
+
     async function goHome(element: HTMLElement): Promise<void> {
       homeButton(element)!.click();
       await fixture.whenStable();
@@ -377,20 +382,30 @@ describe('ErrorComponent', () => {
     });
 
     it('if the withdrawal fails, discards the tokens and goes to Inicio anyway', async () => {
-      withdrawJourney.mockReturnValue(throwError(() => new ApiProblemError(NETWORK_ERROR, 0, 'Network error')));
+      withdrawJourney.mockReturnValue(failsLikeHttp(new ApiProblemError(NETWORK_ERROR, 0, 'Network error')));
+      const store = TestBed.inject(JourneyIssuanceStore);
+      store.confirm('maria@example.org');
 
       await goHome(show('issuance-failed'));
 
+      expect(store.email()).toBeNull();
       expect(session.discardTokens).toHaveBeenCalledTimes(1);
       expect(router.navigate).toHaveBeenCalledWith(['/']);
     });
 
     it('with a 410 leaves the session expired case to the journey interceptor', async () => {
-      withdrawJourney.mockReturnValue(throwError(() => new ApiProblemError('journey_closed', 410, 'Journey closed')));
+      withdrawJourney.mockReturnValue(failsLikeHttp(new ApiProblemError('journey_closed', 410, 'Journey closed')));
+      const store = TestBed.inject(JourneyIssuanceStore);
+      store.confirm('maria@example.org');
 
       await goHome(show('onboarding-unavailable'));
 
+      expect(store.email()).toBeNull();
       expect(router.navigate).not.toHaveBeenCalled();
+    });
+
+    it.each(RETRY_REASONS)('NFR-3: %s with «Volver al inicio» has no accessibility violations', async (reason) => {
+      expect(await axe(show(reason))).toHaveNoViolations();
     });
 
     it('is disabled while going home, so a second click does nothing', () => {
