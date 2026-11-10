@@ -30,6 +30,10 @@ function catalog(lang: string): Record<string, string> {
   >;
 }
 
+/** Las regiones con rol `status`: el explícito y el implícito de `<output>` (HTML-AAM). */
+const statusRegions = (root: HTMLElement): HTMLElement[] =>
+  Array.from(root.querySelectorAll<HTMLElement>('output, [role="status"]'));
+
 describe('CredentialOfferComponent', () => {
   let fixture: ComponentFixture<CredentialOfferComponent>;
   let service: CredentialOfferService;
@@ -106,7 +110,9 @@ describe('CredentialOfferComponent', () => {
 
     const element = await render();
 
-    expect(element.querySelector('[role="status"]')?.textContent).toContain('Estamos preparando tu atestación');
+    const status = statusRegions(element);
+    expect(status).toHaveLength(1);
+    expect(status[0].textContent).toContain('Estamos preparando tu atestación');
   });
 
   describe('on a computer', () => {
@@ -240,7 +246,7 @@ describe('CredentialOfferComponent', () => {
       const element = await render();
 
       expect(element.querySelector('img[width="280"]')?.classList).toContain('opacity-30');
-      expect(element.querySelector('output')?.textContent).toContain('El código ha caducado.');
+      expect(statusRegions(element).map((s) => s.textContent).join()).toContain('El código ha caducado.');
       expect(element.querySelector('a[href]')).toBeNull();
       expect(element.querySelector('app-credential-offer-url-box')).toBeNull();
       expect(buttonWith(element, '¿Prefieres usar el wallet en este ordenador?')).toBeUndefined();

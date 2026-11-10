@@ -14,6 +14,10 @@ import { SESSION_ACTIONS } from '../../core/session/session-actions';
 
 expect.extend(toHaveNoViolations);
 
+/** Las regiones con rol `status`: el explícito y el implícito de `<output>` (HTML-AAM). */
+const statusRegions = (root: HTMLElement): HTMLElement[] =>
+  Array.from(root.querySelectorAll<HTMLElement>('output, [role="status"]'));
+
 describe('EntitlementComponent', () => {
   let fixture: ComponentFixture<EntitlementComponent>;
   let verifyEntitlement: jest.Mock<Observable<EntitlementResult>>;
@@ -55,8 +59,9 @@ describe('EntitlementComponent', () => {
   it('AC-16: shows the waiting indicator while the entitlement is checked, calling POST /entitlement once', () => {
     create(NEVER);
 
-    const status = fixture.nativeElement.querySelector('output') as HTMLElement;
-    expect(status.textContent).toContain('entitlement.checking');
+    const status = statusRegions(fixture.nativeElement);
+    expect(status).toHaveLength(1);
+    expect(status[0].textContent).toContain('entitlement.checking');
     expect(verifyEntitlement).toHaveBeenCalledTimes(1);
     expect(verifyEntitlement).toHaveBeenCalledWith();
     expect(navigate).not.toHaveBeenCalled();
@@ -105,6 +110,15 @@ describe('EntitlementComponent', () => {
     create(problem(type, status));
 
     expect(navigate).not.toHaveBeenCalled();
+  });
+
+  // axe no evalúa `page-has-heading-one` sobre un fragmento: el título se comprueba aquí (review r4).
+  it('NFR-3: the waiting text is the title of the screen', () => {
+    create(NEVER);
+
+    const headings = fixture.nativeElement.querySelectorAll('h1') as NodeListOf<HTMLElement>;
+    expect(headings).toHaveLength(1);
+    expect(headings[0].textContent).toContain('entitlement.checking');
   });
 
   it('does not navigate once the holder has left the screen', () => {

@@ -4,7 +4,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { axe, toHaveNoViolations } from 'jest-axe';
-import { Observable, of, Subject, throwError } from 'rxjs';
+import { NEVER, Observable, of, Subject, throwError } from 'rxjs';
 import { UserDataComponent } from './user-data.component';
 import { ApiProblemError, NETWORK_ERROR } from '../../../core/api/api-problem.error';
 import { AttestationPreview, Journey, JourneyApi } from '../../../core/api/generated/journey';
@@ -30,6 +30,10 @@ function catalog(lang: string): Record<string, string> {
     string
   >;
 }
+
+/** Las regiones con rol `status`: el explícito y el implícito de `<output>` (HTML-AAM). */
+const statusRegions = (root: HTMLElement): HTMLElement[] =>
+  Array.from(root.querySelectorAll<HTMLElement>('output, [role="status"]'));
 
 describe('UserDataComponent', () => {
   let fixture: ComponentFixture<UserDataComponent>;
@@ -86,6 +90,17 @@ describe('UserDataComponent', () => {
     button(label).click();
     fixture.detectChanges();
   }
+
+  it('while GET /journey answers, shows the waiting notice as a status region and no form', () => {
+    getJourney.mockReturnValue(NEVER);
+    fixture = TestBed.createComponent(UserDataComponent);
+    fixture.detectChanges();
+
+    const status = statusRegions(element());
+    expect(status).toHaveLength(1);
+    expect(status[0].textContent).toContain(catalog('es')['userData.loading']);
+    expect(element().querySelector('#holder-email')).toBeNull();
+  });
 
   describe('preview and email', () => {
     it('AC-01: shows the attestation name and every field as the service gives it', () => {

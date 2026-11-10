@@ -69,8 +69,8 @@ describe('resolveOfferAddress', () => {
       expect(url.searchParams.get('credential_offer_uri')).toBe(OFFER_URI);
     });
 
-    it('does not double the slash of a wallet_url that ends with one', () => {
-      expect(resolveOfferAddress(offer(), `${WALLET}/`)!.url).toMatch(/^https:\/\/wallet\.sandbox\.dev\.eudistack\.net\/protocol\/callback\?/);
+    it.each(['/', '//', '///'])('does not double the slash of a wallet_url that ends with %s', (slashes) => {
+      expect(resolveOfferAddress(offer(), `${WALLET}${slashes}`)!.url).toMatch(/^https:\/\/wallet\.sandbox\.dev\.eudistack\.net\/protocol\/callback\?/);
     });
 
     it.each([
