@@ -40,7 +40,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- **EUD-358**: Continuar en Datos envía el código al correo con el idioma de la interfaz (`Accept-Language`) y va a Verificar correo. Los fallos del envío se muestran en Datos: correo no válido, envío no disponible y demasiados envíos con cuenta atrás.
+- **EUD-358**: Continuar en Datos envía el código al correo con el idioma de la interfaz (`Accept-Language`) y va a Verificar correo. Si el correo del campo es el que ya está verificado (comparado sin los espacios de los extremos), Continuar va directamente a QR sin enviar ningún código. Los fallos del envío se muestran en Datos: correo no válido, envío no disponible y demasiados envíos con cuenta atrás.
 - **EUD-358**: QR confirma sin cuerpo y solo con el correo verificado. El correo ya no se guarda en memoria para la confirmación.
 - **EUD-358**: la guarda y el navegador del recorrido eligen entre Datos, Verificar correo y QR según `email_verification`. El interceptor guarda `Retry-After` en el error.
 - **EUD-358**: contrato `api/journey.openapi.yaml` actualizado con la verificación del correo.
