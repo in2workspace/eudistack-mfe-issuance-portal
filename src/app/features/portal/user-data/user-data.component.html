@@ -62,6 +62,14 @@
               @case ('tooManyRequestsLater') {
                 <p class="text-sm text-red-700">{{ 'userData.sendError.tooManyRequestsLater' | translate }}</p>
               }
+              @case ('noMoreCodes') {
+                <p class="text-sm text-red-700">{{ 'userData.sendError.noMoreCodes' | translate }}</p>
+              }
+              @case ('resendTooSoon') {
+                @if (retry.seconds() > 0) {
+                  <p class="text-sm text-red-700">{{ 'userData.sendError.resendTooSoon' | translate: { countdown: retry.text() } }}</p>
+                }
+              }
               @case ('tooManyRequests') {
                 @if (retry.seconds() > 0) {
                   <p class="text-sm text-red-700">{{ 'userData.sendError.tooManyRequests' | translate: { countdown: retry.text() } }}</p>
@@ -79,9 +87,19 @@
             >
               {{ 'userData.cancel' | translate }}
             </button>
+            @if (sendProblem() === 'noMoreCodes') {
+              <button
+                type="button"
+                (click)="onWithdraw()"
+                [disabled]="withdrawing()"
+                class="inline-flex items-center justify-center rounded-md text-sm font-medium h-10 px-4 bg-brand-secondary hover:opacity-90 text-brand-secondary-contrast transition-colors disabled:opacity-50"
+              >
+                {{ 'userData.home' | translate }}
+              </button>
+            }
             <button
               type="submit"
-              [disabled]="email.invalid || withdrawing() || continuing() || retry.seconds() > 0"
+              [disabled]="email.invalid || withdrawing() || continuing() || retry.seconds() > 0 || sendProblem() === 'noMoreCodes'"
               class="inline-flex items-center justify-center rounded-md text-sm font-medium h-10 px-4 bg-brand-secondary hover:opacity-90 text-brand-secondary-contrast transition-colors disabled:opacity-50"
             >
               {{ 'userData.continue' | translate }}

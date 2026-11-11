@@ -15,7 +15,7 @@ import {
   TOO_MANY_CODES,
   TOO_MANY_REQUESTS,
 } from '../../../core/api/api-problem.error';
-import { AttestationPreview, JourneyApi } from '../../../core/api/generated/journey';
+import { AttestationPreview, EmailVerification, JourneyApi } from '../../../core/api/generated/journey';
 import { TenantLanguageService } from '../../../core/branding/tenant-language.service';
 import { JourneyNavigator, isJourneyClosed } from '../../../core/journey/journey-navigator';
 import { EMAIL_PATH } from '../../../core/journey/journey-paths';
@@ -25,7 +25,7 @@ import { injectCountdown } from '../../../shared/countdown';
 import { JourneyIssuanceStore } from '../../../core/journey/journey-issuance.store';
 
 /** Por qué no ha salido el código, para mostrarlo en Datos (design.md §3.2). */
-type SendProblem = 'unavailable' | 'tooManyRequests' | 'tooManyRequestsLater';
+type SendProblem = 'unavailable' | 'tooManyRequests' | 'tooManyRequestsLater' | 'resendTooSoon' | 'noMoreCodes';
 
 /**
  * Formato de correo sin contar los espacios de los extremos, que se quitan al
@@ -65,6 +65,8 @@ export class UserDataComponent implements OnInit {
   /** Continuar está enviando el código o yendo a Verificar correo: una segunda pulsación no envía otro (ac.md EC-07). */
   protected readonly continuing = signal(false);
   protected readonly sendProblem = signal<SendProblem | null>(null);
+  /** El correo y el estado del código que el servicio tiene en `GET /journey`, para saber si hay un código pendiente. */
+  private readonly verification = signal<EmailVerification | null>(null);
   /** Cuenta atrás del `Retry-After` de `too_many_requests`. */
   protected readonly retry = injectCountdown();
   /** El correo que el servicio rechazó (400) sigue sin ser válido hasta que el titular lo cambie (ac.md ES-01). */
@@ -83,7 +85,7 @@ export class UserDataComponent implements OnInit {
       .getJourney()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (journey) => this.show(journey.attestation ?? null, journey.email_verification?.email),
+        next: (journey) => this.show(journey.attestation ?? null, journey.email_verification),
         // GET /journey no pasa por el interceptor de 409 y 410 (EUD-287).
         error: (error: unknown) =>
           void (isJourneyClosed(error) ? this.navigator.toSessionExpired() : this.router.navigate(['/'])),
@@ -91,14 +93,15 @@ export class UserDataComponent implements OnInit {
   }
 
   /** El correo al que se envió el código (al volver de Verificar correo) manda sobre el que conoce la fuente. */
-  private show(attestation: AttestationPreview | null, sentTo: string | undefined): void {
+  private show(attestation: AttestationPreview | null, verification: EmailVerification | undefined): void {
     this.attestation.set(attestation);
-    this.email.setValue(sentTo ?? attestation?.email ?? '');
+    this.verification.set(verification ?? null);
+    this.email.setValue(verification?.email ?? attestation?.email ?? '');
     this.loading.set(false);
   }
 
   protected onContinue(): void {
-    if (this.email.invalid || this.continuing() || this.retry.seconds() > 0) {
+    if (this.email.invalid || this.continuing() || this.retry.seconds() > 0 || this.sendProblem() === 'noMoreCodes') {
       return;
     }
     this.continuing.set(true);
@@ -117,17 +120,24 @@ export class UserDataComponent implements OnInit {
   }
 
   /**
-   * `resend_too_soon` y `too_many_codes` no son fallos aquí: ya hay un código
-   * pendiente o no caben más, y Verificar correo lo dice. `step_not_allowed` y
-   * `journey_closed` los resuelve el interceptor de EUD-287.
+   * `resend_too_soon` y `too_many_codes` no son fallos si ya hay un código
+   * pendiente para este mismo correo: Verificar correo lo dice. Si el correo es
+   * otro (o el anterior ya está verificado), el titular se queda en Datos con la
+   * espera o con Volver al inicio: ir a Verificar correo lo dejaría pasar a QR
+   * con el correo anterior (review B1). `step_not_allowed` y `journey_closed` los
+   * resuelve el interceptor de EUD-287.
    */
   private onSendError(error: unknown): void {
     const problem = error instanceof ApiProblemError ? error : undefined;
     switch (problem?.type) {
       case RESEND_TOO_SOON:
       case TOO_MANY_CODES:
-        this.toVerifyEmail();
-        return;
+        if (this.hasPendingCodeForTypedEmail()) {
+          this.toVerifyEmail();
+          return;
+        }
+        this.showCannotSendYet(problem.type, problem.retryAfterSeconds);
+        break;
       case EMAIL_REQUIRED:
       case EMAIL_INVALID:
         this.rejectedEmail.set(this.email.value.trim());
@@ -152,6 +162,22 @@ export class UserDataComponent implements OnInit {
     this.continuing.set(false);
   }
 
+  private hasPendingCodeForTypedEmail(): boolean {
+    const verification = this.verification();
+    return verification !== null && !verification.verified && verification.email === this.email.value.trim();
+  }
+
+  private showCannotSendYet(type: string, retryAfterSeconds: number | undefined): void {
+    if (type === TOO_MANY_CODES) {
+      this.sendProblem.set('noMoreCodes');
+    } else if (retryAfterSeconds === undefined) {
+      this.sendProblem.set('tooManyRequestsLater');
+    } else {
+      this.retry.startFor(retryAfterSeconds);
+      this.sendProblem.set('resendTooSoon');
+    }
+  }
+
   protected onCancel(): void {
     this.cancelOpen.set(true);
   }
@@ -167,6 +193,15 @@ export class UserDataComponent implements OnInit {
    * ya lleva a la sesión caducada.
    */
   protected onConfirmCancel(): void {
+    this.withdraw();
+  }
+
+  /** «Volver al inicio» (sin más códigos en el recorrido): retira el recorrido sin pedir confirmación. */
+  protected onWithdraw(): void {
+    this.withdraw();
+  }
+
+  private withdraw(): void {
     if (this.withdrawing()) {
       return;
     }

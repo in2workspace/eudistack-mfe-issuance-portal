@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - Ruta `verify-email` entre Datos y QR. Muestra el correo, un componente propio de 6 casillas (admite pegar el código, el autocompletado del sistema y el teclado), Reenviar con la cuenta atrás, Cambiar el correo y Cancelar.
   - El código correcto lleva a QR. Los mensajes del código se anuncian en `aria-live`.
   - Sin más códigos en el recorrido, Volver al inicio retira el recorrido y descarta los tokens.
+  - Datos: si el titular cambia un correo ya verificado (o distinto del que tiene el código pendiente) y el servicio responde `resend_too_soon` o `too_many_codes`, se queda en Datos y no pasa a QR con el correo anterior. Con `resend_too_soon` muestra la espera de `Retry-After` y Continuar queda desactivado hasta que acabe; con `too_many_codes` dice que no se pueden enviar más códigos y ofrece Volver al inicio. Solo va a Verificar correo si hay un código pendiente para ese mismo correo.
 
 - **EUD-286 — Comprobación, Datos y QR conectados con el servicio del portal**:
   - Comprobación (`entitlement`), con la guarda de pasos y botón de volver a Inicio: indicador de espera mientras `POST /entitlement` comprueba el derecho; `confirmed` pasa a Datos, `not_confirmed` al caso sin derecho y 503 `authentic_source_unavailable`, un fallo de red o un error sin Problem al caso de fuente no disponible, cuyo reintento repite la comprobación. Sale sin dejar Comprobación en el historial.

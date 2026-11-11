@@ -362,18 +362,127 @@ describe('UserDataComponent', () => {
       expect(button('Continuar').disabled).toBe(false);
     });
 
-    it.each(['resend_too_soon', 'too_many_codes'])(
-      'AC-04, AC-05: %s is not an error in Datos: goes to Verificar correo, which says what is left',
-      (problemType) => {
-        sendEmailCode.mockReturnValue(problem(problemType, 429, 120));
-        create();
+    describe('resend_too_soon and too_many_codes', () => {
+      const pending = (email = 'maria@example.org'): EmailVerification => verification({ email });
+
+      it.each(['resend_too_soon', 'too_many_codes'])(
+        'AC-04, AC-05: %s with a code pending for the same email goes to Verificar correo, which says what is left',
+        (problemType) => {
+          sendEmailCode.mockReturnValue(problem(problemType, 429, 120));
+          create(PREVIEW, pending());
+
+          click('Continuar');
+
+          expect(navigate).toHaveBeenCalledWith(['/', 'verify-email']);
+          expect(element().textContent).not.toContain('Ahora no se pueden enviar');
+        },
+      );
+
+      it('AC-04, AC-05: with the email typed with spaces around it, it is still the same email', () => {
+        sendEmailCode.mockReturnValue(problem('resend_too_soon', 429, 120));
+        create(PREVIEW, pending());
+        type(' maria@example.org ');
 
         click('Continuar');
 
         expect(navigate).toHaveBeenCalledWith(['/', 'verify-email']);
-        expect(element().textContent).not.toContain('Ahora no se pueden enviar');
-      },
-    );
+      });
+
+      it('AC-07: resend_too_soon with a different email stays in Datos with the wait, and Continuar sends again when it ends', () => {
+        jest.useFakeTimers();
+        try {
+          sendEmailCode.mockReturnValueOnce(problem('resend_too_soon', 429, 120)).mockReturnValueOnce(of(verification()));
+          create(PREVIEW, pending('verificado@example.org'));
+          type('nuevo@example.org');
+
+          click('Continuar');
+
+          expect(navigate).not.toHaveBeenCalled();
+          expect(element().textContent).toContain('Podrás pedir otro código en 02:00.');
+          expect(button('Continuar').disabled).toBe(true);
+          expect(emailInput().value).toBe('nuevo@example.org');
+
+          jest.advanceTimersByTime(121_000);
+          fixture.detectChanges();
+
+          expect(element().textContent).not.toContain('Podrás pedir otro código');
+          expect(button('Continuar').disabled).toBe(false);
+
+          click('Continuar');
+
+          expect(sendEmailCode).toHaveBeenLastCalledWith({ email: 'nuevo@example.org' }, 'es');
+          expect(navigate).toHaveBeenCalledWith(['/', 'verify-email']);
+        } finally {
+          jest.useRealTimers();
+        }
+      });
+
+      it('AC-07: resend_too_soon with the email already verified stays in Datos, the guard would send it to QR', () => {
+        sendEmailCode.mockReturnValue(problem('resend_too_soon', 429, 120));
+        create(PREVIEW, verification({ verified: true }));
+
+        click('Continuar');
+
+        expect(navigate).not.toHaveBeenCalled();
+        expect(element().textContent).toContain('Podrás pedir otro código en');
+      });
+
+      it('AC-07: resend_too_soon with no Retry-After says to try again later', () => {
+        sendEmailCode.mockReturnValue(problem('resend_too_soon', 429));
+        create(PREVIEW, pending('verificado@example.org'));
+        type('nuevo@example.org');
+
+        click('Continuar');
+
+        expect(navigate).not.toHaveBeenCalled();
+        expect(element().textContent).toContain('Inténtalo de nuevo más tarde.');
+        expect(button('Continuar').disabled).toBe(false);
+      });
+
+      it('AC-05, AC-07: too_many_codes with a different email stays in Datos, says no more codes and offers Volver al inicio', () => {
+        sendEmailCode.mockReturnValue(problem('too_many_codes', 429));
+        create(PREVIEW, pending('verificado@example.org'));
+        type('nuevo@example.org');
+
+        click('Continuar');
+
+        expect(navigate).not.toHaveBeenCalled();
+        expect(element().textContent).toContain('No se pueden enviar más códigos en este recorrido.');
+        expect(button('Continuar').disabled).toBe(true);
+        expect(button('Volver al inicio')).toBeDefined();
+      });
+
+      it('AC-05: Volver al inicio withdraws the journey, discards the tokens, forgets the pending call and goes to Inicio, without confirmation', () => {
+        sendEmailCode.mockReturnValue(problem('too_many_codes', 429));
+        withdrawJourney.mockReturnValue(of({ state: 'withdrawn', step: 'entitlement_confirmed' }));
+        store.requestConfirmation();
+        create(PREVIEW, verification({ email: 'verificado@example.org', verified: true }));
+        type('nuevo@example.org');
+        click('Continuar');
+
+        click('Volver al inicio');
+
+        expect(element().querySelector('[role="dialog"]')).toBeNull();
+        expect(withdrawJourney).toHaveBeenCalledTimes(1);
+        expect(discardTokens).toHaveBeenCalledTimes(1);
+        expect(store.pendingCall()).toBeNull();
+        expect(navigate).toHaveBeenCalledWith(['/']);
+      });
+
+      it.each(['resend_too_soon', 'too_many_codes'])(
+        'AC-07: %s with a different email navigates nowhere, so QR is never reached with the old email',
+        (problemType) => {
+          sendEmailCode.mockReturnValue(problem(problemType, 429, 120));
+          create(PREVIEW, verification({ email: 'verificado@example.org', verified: true }));
+          type('nuevo@example.org');
+
+          click('Continuar');
+
+          expect(navigate).not.toHaveBeenCalled();
+          expect(sendEmailCode).toHaveBeenCalledWith({ email: 'nuevo@example.org' }, 'es');
+        },
+      );
+    });
 
     it.each([
       ['step_not_allowed', 409],
