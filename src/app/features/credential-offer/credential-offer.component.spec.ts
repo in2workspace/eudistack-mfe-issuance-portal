@@ -1,177 +1,353 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { signal, WritableSignal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter, Router } from '@angular/router';
-import { signal } from '@angular/core';
-import { TranslateModule } from '@ngx-translate/core';
+import { provideRouter } from '@angular/router';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { axe, toHaveNoViolations } from 'jest-axe';
+import QRCode from 'qrcode';
 import { CredentialOfferComponent } from './credential-offer.component';
-import { CredentialOfferService, CredentialOfferStatus } from './credential-offer.service';
+import { CredentialOfferService, MAX_QR_PAYLOAD_CHARS } from './credential-offer.service';
+import { OfferFlowService } from './offer-flow.service';
+import { MobileLayout, OPEN_WALLET } from '../../core/layout/mobile-layout';
 
-// `qrcode` hace codificación PNG real (zlib) con latencia de E/S real — no es una
-// promesa "de microtarea pura", así que ni `fakeAsync`/`tick()` ni `whenStable()`
-// la resuelven de forma fiable en test. Se mockea para aislar la UI de la librería
-// externa (su propio comportamiento ya está cubierto por los tests del paquete).
+expect.extend(toHaveNoViolations);
+
+// `qrcode` hace codificación PNG real (zlib) con latencia de E/S real: se
+// mockea para aislar la pantalla de la librería.
 jest.mock('qrcode', () => ({
   __esModule: true,
   default: { toDataURL: jest.fn().mockResolvedValue('data:image/png;base64,mocked') },
 }));
 
+const ONBOARDING_URL = 'https://wallet.sandbox.dev.eudistack.net/t/Zk3q9Xw2Lp7Rt4Vb8Nc1Ha';
+const LONG_URL = `https://wallet.example/${'x'.repeat(MAX_QR_PAYLOAD_CHARS)}`;
+
+function catalog(lang: string): Record<string, string> {
+  return JSON.parse(readFileSync(join(__dirname, '../../../assets/i18n', `${lang}.json`), 'utf-8')) as Record<
+    string,
+    string
+  >;
+}
+
+/** Las regiones con rol `status`: el explícito y el implícito de `<output>` (HTML-AAM). */
+const statusRegions = (root: HTMLElement): HTMLElement[] =>
+  Array.from(root.querySelectorAll<HTMLElement>('output, [role="status"]'));
+
 describe('CredentialOfferComponent', () => {
   let fixture: ComponentFixture<CredentialOfferComponent>;
-  let status: ReturnType<typeof signal<CredentialOfferStatus>>;
-  let walletInvocationUrl: ReturnType<typeof signal<{ url: string; length: number } | null>>;
-  let serviceMock: { request: jest.Mock; retry: jest.Mock; cancelPendingWork: jest.Mock };
+  let service: CredentialOfferService;
+  let flow: { enter: jest.Mock; newCode: jest.Mock; finish: jest.Mock };
+  let mobile: WritableSignal<boolean>;
+  let openWallet: jest.Mock;
 
-  function configure(initialStatus: CredentialOfferStatus, initialUrl: { url: string; length: number } | null = null): void {
-    status = signal(initialStatus);
-    walletInvocationUrl = signal(initialUrl);
-    serviceMock = { request: jest.fn(), retry: jest.fn(), cancelPendingWork: jest.fn() };
-
+  beforeEach(() => {
+    (QRCode.toDataURL as jest.Mock).mockClear().mockResolvedValue('data:image/png;base64,mocked');
+    flow = {
+      enter: jest.fn().mockResolvedValue(undefined),
+      newCode: jest.fn().mockResolvedValue(undefined),
+      finish: jest.fn().mockResolvedValue(undefined),
+    };
+    mobile = signal(false);
+    openWallet = jest.fn();
     TestBed.configureTestingModule({
       imports: [CredentialOfferComponent, TranslateModule.forRoot()],
       providers: [
-        {
-          provide: CredentialOfferService,
-          useValue: { ...serviceMock, status, offer: signal(null), walletInvocationUrl },
-        },
         provideRouter([]),
+        { provide: MobileLayout, useValue: { mobile } },
+        { provide: OPEN_WALLET, useValue: openWallet },
       ],
     });
+    TestBed.overrideComponent(CredentialOfferComponent, {
+      set: { providers: [{ provide: OfferFlowService, useValue: flow }] },
+    });
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('es', catalog('es'));
+    translate.use('es');
+    service = TestBed.inject(CredentialOfferService);
+  });
 
+  afterEach(() => {
+    service.reset();
+    fixture?.nativeElement.remove();
+  });
+
+  async function render(): Promise<HTMLElement> {
     fixture = TestBed.createComponent(CredentialOfferComponent);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  function present(seconds: number, url = ONBOARDING_URL): void {
+    service.present({ url, expiresAt: Date.now() + seconds * 1000 });
+  }
+
+  function buttonWith(element: HTMLElement, text: string): HTMLButtonElement | undefined {
+    return Array.from(element.querySelectorAll('button')).find((b) => b.textContent?.trim() === text);
+  }
+
+  /** Como con el teclado: el botón recibe el foco y se pulsa. */
+  function click(element: HTMLElement, text: string): void {
+    const button = buttonWith(element, text)!;
+    button.focus();
+    button.click();
     fixture.detectChanges();
   }
 
-  it('AC-04: estado de espera explícito antes de la respuesta, sin pantalla en blanco', () => {
-    configure('loading');
+  const dialog = (element: HTMLElement) => element.querySelector('[role="dialog"]');
 
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('[role="status"]')).not.toBeNull();
-    expect(compiled.textContent).not.toBe('');
+  it('asks the flow for the offer when the screen opens', async () => {
+    await render();
+
+    expect(flow.enter).toHaveBeenCalledTimes(1);
   });
 
-  it('AC-01: QR y enlace visibles a la vez en la misma pantalla al llegar la oferta', async () => {
-    configure('ready', { url: 'https://origin.example/wallet/protocol/callback?credential_offer_uri=ref', length: 60 });
-    // La generación del QR (`QRCode.toDataURL`, mockeada arriba) es asíncrona (efecto → promesa) —
-    // hay que dejar que el microtask resuelva y reflejarlo con un segundo detectChanges.
-    await fixture.whenStable();
-    fixture.detectChanges();
+  it('QR (generando): shows the waiting notice', async () => {
+    service.startLoading();
 
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('img[width="280"]')).not.toBeNull();
-    const link = compiled.querySelector('a[href]');
-    expect(link?.getAttribute('href')).toBe('https://origin.example/wallet/protocol/callback?credential_offer_uri=ref');
+    const element = await render();
+
+    const status = statusRegions(element);
+    expect(status).toHaveLength(1);
+    expect(status[0].textContent).toContain('Estamos preparando tu atestación');
   });
 
-  it('AC-05: aviso genérico con opción de reintentar, sin causa técnica ni identificador interno', () => {
-    configure('unavailable');
+  describe('on a computer', () => {
+    it('AC-02, AC-14: the QR is the main action and carries the same address as the copy box', async () => {
+      present(582);
 
-    const compiled = fixture.nativeElement as HTMLElement;
-    const alert = compiled.querySelector('[role="alert"]');
-    expect(alert).not.toBeNull();
-    // `TranslateModule.forRoot()` sin loader en test no resuelve el catálogo real
-    // (devuelve la clave i18n tal cual, no el texto en español) — se comprueba
-    // aquí que NUNCA se filtra un detalle técnico real (status HTTP, cuerpo de
-    // la respuesta), no el nombre de la clave de traducción en sí.
-    expect(alert?.textContent).not.toMatch(/\b[45]\d{2}\b|Http|status:|body:/i);
+      const element = await render();
 
-    // Sin datos del titular en el navegador, reintentar vuelve a Inicio
-    // en lugar de repetir la petición (hasta EUD-286).
-    const router = TestBed.inject(Router);
-    const navigateSpy = jest.spyOn(router, 'navigate').mockResolvedValue(true);
-    const retryButton = compiled.querySelector('button');
-    retryButton?.dispatchEvent(new Event('click'));
-    expect(serviceMock.retry).not.toHaveBeenCalled();
-    expect(navigateSpy).toHaveBeenCalledWith(['/']);
+      expect(element.querySelector('h1')?.textContent).toContain('Escanea el código con la cámara de tu móvil');
+      expect(QRCode.toDataURL).toHaveBeenCalledWith(ONBOARDING_URL, expect.anything());
+      expect(element.querySelector('img[width="280"]')).not.toBeNull();
+      expect((element.querySelector('app-credential-offer-url-box input') as HTMLInputElement).value).toBe(ONBOARDING_URL);
+      expect(element.querySelector('a[href]')).toBeNull();
+    });
+
+    it('AC-02: shows the time left as mm:ss', async () => {
+      present(582);
+
+      const element = await render();
+
+      expect(element.querySelector('[role="timer"]')?.textContent).toContain('El código caduca en 09:42');
+    });
+
+    it('AC-14: opening the wallet is a text link under the countdown that opens the personal computer notice', async () => {
+      present(582);
+      const element = await render();
+      const link = buttonWith(element, '¿Prefieres usar el wallet en este ordenador?')!;
+
+      expect(link.compareDocumentPosition(element.querySelector('[role="timer"]')!)).toBe(Node.DOCUMENT_POSITION_PRECEDING);
+      click(element, '¿Prefieres usar el wallet en este ordenador?');
+
+      expect(dialog(element)?.textContent).toContain('¿Usar el wallet en este ordenador?');
+      expect(dialog(element)?.textContent).toContain('Usa el wallet solo en un ordenador personal.');
+      expect(dialog(element)?.textContent).toContain('Si sigues, cierra la sesión del wallet al terminar.');
+      expect(document.activeElement?.textContent?.trim()).toBe('Usar el móvil');
+      expect(openWallet).not.toHaveBeenCalled();
+    });
+
+    it('AC-14: «Usar el móvil», the recommended option, is the highlighted one', async () => {
+      present(582);
+      const element = await render();
+      click(element, '¿Prefieres usar el wallet en este ordenador?');
+
+      expect(buttonWith(element, 'Usar el móvil')!.className).toContain('bg-brand-secondary');
+      expect(buttonWith(element, 'Continuar en este ordenador')!.className).not.toContain('bg-brand-secondary');
+    });
+
+    it('AC-14: «Usar el móvil» goes back to the QR without opening the wallet', async () => {
+      present(582);
+      const element = await render();
+      click(element, '¿Prefieres usar el wallet en este ordenador?');
+
+      click(element, 'Usar el móvil');
+
+      expect(dialog(element)).toBeNull();
+      expect(openWallet).not.toHaveBeenCalled();
+      expect(document.activeElement?.textContent?.trim()).toBe('¿Prefieres usar el wallet en este ordenador?');
+    });
+
+    it('AC-14: Escape goes back to the QR without opening the wallet', async () => {
+      present(582);
+      const element = await render();
+      click(element, '¿Prefieres usar el wallet en este ordenador?');
+
+      document.activeElement!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      fixture.detectChanges();
+
+      expect(dialog(element)).toBeNull();
+      expect(openWallet).not.toHaveBeenCalled();
+    });
+
+    it('AC-14: «Continuar en este ordenador» opens the wallet with the QR address', async () => {
+      present(582);
+      const element = await render();
+      click(element, '¿Prefieres usar el wallet en este ordenador?');
+
+      click(element, 'Continuar en este ordenador');
+
+      expect(openWallet).toHaveBeenCalledWith(ONBOARDING_URL);
+    });
+
+    it('AC-05: without QR, opening the wallet becomes the main button and still shows the notice', async () => {
+      present(582, LONG_URL);
+      const element = await render();
+
+      expect(element.textContent).toContain('No se ha podido generar el código.');
+      expect(element.querySelector('app-credential-offer-url-box')).not.toBeNull();
+      expect(buttonWith(element, '¿Prefieres usar el wallet en este ordenador?')).toBeUndefined();
+      click(element, 'Abrir en mi wallet');
+
+      expect(dialog(element)).not.toBeNull();
+      expect(openWallet).not.toHaveBeenCalled();
+    });
+
+    it('AC-05: when the QR fails to generate, behaves as without QR', async () => {
+      (QRCode.toDataURL as jest.Mock).mockRejectedValue(new Error('too much data'));
+      present(582);
+
+      const element = await render();
+
+      expect(element.querySelector('img[width="280"]')).toBeNull();
+      expect(element.textContent).toContain('No se ha podido generar el código.');
+      expect(buttonWith(element, 'Abrir en mi wallet')).toBeDefined();
+    });
   });
 
-  it('AC-09: el enlace y el título usan el pipe de traducción (nunca un literal hardcodeado en el template)', () => {
-    configure('ready', { url: 'https://o.example/w?credential_offer_uri=r', length: 40 });
+  describe('on a phone', () => {
+    beforeEach(() => mobile.set(true));
 
-    // `TranslateModule.forRoot()` sin loader en test devuelve la clave i18n tal
-    // cual — comprobar ESO (no un texto en español) es justo la evidencia de
-    // que el template pasa por `| translate` y no por un string hardcodeado.
-    const compiled = fixture.nativeElement as HTMLElement;
-    const link = compiled.querySelector('a[href]');
-    expect(link?.textContent?.trim()).toBe('credentialOffer.deeplink.label');
+    it('AC-13: «Abrir en mi wallet» goes first, in the same tab, with the QR address and no notice', async () => {
+      present(582);
+
+      const element = await render();
+
+      const open = element.querySelector('a[href]') as HTMLAnchorElement;
+      expect(element.querySelector('h1')?.textContent).toContain('Añade tu atestación a tu wallet');
+      expect(open.textContent?.trim()).toBe('Abrir en mi wallet');
+      expect(open.getAttribute('href')).toBe(ONBOARDING_URL);
+      expect(open.hasAttribute('target')).toBe(false);
+      expect(open.compareDocumentPosition(element.querySelector('img[width="280"]')!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+      expect(element.textContent).toContain('¿Usas otro dispositivo? Escanea este código:');
+      expect(buttonWith(element, '¿Prefieres usar el wallet en este ordenador?')).toBeUndefined();
+    });
   });
 
-  it('EC-01: sin app que atienda el enlace, la pantalla no cambia — QR y enlace siguen disponibles', async () => {
-    configure('ready', { url: 'https://o.example/w?credential_offer_uri=r', length: 40 });
-    // Ídem AC-01: esperar a que la promesa mockeada de `QRCode.toDataURL` resuelva antes de comprobar el QR.
-    await fixture.whenStable();
-    fixture.detectChanges();
+  describe('expired', () => {
+    it.each([false, true])('AC-06: dims the QR and offers only a new code (phone: %s)', async (onPhone) => {
+      mobile.set(onPhone);
+      present(-1);
 
-    const compiled = fixture.nativeElement as HTMLElement;
-    const link = compiled.querySelector('a[href]') as HTMLAnchorElement;
-    // Un <a href> normal: si nada lo atiende, el navegador no notifica a la SPA — no hay handler que reaccionar.
-    expect(link.onclick).toBeNull();
-    // target="_blank" (+ rel="noopener noreferrer"): el enlace abre en una
-    // pestaña nueva para que la pantalla de la oferta (QR + enlace + URL box)
-    // siga visible en la pestaña original, tanto si walletInvocationBase es
-    // una ruta same-origin (navega en la misma pestaña sin esto) como si es
-    // el esquema openid-credential-offer:// (delegado al SO en cualquier caso).
-    expect(link.target).toBe('_blank');
-    expect(link.rel).toBe('noopener noreferrer');
-    expect(compiled.querySelector('img[width="280"]')).not.toBeNull();
-    expect(compiled.querySelector('app-credential-offer-url-box')).not.toBeNull();
+      const element = await render();
+
+      expect(element.querySelector('img[width="280"]')?.classList).toContain('opacity-30');
+      expect(statusRegions(element).map((s) => s.textContent).join()).toContain('El código ha caducado.');
+      expect(element.querySelector('a[href]')).toBeNull();
+      expect(element.querySelector('app-credential-offer-url-box')).toBeNull();
+      expect(buttonWith(element, '¿Prefieres usar el wallet en este ordenador?')).toBeUndefined();
+      expect(element.querySelector('[role="timer"]')).toBeNull();
+    });
+
+    it('AC-06: while the address is valid there is no «Generar un código nuevo»', async () => {
+      present(582);
+
+      const element = await render();
+
+      expect(buttonWith(element, 'Generar un código nuevo')).toBeUndefined();
+    });
+
+    it('AC-06: «Generar un código nuevo» asks the flow for a new code', async () => {
+      present(-1);
+      const element = await render();
+
+      click(element, 'Generar un código nuevo');
+
+      expect(flow.newCode).toHaveBeenCalledTimes(1);
+    });
   });
 
-  it("ES-06: con status 'ready-without-qr' se presenta el enlace y la URL, sin QR", () => {
-    configure('ready-without-qr', { url: 'https://o.example/w?credential_offer_uri=' + 'x'.repeat(1200), length: 1250 });
+  describe('He terminado', () => {
+    it('AC-15: ends the journey through the flow', async () => {
+      present(582);
+      const element = await render();
 
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('img[width="280"]')).toBeNull();
-    expect(compiled.querySelector('a[href]')).not.toBeNull();
-    expect(compiled.querySelector('app-credential-offer-url-box')).not.toBeNull();
+      click(element, 'He terminado');
+
+      expect(flow.finish).toHaveBeenCalledTimes(1);
+    });
+
+    it('EC-07: a second click while it is ending does nothing', async () => {
+      flow.finish.mockReturnValue(new Promise(() => undefined));
+      present(582);
+      const element = await render();
+
+      click(element, 'He terminado');
+      buttonWith(element, 'He terminado')!.click();
+
+      expect(flow.finish).toHaveBeenCalledTimes(1);
+      expect(buttonWith(element, 'He terminado')!.disabled).toBe(true);
+    });
+
+    it('the demo actions are gone', async () => {
+      present(582);
+
+      const element = await render();
+
+      expect(buttonWith(element, 'Cancelar')).toBeUndefined();
+      expect(element.textContent).not.toContain('Marcar como completado');
+    });
   });
 
-  it('presenta el aviso de validez (10 min, AD-6/NFR-S-163-01) junto al QR y enlace', () => {
-    configure('ready', { url: 'https://o.example/w?credential_offer_uri=r', length: 40 });
-
-    const compiled = fixture.nativeElement as HTMLElement;
-    const notice = compiled.querySelector('[role="status"]');
-    expect(notice?.textContent).toContain('credentialOffer.validity.notice');
-  });
-
-  it('Cancelar vuelve a Inicio', () => {
-    configure('ready', { url: 'https://o.example/w?credential_offer_uri=r', length: 40 });
-    const router = TestBed.inject(Router);
-    const navigateSpy = jest.spyOn(router, 'navigate').mockResolvedValue(true);
-
-    const buttons = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button'));
-    const cancelButton = buttons.find((b) => b.textContent?.includes('credentialOffer.actions.cancel'));
-    cancelButton?.dispatchEvent(new Event('click'));
-
-    expect(navigateSpy).toHaveBeenCalledWith(['/']);
-  });
-
-  it('Marcar como completado vuelve a Inicio', () => {
-    configure('ready', { url: 'https://o.example/w?credential_offer_uri=r', length: 40 });
-    const router = TestBed.inject(Router);
-    const navigateSpy = jest.spyOn(router, 'navigate').mockResolvedValue(true);
-
-    const buttons = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button'));
-    const completeButton = buttons.find((b) => b.textContent?.includes('credentialOffer.actions.complete'));
-    completeButton?.dispatchEvent(new Event('click'));
-
-    expect(navigateSpy).toHaveBeenCalledWith(['/']);
-  });
-
-  it('ngOnDestroy cancela el trabajo pendiente del service (temporizador de caducidad)', () => {
-    configure('ready', { url: 'https://o.example/w?credential_offer_uri=r', length: 40 });
+  it('W5: leaving QR, for any reason, forgets the address with the ticket', async () => {
+    present(582);
+    await render();
 
     fixture.destroy();
 
-    expect(serviceMock.cancelPendingWork).toHaveBeenCalled();
+    expect(service.address()).toBeNull();
   });
 
-  it('AC-06: with no holder data in the browser, it goes back to Inicio instead of requesting the offer', () => {
-    configure('idle');
-    const router = TestBed.inject(Router);
-    const navigateSpy = jest.spyOn(router, 'navigate').mockResolvedValue(true);
+  it('N14: no element has an accessible name that hides its visible text', async () => {
+    mobile.set(true);
+    present(582);
 
-    fixture.componentInstance.ngOnInit();
+    const element = await render();
 
-    expect(serviceMock.request).not.toHaveBeenCalled();
-    expect(navigateSpy).toHaveBeenCalledWith(['/']);
+    expect(element.querySelector('a[aria-label], button[aria-label]:not(app-credential-offer-url-box button)')).toBeNull();
+  });
+
+  it.each(['es', 'en'])('NFR-2: has every QR text in %s', (lang) => {
+    const texts = catalog(lang);
+    const keys = Object.keys(catalog('es')).filter((key) => key.startsWith('credentialOffer.'));
+
+    keys.forEach((key) => expect(texts[key]).toBeTruthy());
+  });
+
+  it.each([
+    ['generating', false, () => service.startLoading()],
+    ['ready on a computer', false, () => present(582)],
+    ['ready on a phone', true, () => present(582)],
+    ['without QR', false, () => present(582, LONG_URL)],
+    ['expired', false, () => present(-1)],
+  ])('NFR-3: has no accessibility violations while %s', async (_state, onPhone, setUp) => {
+    mobile.set(onPhone);
+    setUp();
+
+    const element = await render();
+
+    expect(await axe(element)).toHaveNoViolations();
+  });
+
+  it('NFR-3: has no accessibility violations with the personal computer notice open', async () => {
+    present(582);
+    const element = await render();
+    click(element, '¿Prefieres usar el wallet en este ordenador?');
+
+    expect(await axe(element)).toHaveNoViolations();
   });
 });

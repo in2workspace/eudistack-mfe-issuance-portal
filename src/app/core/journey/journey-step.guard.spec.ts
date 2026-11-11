@@ -69,11 +69,26 @@ describe('journeyStepGuard', () => {
     expect(await run(path)).toBe(target);
   });
 
-  it.each<Journey.StateEnum>(['completed', 'withdrawn'])('a %s journey goes to Inicio', async (state) => {
-    getJourney.mockReturnValue(journey('offer_obtained', state));
+  it('EC-01 (EUD-286): a completed journey with the offer obtained stays in QR', async () => {
+    getJourney.mockReturnValue(journey('offer_obtained', 'completed'));
 
-    expect(await run('offer')).toBe('/');
+    expect(await run('offer')).toBe(true);
   });
+
+  it.each(['entitlement', 'user-data'])('EC-01 (EUD-286): a completed journey on %s goes to QR', async (path) => {
+    getJourney.mockReturnValue(journey('offer_obtained', 'completed'));
+
+    expect(await run(path)).toBe('/offer');
+  });
+
+  it.each<Journey.StepEnum>(['entitlement_confirmed', 'offer_obtained'])(
+    'EC-01 (EUD-286): a withdrawn journey at step %s goes to Inicio',
+    async (step) => {
+      getJourney.mockReturnValue(journey(step, 'withdrawn'));
+
+      expect(await run('offer')).toBe('/');
+    },
+  );
 
   it('AC-01, ES-02: with no Access Token goes to Inicio without calling the service', async () => {
     token = null;

@@ -1,99 +1,101 @@
-import { TestBed, fakeAsync, tick, discardPeriodicTasks } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { CredentialOfferService, MAX_QR_PAYLOAD_CHARS } from './credential-offer.service';
 
 describe('CredentialOfferService', () => {
+  const NOW = Date.parse('2026-11-06T12:00:00Z');
   let service: CredentialOfferService;
 
-  const url = { url: 'https://cgcom.example/wallet?credential_offer_uri=ref-1', length: 54 };
-
   beforeEach(() => {
-    TestBed.configureTestingModule({ providers: [CredentialOfferService] });
+    jest.useFakeTimers({ now: NOW });
     service = TestBed.inject(CredentialOfferService);
   });
 
-  it('starts idle, with nothing presented', () => {
-    expect(service.status()).toBe('idle');
-    expect(service.offer()).toBeNull();
-    expect(service.walletInvocationUrl()).toBeNull();
+  afterEach(() => {
+    service.reset();
+    jest.useRealTimers();
   });
 
-  it('AC-01: presenting an offer shows it ready, with its link', fakeAsync(() => {
-    service.present({ reference: 'ref-1', obtainedAt: Date.now() }, url);
+  const address = (seconds: number, url = 'https://wallet.example/t/abc') => ({ url, expiresAt: NOW + seconds * 1000 });
+
+  it('starts generating, with nothing presented', () => {
+    expect(service.status()).toBe('loading');
+    expect(service.address()).toBeNull();
+  });
+
+  it('AC-02: presents the address ready, with the time left until its expiry', () => {
+    service.present(address(600));
 
     expect(service.status()).toBe('ready');
-    expect(service.walletInvocationUrl()).toEqual(url);
-    discardPeriodicTasks();
-    service.cancelPendingWork();
-  }));
+    expect(service.address()?.url).toBe('https://wallet.example/t/abc');
+    expect(service.remainingSeconds()).toBe(600);
+  });
 
-  it('ES-06: a link longer than the QR limit is presented without QR', fakeAsync(() => {
-    const longUrl = { url: 'x'.repeat(MAX_QR_PAYLOAD_CHARS + 1), length: MAX_QR_PAYLOAD_CHARS + 1 };
-
-    service.present({ reference: 'ref-1', obtainedAt: Date.now() }, longUrl);
+  it('AC-05: an address longer than the QR limit is presented without QR', () => {
+    service.present(address(600, `https://wallet.example/${'x'.repeat(MAX_QR_PAYLOAD_CHARS)}`));
 
     expect(service.status()).toBe('ready-without-qr');
-    service.cancelPendingWork();
-  }));
+  });
 
-  it('marking it unavailable withdraws the offer and shows the notice', fakeAsync(() => {
-    service.present({ reference: 'ref-1', obtainedAt: Date.now() }, url);
+  it('AC-06: counts down every second and, at zero, expires keeping the address', () => {
+    service.present(address(3));
 
-    service.markUnavailable();
+    jest.advanceTimersByTime(2000);
+    expect(service.remainingSeconds()).toBe(1);
+    expect(service.status()).toBe('ready');
 
-    expect(service.status()).toBe('unavailable');
-    expect(service.offer()).toBeNull();
-    expect(service.walletInvocationUrl()).toBeNull();
-  }));
+    jest.advanceTimersByTime(1000);
+    expect(service.remainingSeconds()).toBe(0);
+    expect(service.status()).toBe('expired');
+    expect(service.address()?.url).toBe('https://wallet.example/t/abc');
+  });
 
-  it('NFR-S-163-03: never writes the offer to sessionStorage, localStorage or the console', fakeAsync(() => {
+  it('AC-06: follows the clock even if the timer runs late', () => {
+    service.present(address(600));
+
+    jest.setSystemTime(NOW + 599_000);
+    jest.advanceTimersByTime(1000);
+
+    expect(service.status()).toBe('expired');
+  });
+
+  it('EC-06: an address already expired when received is presented expired', () => {
+    service.present(address(-5));
+
+    expect(service.status()).toBe('expired');
+    expect(service.remainingSeconds()).toBe(0);
+  });
+
+  it('generating again forgets the previous address and stops its countdown', () => {
+    service.present(address(3));
+
+    service.startLoading();
+    jest.advanceTimersByTime(5000);
+
+    expect(service.status()).toBe('loading');
+    expect(service.address()).toBeNull();
+  });
+
+  it('W5: reset() forgets the address with the ticket and stops the countdown when QR is left', () => {
+    service.present(address(3));
+
+    service.reset();
+    jest.advanceTimersByTime(5000);
+
+    expect(service.address()).toBeNull();
+    expect(service.remainingSeconds()).toBe(0);
+    expect(service.status()).toBe('loading');
+  });
+
+  it('NFR-1: never writes the address to sessionStorage, localStorage or the console', () => {
     const setItem = jest.spyOn(Storage.prototype, 'setItem');
     const log = jest.spyOn(console, 'log');
 
-    service.present({ reference: 'ref-secret', obtainedAt: Date.now() }, url);
+    service.present(address(600));
+    jest.advanceTimersByTime(3000);
 
     expect(setItem).not.toHaveBeenCalled();
     expect(log).not.toHaveBeenCalled();
     setItem.mockRestore();
     log.mockRestore();
-    service.cancelPendingWork();
-  }));
-
-  describe('real expiry timer (ES-03, NFR-S-163-01)', () => {
-    it('at 601 s, past the 10 min window, withdraws the offer and shows the unavailable notice', fakeAsync(() => {
-      service.present({ reference: 'ref-1', obtainedAt: Date.now() }, url);
-
-      tick(601 * 1000);
-
-      expect(service.status()).toBe('unavailable');
-    }));
-
-    it('at 599 s it has not expired yet', fakeAsync(() => {
-      service.present({ reference: 'ref-1', obtainedAt: Date.now() }, url);
-
-      tick(599 * 1000);
-
-      expect(service.status()).toBe('ready');
-      service.cancelPendingWork();
-    }));
-
-    it('cancelPendingWork() cancels the pending timer, so it does not expire after the component is destroyed', fakeAsync(() => {
-      service.present({ reference: 'ref-1', obtainedAt: Date.now() }, url);
-
-      service.cancelPendingWork();
-      tick(601 * 1000);
-
-      expect(service.status()).toBe('ready');
-    }));
-
-    it('presenting a new offer replaces the previous timer', fakeAsync(() => {
-      service.present({ reference: 'ref-1', obtainedAt: Date.now() }, url);
-      tick(5 * 60 * 1000);
-
-      service.present({ reference: 'ref-2', obtainedAt: Date.now() }, url);
-      tick(5 * 60 * 1000 + 1000);
-
-      expect(service.status()).toBe('ready');
-      service.cancelPendingWork();
-    }));
   });
 });

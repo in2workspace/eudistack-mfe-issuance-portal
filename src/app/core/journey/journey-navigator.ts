@@ -5,6 +5,7 @@ import { ApiProblemError, JOURNEY_CLOSED } from '../api/api-problem.error';
 import { Journey, JourneyApi } from '../api/generated/journey';
 import { errorUrl } from '../../features/error/error-reason';
 import { SESSION_ACTIONS } from '../session/session-actions';
+import { JourneyIssuanceStore } from './journey-issuance.store';
 import { DATA_PATH, ENTITLEMENT_PATH, QR_PATH } from './journey-paths';
 
 /** Ruta del último paso alcanzado del recorrido. */
@@ -14,9 +15,19 @@ export const STEP_PATH: Record<Journey.StepEnum, string> = {
   offer_obtained: QR_PATH,
 };
 
-/** Adónde va el titular según el recorrido: la ruta de su paso o, si ya no está en curso, Inicio. */
+/**
+ * Recorrido en el que el titular sigue teniendo un paso: en curso o, tras la
+ * primera oferta, `completed` con `offer_obtained`. El servicio pasa el
+ * recorrido a `completed` al entregar la primera oferta, pero el titular sigue
+ * en QR y puede pedir un código nuevo (EUD-286, decisión 6 de ac.md).
+ */
+export function isJourneyActive(journey: Journey): boolean {
+  return journey.state === 'in_progress' || (journey.state === 'completed' && journey.step === 'offer_obtained');
+}
+
+/** Adónde va el titular según el recorrido: la ruta de su paso o, si ya no tiene paso, Inicio. */
 export function stepUrl(journey: Journey): string[] {
-  return journey.state === 'in_progress' ? ['/', STEP_PATH[journey.step]] : ['/'];
+  return isJourneyActive(journey) ? ['/', STEP_PATH[journey.step]] : ['/'];
 }
 
 export function isJourneyClosed(error: unknown): boolean {
@@ -29,13 +40,16 @@ export class JourneyNavigator {
   private readonly router = inject(Router);
   private readonly journeyApi = inject(JourneyApi);
   private readonly session = inject(SESSION_ACTIONS);
+  private readonly issuance = inject(JourneyIssuanceStore);
 
   /**
    * El recorrido ha caducado: descarta los tokens (design.md §3.1, punto 7) y
-   * devuelve la dirección de la sesión caducada. Es el único camino del 410,
-   * venga de una llamada, de la guarda o del temporizador de inactividad.
+   * el correo que el titular escribió en Datos, y devuelve la dirección de la
+   * sesión caducada. Es el único camino del 410, venga de una llamada, de la
+   * guarda o del temporizador de inactividad.
    */
   expireSession(): string[] {
+    this.issuance.clear();
     this.session.discardTokens();
     return errorUrl('session-expired');
   }

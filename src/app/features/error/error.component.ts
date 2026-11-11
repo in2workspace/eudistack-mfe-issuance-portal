@@ -2,13 +2,17 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
-import { combineLatest, map } from 'rxjs';
+import { combineLatest, firstValueFrom, map } from 'rxjs';
 import { TenantLanguageService } from '../../core/branding/tenant-language.service';
 import { PortalConfigService } from '../../core/config/portal-config.service';
 import { hasSupportDetails } from '../../core/config/support-details';
 import { ENTITLEMENT_PATH, QR_PATH } from '../../core/journey/journey-paths';
+import { JourneyApi } from '../../core/api/generated/journey';
+import { ISSUANCE_PORTAL_ACCESS_TOKEN } from '../../core/api/issuance-portal-api.interceptor';
+import { JourneyIssuanceStore } from '../../core/journey/journey-issuance.store';
+import { isJourneyClosed } from '../../core/journey/journey-navigator';
 import { SESSION_ACTIONS } from '../../core/session/session-actions';
-import { ErrorReason, isErrorReason } from './error-reason';
+import { ErrorReason, RETRY_REASONS, isErrorReason } from './error-reason';
 
 /**
  * Pantalla de error única (prd.md §3.4, wireframes, Error): título, texto y
@@ -27,6 +31,9 @@ export class ErrorComponent {
   private readonly session = inject(SESSION_ACTIONS);
   private readonly portalConfig = inject(PortalConfigService);
   private readonly language = inject(TenantLanguageService);
+  private readonly journeyApi = inject(JourneyApi);
+  private readonly accessToken = inject(ISSUANCE_PORTAL_ACCESS_TOKEN);
+  private readonly issuance = inject(JourneyIssuanceStore);
 
   private readonly route = inject(ActivatedRoute);
 
@@ -40,6 +47,12 @@ export class ErrorComponent {
 
   protected readonly retrying = signal(false);
 
+  /** «Volver al inicio» como acción secundaria de los casos con reintento (AC-17). */
+  protected readonly canGoHome = computed(() => {
+    const reason = this.reason();
+    return reason !== null && RETRY_REASONS.includes(reason);
+  });
+
   protected readonly support = computed(() => {
     if (this.reason() !== 'not-entitled') {
       return null;
@@ -47,6 +60,36 @@ export class ErrorComponent {
     const support = this.portalConfig.config()?.support;
     return hasSupportDetails(support) ? support : null;
   });
+
+  /**
+   * «Volver al inicio» desde un caso con reintento (AC-17): retira el recorrido
+   * si hay Access Token, descarta los tokens y olvida el correo, sin pedir
+   * confirmación. Si la retirada falla, se descartan igual (design.md §3.1,
+   * punto 7); con un 410, la sesión caducada la muestra el interceptor.
+   */
+  async onGoHome(): Promise<void> {
+    if (this.retrying()) {
+      return;
+    }
+    this.retrying.set(true);
+    try {
+      if (this.accessToken()) {
+        try {
+          await firstValueFrom(this.journeyApi.withdrawJourney());
+        } catch (error: unknown) {
+          if (isJourneyClosed(error)) {
+            this.issuance.clear();
+            return;
+          }
+        }
+      }
+      this.issuance.clear();
+      this.session.discardTokens();
+      await this.router.navigate(['/']);
+    } finally {
+      this.retrying.set(false);
+    }
+  }
 
   async onAction(): Promise<void> {
     const reason = this.reason();

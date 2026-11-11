@@ -21,6 +21,18 @@ export const ERROR_REASONS = [
 
 export type ErrorReason = (typeof ERROR_REASONS)[number];
 
+/**
+ * Casos cuya acción principal es volver a intentarlo o generar un código
+ * nuevo: ofrecen también «Volver al inicio», que termina el recorrido
+ * (prd.md 1.5.0 §3.4, AC-20; EUD-286 decisión 8).
+ */
+export const RETRY_REASONS: readonly ErrorReason[] = [
+  'identification-failed',
+  'source-unavailable',
+  'issuance-failed',
+  'onboarding-unavailable',
+];
+
 export function isErrorReason(value: unknown): value is ErrorReason {
   return typeof value === 'string' && (ERROR_REASONS as readonly string[]).includes(value);
 }

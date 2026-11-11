@@ -1,23 +1,22 @@
-import { CredentialOffer } from './credential-offer.model';
+import { OfferAddress } from './credential-offer.model';
 
 /**
- * Ventana de presentación de la oferta (AD-6, NFR-S-163-01): 10 min absolutos
- * desde la obtención, sin renovación deslizante. Constante de código, no
- * configurable por tenant — mismo criterio que el TTL de EUD-164 AD-2.
+ * Segundos enteros que le quedan a la dirección (0 si ya ha caducado). La
+ * caducidad es la que da el servicio (`onboarding_expires_at` o
+ * `expires_at`), no una ventana fija del navegador. `now` se inyecta para
+ * poder probar los límites.
  */
-export const CREDENTIAL_OFFER_PRESENTATION_TTL_MS = 10 * 60 * 1000;
-
-/**
- * Milisegundos restantes hasta la caducidad (negativo si ya caducó) — única
- * fuente de la resta TTL/elapsed, para que `isCredentialOfferExpired` y el
- * temporizador real de `CredentialOfferService.present()` no
- * dupliquen el cálculo (code-reviewer, auditoría EUD-163, hallazgo B1).
- */
-export function msUntilCredentialOfferExpiry(offer: CredentialOffer, now: number): number {
-  return CREDENTIAL_OFFER_PRESENTATION_TTL_MS - (now - offer.obtainedAt);
+export function secondsUntilExpiry(address: OfferAddress, now: number): number {
+  return Math.max(Math.ceil((address.expiresAt - now) / 1000), 0);
 }
 
-/** Función pura — `now` inyectado para ser testeable en los límites (ES-03). */
-export function isCredentialOfferExpired(offer: CredentialOffer, now: number): boolean {
-  return msUntilCredentialOfferExpiry(offer, now) < 0;
+export function isOfferAddressExpired(address: OfferAddress, now: number): boolean {
+  return secondsUntilExpiry(address, now) === 0;
+}
+
+/** Cuenta atrás «mm:ss» (prd.md FR-06, wireframes QR). */
+export function formatCountdown(seconds: number): string {
+  const minutes = Math.floor(seconds / 60);
+  const rest = seconds % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(rest).padStart(2, '0')}`;
 }

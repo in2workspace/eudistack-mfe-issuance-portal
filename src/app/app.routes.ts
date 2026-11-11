@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 import { journeyStepGuard } from './core/journey/journey-step.guard';
-import { DATA_PATH, QR_PATH } from './core/journey/journey-paths';
+import { DATA_PATH, ENTITLEMENT_PATH, QR_PATH } from './core/journey/journey-paths';
 import { CONFIG_UNAVAILABLE_PATH, configAvailableGuard, configUnavailableGuard } from './core/guards/config-available.guard';
 import { legacyQueryParamsGuard } from './core/guards/legacy-query-params.guard';
 import { ERROR_PATH, errorReasonGuard } from './features/error/error-reason';
@@ -31,6 +31,14 @@ export const routes: Routes = [
           import('./features/issuance-start/issuance-info/issuance-info.component').then(
             (m) => m.IssuanceInfoComponent,
           ),
+      },
+      {
+        // Paso Comprobación (EUD-286): comprueba el derecho y pasa solo a Datos o a Error.
+        path: ENTITLEMENT_PATH,
+        data: { back: '' },
+        loadComponent: () =>
+          import('./features/entitlement/entitlement.component').then((m) => m.EntitlementComponent),
+        canActivate: [journeyStepGuard],
       },
       {
         path: DATA_PATH,

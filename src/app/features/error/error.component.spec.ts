@@ -7,7 +7,12 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import { BehaviorSubject } from 'rxjs';
 import { ErrorComponent } from './error.component';
-import { ERROR_REASONS, ErrorReason } from './error-reason';
+import { ERROR_REASONS, ErrorReason, RETRY_REASONS } from './error-reason';
+import { Journey, JourneyApi } from '../../core/api/generated/journey';
+import { ApiProblemError, NETWORK_ERROR } from '../../core/api/api-problem.error';
+import { ISSUANCE_PORTAL_ACCESS_TOKEN } from '../../core/api/issuance-portal-api.interceptor';
+import { JourneyIssuanceStore } from '../../core/journey/journey-issuance.store';
+import { Observable, asyncScheduler, observeOn, of, throwError } from 'rxjs';
 import { PortalConfigService, PortalConfigState } from '../../core/config/portal-config.service';
 import { TenantLanguageService } from '../../core/branding/tenant-language.service';
 import { SESSION_ACTIONS, SessionActions } from '../../core/session/session-actions';
@@ -24,6 +29,8 @@ describe('ErrorComponent', () => {
   let load: jest.Mock<Promise<PortalConfigState>>;
   let reloadTexts: jest.Mock;
   const config = signal<PortalConfig | null>(null);
+  let withdrawJourney: jest.Mock<Observable<Journey>>;
+  let token: string | null;
 
   function configWith(support: PortalConfigSupport): PortalConfig {
     return { texts: {}, support, legal_links: {}, wallet_url: 'https://cgcom.example/wallet' };
@@ -56,6 +63,8 @@ describe('ErrorComponent', () => {
     data = new BehaviorSubject<Record<string, unknown>>({});
     load = jest.fn();
     reloadTexts = jest.fn().mockResolvedValue(undefined);
+    withdrawJourney = jest.fn().mockReturnValue(of({ state: 'withdrawn', step: 'identified' }));
+    token = 'access-token';
     session = { restartLogin: jest.fn().mockResolvedValue(undefined), discardTokens: jest.fn() };
     config.set(configWith({ email: 'soporte@cgcom.example', phone: '900 000 000', schedule: 'L-V 9-18' }));
     TestBed.configureTestingModule({
@@ -66,6 +75,8 @@ describe('ErrorComponent', () => {
         { provide: SESSION_ACTIONS, useValue: session },
         { provide: PortalConfigService, useValue: { config, load } },
         { provide: TenantLanguageService, useValue: { reloadTexts } },
+        { provide: JourneyApi, useValue: { withdrawJourney } },
+        { provide: ISSUANCE_PORTAL_ACCESS_TOKEN, useValue: () => token },
       ],
     });
     router = TestBed.inject(Router);
@@ -310,6 +321,115 @@ describe('ErrorComponent', () => {
           /\b[45]\d{2}\b|journey_closed|step_not_allowed|offer_not_renewable|onboarding_unavailable|config_unavailable|not_entitled|issuance_(rejected|unavailable)|authentic_source|Verifier|Wallet Unit Service|GET \/|POST \/|Problem|error\.|\{\{/,
         );
       });
+    });
+  });
+
+  describe('AC-17 (EUD-286): Volver al inicio en los casos con reintento', () => {
+    function homeButton(element: HTMLElement): HTMLButtonElement | undefined {
+      return Array.from(element.querySelectorAll('button')).find((b) => b.textContent?.trim() === 'error.backHome');
+    }
+
+    /** Un error HTTP llega siempre de forma asíncrona, como aquí. */
+    function failsLikeHttp(error: ApiProblemError): Observable<never> {
+      return throwError(() => error).pipe(observeOn(asyncScheduler));
+    }
+
+    async function goHome(element: HTMLElement): Promise<void> {
+      homeButton(element)!.click();
+      await fixture.whenStable();
+    }
+
+    it.each(RETRY_REASONS)('%s offers «Volver al inicio» under the main action', (reason) => {
+      const element = show(reason);
+
+      const buttons = Array.from(element.querySelectorAll('button')).map((b) => b.textContent?.trim());
+      expect(buttons).toEqual([`error.${reason}.action`, 'error.backHome']);
+    });
+
+    it.each(ERROR_REASONS.filter((reason) => !RETRY_REASONS.includes(reason) && reason !== 'config-unavailable'))(
+      '%s, whose main action already goes to Inicio, does not offer it',
+      (reason) => {
+        expect(homeButton(show(reason))).toBeUndefined();
+      },
+    );
+
+    it('config-unavailable does not offer it', () => {
+      expect(homeButton(showConfigUnavailable())).toBeUndefined();
+    });
+
+    it('withdraws the journey, discards the tokens, forgets the email and goes to Inicio, without confirmation', async () => {
+      const store = TestBed.inject(JourneyIssuanceStore);
+      store.confirm('maria@example.org');
+      const element = show('source-unavailable');
+
+      await goHome(element);
+
+      expect(withdrawJourney).toHaveBeenCalledTimes(1);
+      expect(session.discardTokens).toHaveBeenCalledTimes(1);
+      expect(store.email()).toBeNull();
+      expect(router.navigate).toHaveBeenCalledWith(['/']);
+      expect(element.querySelector('[role="dialog"]')).toBeNull();
+    });
+
+    it('without Access Token (identification not completed) only discards and goes to Inicio', async () => {
+      token = null;
+
+      await goHome(show('identification-failed'));
+
+      expect(withdrawJourney).not.toHaveBeenCalled();
+      expect(session.discardTokens).toHaveBeenCalledTimes(1);
+      expect(router.navigate).toHaveBeenCalledWith(['/']);
+    });
+
+    it('if the withdrawal fails, discards the tokens and goes to Inicio anyway', async () => {
+      withdrawJourney.mockReturnValue(failsLikeHttp(new ApiProblemError(NETWORK_ERROR, 0, 'Network error')));
+      const store = TestBed.inject(JourneyIssuanceStore);
+      store.confirm('maria@example.org');
+
+      await goHome(show('issuance-failed'));
+
+      expect(store.email()).toBeNull();
+      expect(session.discardTokens).toHaveBeenCalledTimes(1);
+      expect(router.navigate).toHaveBeenCalledWith(['/']);
+    });
+
+    it('with a 410 leaves the session expired case to the journey interceptor', async () => {
+      withdrawJourney.mockReturnValue(failsLikeHttp(new ApiProblemError('journey_closed', 410, 'Journey closed')));
+      const store = TestBed.inject(JourneyIssuanceStore);
+      store.confirm('maria@example.org');
+
+      await goHome(show('onboarding-unavailable'));
+
+      expect(store.email()).toBeNull();
+      expect(router.navigate).not.toHaveBeenCalled();
+    });
+
+    it.each(RETRY_REASONS)('NFR-3: %s with «Volver al inicio» has no accessibility violations', async (reason) => {
+      expect(await axe(show(reason))).toHaveNoViolations();
+    });
+
+    it('is disabled while going home, so a second click does nothing', () => {
+      withdrawJourney.mockReturnValue(new Observable<Journey>());
+      const element = show('source-unavailable');
+
+      homeButton(element)!.click();
+      fixture.detectChanges();
+      homeButton(element)!.click();
+
+      expect(withdrawJourney).toHaveBeenCalledTimes(1);
+      expect(homeButton(element)!.disabled).toBe(true);
+    });
+
+    it.each([
+      ['es', 'Volver al inicio'],
+      ['en', 'Back to start'],
+    ])('NFR-2: has the «Volver al inicio» text in %s', (lang, text) => {
+      const catalog = JSON.parse(readFileSync(join(__dirname, '../../../assets/i18n', `${lang}.json`), 'utf-8')) as Record<
+        string,
+        string
+      >;
+
+      expect(catalog['error.backHome']).toBe(text);
     });
   });
 });
