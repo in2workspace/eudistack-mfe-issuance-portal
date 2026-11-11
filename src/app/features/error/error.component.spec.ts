@@ -357,16 +357,16 @@ describe('ErrorComponent', () => {
       expect(homeButton(showConfigUnavailable())).toBeUndefined();
     });
 
-    it('withdraws the journey, discards the tokens, forgets the email and goes to Inicio, without confirmation', async () => {
+    it('withdraws the journey, discards the tokens, forgets the pending call and goes to Inicio, without confirmation', async () => {
       const store = TestBed.inject(JourneyIssuanceStore);
-      store.confirm('maria@example.org');
+      store.requestConfirmation();
       const element = show('source-unavailable');
 
       await goHome(element);
 
       expect(withdrawJourney).toHaveBeenCalledTimes(1);
       expect(session.discardTokens).toHaveBeenCalledTimes(1);
-      expect(store.email()).toBeNull();
+      expect(store.pendingCall()).toBeNull();
       expect(router.navigate).toHaveBeenCalledWith(['/']);
       expect(element.querySelector('[role="dialog"]')).toBeNull();
     });
@@ -384,11 +384,11 @@ describe('ErrorComponent', () => {
     it('if the withdrawal fails, discards the tokens and goes to Inicio anyway', async () => {
       withdrawJourney.mockReturnValue(failsLikeHttp(new ApiProblemError(NETWORK_ERROR, 0, 'Network error')));
       const store = TestBed.inject(JourneyIssuanceStore);
-      store.confirm('maria@example.org');
+      store.requestConfirmation();
 
       await goHome(show('issuance-failed'));
 
-      expect(store.email()).toBeNull();
+      expect(store.pendingCall()).toBeNull();
       expect(session.discardTokens).toHaveBeenCalledTimes(1);
       expect(router.navigate).toHaveBeenCalledWith(['/']);
     });
@@ -396,11 +396,11 @@ describe('ErrorComponent', () => {
     it('with a 410 leaves the session expired case to the journey interceptor', async () => {
       withdrawJourney.mockReturnValue(failsLikeHttp(new ApiProblemError('journey_closed', 410, 'Journey closed')));
       const store = TestBed.inject(JourneyIssuanceStore);
-      store.confirm('maria@example.org');
+      store.requestConfirmation();
 
       await goHome(show('onboarding-unavailable'));
 
-      expect(store.email()).toBeNull();
+      expect(store.pendingCall()).toBeNull();
       expect(router.navigate).not.toHaveBeenCalled();
     });
 

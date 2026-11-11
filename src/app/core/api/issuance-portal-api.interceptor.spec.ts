@@ -74,6 +74,35 @@ describe('issuancePortalApiInterceptor', () => {
     expect(error).toMatchObject({ type: 'journey_closed', status: 410, title: 'Journey closed' });
   });
 
+  it.each([
+    ['90', 90],
+    [' 5 ', 5],
+    ['0', 0],
+    ['Wed, 21 Oct 2026 07:28:00 GMT', undefined],
+    ['soon', undefined],
+  ])('EUD-358: a Retry-After of %j becomes retryAfterSeconds %s', (header, seconds) => {
+    let error: unknown;
+    http.post('/issuance-portal/api/v1/journey/email-verification', {}).subscribe({ error: (e: unknown) => (error = e) });
+
+    controller.expectOne('/issuance-portal/api/v1/journey/email-verification').flush(
+      { type: 'resend_too_soon', title: 'Resend too soon', status: 429 },
+      { status: 429, statusText: 'Too Many Requests', headers: { 'Retry-After': header } },
+    );
+
+    expect(error).toMatchObject({ type: 'resend_too_soon', status: 429, retryAfterSeconds: seconds });
+  });
+
+  it('EUD-358: a Problem without Retry-After (too_many_codes) has no retryAfterSeconds', () => {
+    let error: unknown;
+    http.post('/issuance-portal/api/v1/journey/email-verification', {}).subscribe({ error: (e: unknown) => (error = e) });
+
+    controller
+      .expectOne('/issuance-portal/api/v1/journey/email-verification')
+      .flush({ type: 'too_many_codes', title: 'Too many codes', status: 429 }, { status: 429, statusText: 'Too Many Requests' });
+
+    expect((error as ApiProblemError).retryAfterSeconds).toBeUndefined();
+  });
+
   it('ES-04: an error without a Problem body gets the generic type and the response status', () => {
     let error: unknown;
     http.get('/issuance-portal/api/v1/config').subscribe({ error: (e: unknown) => (error = e) });

@@ -8,56 +8,42 @@ describe('JourneyIssuanceStore', () => {
     store = TestBed.inject(JourneyIssuanceStore);
   });
 
-  it('starts empty', () => {
-    expect(store.email()).toBeNull();
+  it('starts with nothing to call', () => {
     expect(store.pendingCall()).toBeNull();
-    expect(store.emailRejected()).toBe(false);
   });
 
-  it('confirming keeps the email and asks for the confirmation', () => {
-    store.rejectEmail();
+  it('EUD-358: holds no email, the verified one lives in the service', () => {
+    expect('email' in store).toBe(false);
+    expect('confirm' in store).toBe(false);
+  });
 
-    store.confirm('maria@example.org');
+  it('with the email verified, asks for the confirmation', () => {
+    store.requestConfirmation();
 
-    expect(store.email()).toBe('maria@example.org');
     expect(store.pendingCall()).toBe('confirmation');
-    expect(store.emailRejected()).toBe(false);
   });
 
-  it('a new code keeps the email and asks for a new offer', () => {
-    store.confirm('maria@example.org');
+  it('a new code asks for a new offer', () => {
+    store.requestConfirmation();
 
     store.requestNewOffer();
 
-    expect(store.email()).toBe('maria@example.org');
     expect(store.pendingCall()).toBe('offers');
   });
 
   it('an offer received leaves nothing to call', () => {
-    store.confirm('maria@example.org');
+    store.requestConfirmation();
 
     store.offerReceived();
 
     expect(store.pendingCall()).toBeNull();
   });
 
-  it('a rejected email is marked and leaves nothing to call', () => {
-    store.confirm('maria@example.org');
-
-    store.rejectEmail();
-
-    expect(store.emailRejected()).toBe(true);
-    expect(store.pendingCall()).toBeNull();
-  });
-
   it('NFR-1: clearing forgets everything', () => {
-    store.confirm('maria@example.org');
-    store.rejectEmail();
+    store.requestNewOffer();
 
     store.clear();
 
-    expect(store.email()).toBeNull();
     expect(store.pendingCall()).toBeNull();
-    expect(store.emailRejected()).toBe(false);
   });
 });

@@ -3,9 +3,10 @@ import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { JourneyApi } from '../api/generated/journey';
 import { ISSUANCE_PORTAL_ACCESS_TOKEN } from '../api/issuance-portal-api.interceptor';
-import { JourneyNavigator, STEP_PATH, isJourneyClosed } from './journey-navigator';
+import { JourneyNavigator, isJourneyClosed } from './journey-navigator';
+import { DATA_PATH, EMAIL_PATH, ENTITLEMENT_PATH, QR_PATH } from './journey-paths';
 
-const STEP_PATHS: readonly string[] = Object.values(STEP_PATH);
+const STEP_PATHS: readonly string[] = [ENTITLEMENT_PATH, DATA_PATH, EMAIL_PATH, QR_PATH];
 
 /**
  * Aviso de caducidad del recorrido (prd.md §3.3, punto 4): el servicio lo

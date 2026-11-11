@@ -7,7 +7,8 @@ import { axe, toHaveNoViolations } from 'jest-axe';
 import { NEVER, Observable, of, Subject, throwError } from 'rxjs';
 import { UserDataComponent } from './user-data.component';
 import { ApiProblemError, NETWORK_ERROR } from '../../../core/api/api-problem.error';
-import { AttestationPreview, Journey, JourneyApi } from '../../../core/api/generated/journey';
+import { AttestationPreview, EmailVerification, Journey, JourneyApi } from '../../../core/api/generated/journey';
+import { TenantLanguageService } from '../../../core/branding/tenant-language.service';
 import { JourneyNavigator } from '../../../core/journey/journey-navigator';
 import { SESSION_ACTIONS } from '../../../core/session/session-actions';
 import { JourneyIssuanceStore } from '../../../core/journey/journey-issuance.store';
@@ -39,6 +40,8 @@ describe('UserDataComponent', () => {
   let fixture: ComponentFixture<UserDataComponent>;
   let getJourney: jest.Mock<Observable<Journey>>;
   let withdrawJourney: jest.Mock<Observable<Journey>>;
+  let sendEmailCode: jest.Mock<Observable<EmailVerification>>;
+  let language: string;
   let discardTokens: jest.Mock;
   let toSessionExpired: jest.Mock;
   let navigate: jest.SpyInstance;
@@ -47,13 +50,16 @@ describe('UserDataComponent', () => {
   beforeEach(() => {
     getJourney = jest.fn();
     withdrawJourney = jest.fn();
+    sendEmailCode = jest.fn();
+    language = 'es';
     discardTokens = jest.fn();
     toSessionExpired = jest.fn().mockResolvedValue(true);
     TestBed.configureTestingModule({
       imports: [UserDataComponent, TranslateModule.forRoot()],
       providers: [
         provideRouter([]),
-        { provide: JourneyApi, useValue: { getJourney, withdrawJourney } },
+        { provide: JourneyApi, useValue: { getJourney, withdrawJourney, sendEmailCode } },
+        { provide: TenantLanguageService, useValue: { current: () => language } },
         { provide: JourneyNavigator, useValue: { toSessionExpired } },
         { provide: SESSION_ACTIONS, useValue: { restartLogin: jest.fn(), discardTokens } },
       ],
@@ -65,14 +71,39 @@ describe('UserDataComponent', () => {
     store = TestBed.inject(JourneyIssuanceStore);
   });
 
-  function create(attestation: AttestationPreview | undefined = PREVIEW): void {
-    getJourney.mockReturnValue(of({ state: 'in_progress', step: 'entitlement_confirmed', attestation }));
+  function create(
+    attestation: AttestationPreview | undefined = PREVIEW,
+    email_verification?: EmailVerification,
+  ): void {
+    getJourney.mockReturnValue(
+      of({
+        state: 'in_progress',
+        step: email_verification?.verified ? 'email_verified' : 'entitlement_confirmed',
+        attestation,
+        email_verification,
+      }),
+    );
     fixture = TestBed.createComponent(UserDataComponent);
     document.body.appendChild(fixture.nativeElement);
     fixture.detectChanges();
   }
 
   afterEach(() => fixture?.nativeElement.remove());
+
+  function verification(overrides: Partial<EmailVerification> = {}): EmailVerification {
+    return {
+      email: 'maria@example.org',
+      verified: false,
+      code_expires_at: new Date(Date.now() + 600_000).toISOString(),
+      resend_available_at: new Date(Date.now() + 180_000).toISOString(),
+      sends_left: 2,
+      ...overrides,
+    };
+  }
+
+  function problem(type: string, status: number, retryAfter?: number): Observable<never> {
+    return throwError(() => new ApiProblemError(type, status, type, retryAfter));
+  }
 
   const element = (): HTMLElement => fixture.nativeElement as HTMLElement;
   const emailInput = (): HTMLInputElement => element().querySelector('#holder-email')!;
@@ -147,44 +178,91 @@ describe('UserDataComponent', () => {
       expect(button('Continuar').disabled).toBe(false);
     });
 
-    it('back from QR, the email the holder wrote wins over the one the service knows', () => {
-      store.confirm('escrito@example.org');
-
-      create();
+    it('AC-07: back from Verificar correo, the email the code was sent to wins over the one the source knows', () => {
+      create(PREVIEW, verification({ email: 'escrito@example.org' }));
 
       expect(emailInput().value).toBe('escrito@example.org');
     });
 
-    it('ES-04: an email the service rejected is shown marked as not valid', () => {
-      store.confirm('rechazado@example.org');
-      store.rejectEmail();
+    it('AC-07: back from Verificar correo with the email verified, shows it too', () => {
+      create(PREVIEW, verification({ email: 'verificado@example.org', verified: true }));
 
-      create();
-
-      expect(emailInput().value).toBe('rechazado@example.org');
-      expect(emailInput().getAttribute('aria-invalid')).toBe('true');
-      expect(button('Continuar').disabled).toBe(true);
-
-      type('corregido@example.org');
-      expect(button('Continuar').disabled).toBe(false);
+      expect(emailInput().value).toBe('verificado@example.org');
     });
   });
 
   describe('Continuar', () => {
-    it('EC-07: a second click while going to QR does not navigate again', () => {
-      // La navegación a QR sigue en curso mientras la guarda consulta GET /journey.
+    beforeEach(() => sendEmailCode.mockReturnValue(of(verification())));
+
+    it('AC-01: sends the code to the email, with the language being shown, and goes to Verificar correo', () => {
+      create();
+      type('maria@example.org');
+
+      click('Continuar');
+
+      expect(sendEmailCode).toHaveBeenCalledWith({ email: 'maria@example.org' }, 'es');
+      expect(navigate).toHaveBeenCalledWith(['/', 'verify-email']);
+    });
+
+    it('AC-01: sends the language of the tenant being shown when the holder changed it', () => {
+      language = 'en';
+      create();
+
+      click('Continuar');
+
+      expect(sendEmailCode).toHaveBeenCalledWith({ email: 'maria@example.org' }, 'en');
+    });
+
+    it('AC-01: sends no language when none has been chosen yet', () => {
+      language = '';
+      create();
+
+      click('Continuar');
+
+      expect(sendEmailCode).toHaveBeenCalledWith({ email: 'maria@example.org' }, undefined);
+    });
+
+    it('EC-01: the email filled from the source goes out without the holder changing it', () => {
+      create();
+
+      click('Continuar');
+
+      expect(sendEmailCode).toHaveBeenCalledWith({ email: 'maria@example.org' }, 'es');
+    });
+
+    it('EC-07 (service): an email with spaces around it is valid and goes out without them', () => {
+      create();
+      type(' maria@example.org ');
+
+      click('Continuar');
+
+      expect(sendEmailCode).toHaveBeenCalledWith({ email: 'maria@example.org' }, 'es');
+    });
+
+    it('EC-07: a second click while sending does not send another code', () => {
+      sendEmailCode.mockReturnValue(NEVER);
+      create();
+
+      button('Continuar').click();
+      button('Continuar').click();
+
+      expect(sendEmailCode).toHaveBeenCalledTimes(1);
+      fixture.detectChanges();
+      expect(button('Continuar').disabled).toBe(true);
+    });
+
+    it('EC-07: a second click while going to Verificar correo does not send another code', () => {
       navigate.mockReturnValue(new Promise(() => undefined));
       create();
 
       button('Continuar').click();
       button('Continuar').click();
 
+      expect(sendEmailCode).toHaveBeenCalledTimes(1);
       expect(navigate).toHaveBeenCalledTimes(1);
-      fixture.detectChanges();
-      expect(button('Continuar').disabled).toBe(true);
     });
 
-    it('EC-07: if QR does not let the holder in, Continuar works again', async () => {
+    it('EC-07: if Verificar correo does not let the holder in, Continuar works again', async () => {
       navigate.mockResolvedValue(false);
       create();
 
@@ -195,24 +273,120 @@ describe('UserDataComponent', () => {
       expect(button('Continuar').disabled).toBe(false);
     });
 
-    it('N3: an email with spaces around it is valid and is kept without them', () => {
-      create();
-      type(' maria@example.org ');
-
-      click('Continuar');
-
-      expect(store.email()).toBe('maria@example.org');
-    });
-
-    it('AC-01: keeps the email in memory, asks QR for the confirmation and goes to QR', () => {
+    it('AC-09: keeps the email nowhere but the field: the store holds no email', () => {
       create();
       type('maria@example.org');
 
       click('Continuar');
 
-      expect(store.email()).toBe('maria@example.org');
-      expect(store.pendingCall()).toBe('confirmation');
-      expect(navigate).toHaveBeenCalledWith(['/', 'offer']);
+      expect('email' in store).toBe(false);
+      expect(store.pendingCall()).toBeNull();
+    });
+  });
+
+  describe('Continuar fails', () => {
+    it.each(['email_required', 'email_invalid'])(
+      'ES-01: %s marks the email as not valid in the field and Continuar stays disabled until it changes',
+      (problemType) => {
+        sendEmailCode.mockReturnValue(problem(problemType, 400));
+        create();
+        type('rechazado@example.org');
+
+        click('Continuar');
+
+        expect(navigate).not.toHaveBeenCalled();
+        expect(emailInput().getAttribute('aria-invalid')).toBe('true');
+        expect(element().textContent).toContain('Escribe un correo electrónico válido.');
+        expect(button('Continuar').disabled).toBe(true);
+
+        type('corregido@example.org');
+        expect(button('Continuar').disabled).toBe(false);
+      },
+    );
+
+    it('AC-06: email_unavailable stays in Datos with the notice, and Continuar tries again', () => {
+      sendEmailCode.mockReturnValueOnce(problem('email_unavailable', 503)).mockReturnValueOnce(of(verification()));
+      create();
+
+      click('Continuar');
+
+      expect(navigate).not.toHaveBeenCalled();
+      expect(element().textContent).toContain('Ahora no se puede enviar el código.');
+      expect(button('Continuar').disabled).toBe(false);
+
+      click('Continuar');
+
+      expect(sendEmailCode).toHaveBeenCalledTimes(2);
+      expect(navigate).toHaveBeenCalledWith(['/', 'verify-email']);
+      expect(element().textContent).not.toContain('Ahora no se puede enviar el código.');
+    });
+
+    it('AC-06: a failure with no answer is shown as email_unavailable', () => {
+      sendEmailCode.mockReturnValue(problem(NETWORK_ERROR, 0));
+      create();
+
+      click('Continuar');
+
+      expect(element().textContent).toContain('Ahora no se puede enviar el código.');
+    });
+
+    it('AC-05: too_many_requests shows the countdown of Retry-After and blocks Continuar until it ends', () => {
+      jest.useFakeTimers();
+      try {
+        sendEmailCode.mockReturnValue(problem('too_many_requests', 429, 90));
+        create();
+
+        click('Continuar');
+
+        expect(element().textContent).toContain('Ahora no se pueden enviar más códigos. Inténtalo de nuevo en 01:30.');
+        expect(button('Continuar').disabled).toBe(true);
+        expect(navigate).not.toHaveBeenCalled();
+
+        jest.advanceTimersByTime(91_000);
+        fixture.detectChanges();
+
+        expect(element().textContent).not.toContain('Ahora no se pueden enviar más códigos');
+        expect(button('Continuar').disabled).toBe(false);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('AC-05: too_many_requests with no Retry-After says to try again later and does not block Continuar', () => {
+      sendEmailCode.mockReturnValue(problem('too_many_requests', 429));
+      create();
+
+      click('Continuar');
+
+      expect(element().textContent).toContain('Inténtalo de nuevo más tarde.');
+      expect(button('Continuar').disabled).toBe(false);
+    });
+
+    it.each(['resend_too_soon', 'too_many_codes'])(
+      'AC-04, AC-05: %s is not an error in Datos: goes to Verificar correo, which says what is left',
+      (problemType) => {
+        sendEmailCode.mockReturnValue(problem(problemType, 429, 120));
+        create();
+
+        click('Continuar');
+
+        expect(navigate).toHaveBeenCalledWith(['/', 'verify-email']);
+        expect(element().textContent).not.toContain('Ahora no se pueden enviar');
+      },
+    );
+
+    it.each([
+      ['step_not_allowed', 409],
+      ['journey_closed', 410],
+    ])('ES-04: %s is left to the journey interceptor: no message and Continuar works again', (problemType, status) => {
+      sendEmailCode.mockReturnValue(problem(problemType, status));
+      create();
+
+      click('Continuar');
+
+      expect(navigate).not.toHaveBeenCalled();
+      expect(element().textContent).not.toContain('Ahora no se puede enviar el código.');
+      expect(button('Continuar').disabled).toBe(false);
     });
   });
 
@@ -258,9 +432,9 @@ describe('UserDataComponent', () => {
       expect(navigate).not.toHaveBeenCalled();
     });
 
-    it('AC-12: «Sí, cancelar» withdraws the journey, discards the tokens, forgets the email and goes to Inicio', () => {
+    it('AC-12: «Sí, cancelar» withdraws the journey, discards the tokens, forgets the pending call and goes to Inicio', () => {
       withdrawJourney.mockReturnValue(of({ state: 'withdrawn', step: 'entitlement_confirmed' }));
-      store.confirm('maria@example.org');
+      store.requestConfirmation();
       create();
       click('Cancelar');
 
@@ -268,7 +442,7 @@ describe('UserDataComponent', () => {
 
       expect(withdrawJourney).toHaveBeenCalledTimes(1);
       expect(discardTokens).toHaveBeenCalledTimes(1);
-      expect(store.email()).toBeNull();
+      expect(store.pendingCall()).toBeNull();
       expect(navigate).toHaveBeenCalledWith(['/']);
     });
 
@@ -285,14 +459,14 @@ describe('UserDataComponent', () => {
 
     it('ES-05: with a 410 leaves the navigation to the journey interceptor', () => {
       withdrawJourney.mockReturnValue(throwError(() => new ApiProblemError('journey_closed', 410, 'Journey closed')));
-      store.confirm('maria@example.org');
+      store.requestConfirmation();
       create();
       click('Cancelar');
 
       click('Sí, cancelar');
 
       expect(navigate).not.toHaveBeenCalled();
-      expect(store.email()).toBeNull();
+      expect(store.pendingCall()).toBeNull();
     });
 
     it('EC-07: withdraws only once while the withdrawal is running', () => {

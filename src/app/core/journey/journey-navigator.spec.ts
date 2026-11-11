@@ -3,7 +3,7 @@ import { provideRouter, Router } from '@angular/router';
 import { Observable, of, throwError } from 'rxjs';
 import { JourneyNavigator, stepUrl } from './journey-navigator';
 import { ApiProblemError, NETWORK_ERROR } from '../api/api-problem.error';
-import { Journey, JourneyApi } from '../api/generated/journey';
+import { EmailVerification, Journey, JourneyApi } from '../api/generated/journey';
 import { SESSION_ACTIONS } from '../session/session-actions';
 import { JourneyIssuanceStore } from './journey-issuance.store';
 
@@ -31,8 +31,40 @@ describe('JourneyNavigator', () => {
     ['identified', ['/', 'entitlement']],
     ['entitlement_confirmed', ['/', 'user-data']],
     ['offer_obtained', ['/', 'offer']],
-  ])('EC-01: the step %s goes to %j', (step, url) => {
+  ])('EC-01: the step %s with no email verification goes to %j', (step, url) => {
     expect(stepUrl({ state: 'in_progress', step })).toEqual(url);
+  });
+
+  describe('EUD-358: the screen follows email_verification, not the step', () => {
+    const verification = (verified: boolean): EmailVerification => ({
+      email: 'maria@example.org',
+      verified,
+      resend_available_at: '2026-11-11T10:03:00Z',
+      sends_left: 2,
+    });
+
+    it.each<[Journey.StepEnum, boolean, string[]]>([
+      ['entitlement_confirmed', false, ['/', 'verify-email']],
+      ['email_verified', false, ['/', 'verify-email']],
+      ['entitlement_confirmed', true, ['/', 'offer']],
+      ['email_verified', true, ['/', 'offer']],
+    ])('AC-09: step %s with verified=%s goes to %j', (step, verified, url) => {
+      expect(stepUrl({ state: 'in_progress', step, email_verification: verification(verified) })).toEqual(url);
+    });
+
+    it('AC-09: the step email_verified with no email verification goes to Datos', () => {
+      expect(stepUrl({ state: 'in_progress', step: 'email_verified' })).toEqual(['/', 'user-data']);
+    });
+
+    it('a completed journey with the offer obtained goes to QR whatever email_verification says', () => {
+      expect(
+        stepUrl({ state: 'completed', step: 'offer_obtained', email_verification: verification(false) }),
+      ).toEqual(['/', 'offer']);
+    });
+
+    it('a withdrawn journey goes to Inicio even with a code pending', () => {
+      expect(stepUrl({ state: 'withdrawn', step: 'email_verified', email_verification: verification(false) })).toEqual(['/']);
+    });
   });
 
   it('a withdrawn journey goes to Inicio', () => {
@@ -40,13 +72,12 @@ describe('JourneyNavigator', () => {
     expect(stepUrl({ state: 'withdrawn', step: 'offer_obtained' })).toEqual(['/']);
   });
 
-  it('NFR-1 (EUD-286): expireSession forgets the email the holder wrote in Datos', () => {
+  it('NFR-1 (EUD-286): expireSession forgets the call pending in QR', () => {
     const store = TestBed.inject(JourneyIssuanceStore);
-    store.confirm('maria@example.org');
+    store.requestConfirmation();
 
     navigator.expireSession();
 
-    expect(store.email()).toBeNull();
     expect(store.pendingCall()).toBeNull();
   });
 

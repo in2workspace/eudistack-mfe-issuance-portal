@@ -142,7 +142,7 @@ describe('JourneyInactivityService', () => {
     expect(getJourney).not.toHaveBeenCalled();
   });
 
-  it.each(['/entitlement', '/offer'])('watches the step route %s too', async (path) => {
+  it.each(['/entitlement', '/verify-email', '/offer'])('watches the step route %s too', async (path) => {
     url = path;
     service.touch();
 

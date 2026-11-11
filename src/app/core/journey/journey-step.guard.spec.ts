@@ -27,8 +27,16 @@ describe('journeyStepGuard', () => {
     });
   });
 
-  function journey(step: Journey.StepEnum, state: Journey.StateEnum = 'in_progress'): Observable<Journey> {
-    return of({ state, step });
+  function journey(
+    step: Journey.StepEnum,
+    state: Journey.StateEnum = 'in_progress',
+    verified?: boolean,
+  ): Observable<Journey> {
+    const email_verification =
+      verified === undefined
+        ? undefined
+        : { email: 'maria@example.org', verified, resend_available_at: '2026-11-11T10:03:00Z', sends_left: 2 };
+    return of({ state, step, email_verification });
   }
 
   async function run(path: string): Promise<true | string> {
@@ -39,32 +47,52 @@ describe('journeyStepGuard', () => {
     return result instanceof UrlTree ? TestBed.inject(Router).serializeUrl(result) : (result as true);
   }
 
-  it('protects the Datos and QR routes', () => {
+  it('protects the Datos, Verificar correo and QR routes', () => {
     const screens = routes.find((r) => r.path === '' && r.children)?.children ?? [];
 
     expect(screens.find((r) => r.path === 'user-data')?.canActivate).toEqual([journeyStepGuard]);
+    expect(screens.find((r) => r.path === 'verify-email')?.canActivate).toEqual([journeyStepGuard]);
     expect(screens.find((r) => r.path === 'offer')?.canActivate).toEqual([journeyStepGuard]);
   });
 
-  it.each<[string, Journey.StepEnum]>([
-    ['entitlement', 'identified'],
-    ['user-data', 'entitlement_confirmed'],
-    ['offer', 'entitlement_confirmed'],
-    ['offer', 'offer_obtained'],
-  ])('EC-01: lets the holder into %s with step %s', async (path, step) => {
-    getJourney.mockReturnValue(journey(step));
+  it.each<[string, Journey.StepEnum, boolean | undefined]>([
+    ['entitlement', 'identified', undefined],
+    ['user-data', 'entitlement_confirmed', undefined],
+    ['verify-email', 'entitlement_confirmed', false],
+    ['offer', 'entitlement_confirmed', true],
+    ['offer', 'email_verified', true],
+    ['offer', 'offer_obtained', undefined],
+    // Cambiar el correo y atrás desde Verificar correo vuelven a Datos, con el correo verificado o no (AC-07).
+    ['user-data', 'entitlement_confirmed', false],
+    ['user-data', 'email_verified', true],
+    ['user-data', 'email_verified', false],
+    // El paso no retrocede: con un código nuevo pedido, el paso sigue siendo email_verified (decisión 2).
+    ['verify-email', 'email_verified', false],
+  ])('EC-01: lets the holder into %s with step %s and verified=%s', async (path, step, verified) => {
+    getJourney.mockReturnValue(journey(step, 'in_progress', verified));
 
     expect(await run(path)).toBe(true);
   });
 
-  it.each<[string, Journey.StepEnum, string]>([
-    ['user-data', 'identified', '/entitlement'],
-    ['offer', 'identified', '/entitlement'],
-    ['entitlement', 'entitlement_confirmed', '/user-data'],
-    ['user-data', 'offer_obtained', '/offer'],
-    ['entitlement', 'offer_obtained', '/offer'],
-  ])('AC-09: on %s with step %s, goes to %s', async (path, step, target) => {
-    getJourney.mockReturnValue(journey(step));
+  it.each<[string, Journey.StepEnum, boolean | undefined, string]>([
+    ['user-data', 'identified', undefined, '/entitlement'],
+    ['offer', 'identified', undefined, '/entitlement'],
+    ['verify-email', 'identified', undefined, '/entitlement'],
+    ['entitlement', 'entitlement_confirmed', undefined, '/user-data'],
+    ['entitlement', 'entitlement_confirmed', false, '/verify-email'],
+    ['entitlement', 'email_verified', true, '/offer'],
+    ['user-data', 'offer_obtained', undefined, '/offer'],
+    ['entitlement', 'offer_obtained', undefined, '/offer'],
+    ['verify-email', 'offer_obtained', undefined, '/offer'],
+    // AC-09: sin código pendiente no hay nada que verificar.
+    ['verify-email', 'entitlement_confirmed', undefined, '/user-data'],
+    ['verify-email', 'email_verified', true, '/offer'],
+    // AC-01: no se pasa a QR sin introducir el código.
+    ['offer', 'entitlement_confirmed', undefined, '/user-data'],
+    ['offer', 'entitlement_confirmed', false, '/verify-email'],
+    ['offer', 'email_verified', false, '/verify-email'],
+  ])('AC-09: on %s with step %s and verified=%s, goes to %s', async (path, step, verified, target) => {
+    getJourney.mockReturnValue(journey(step, 'in_progress', verified));
 
     expect(await run(path)).toBe(target);
   });
@@ -75,7 +103,7 @@ describe('journeyStepGuard', () => {
     expect(await run('offer')).toBe(true);
   });
 
-  it.each(['entitlement', 'user-data'])('EC-01 (EUD-286): a completed journey on %s goes to QR', async (path) => {
+  it.each(['entitlement', 'user-data', 'verify-email'])('EC-01 (EUD-286): a completed journey on %s goes to QR', async (path) => {
     getJourney.mockReturnValue(journey('offer_obtained', 'completed'));
 
     expect(await run(path)).toBe('/offer');

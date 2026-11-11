@@ -1,32 +1,24 @@
 import { Injectable, signal } from '@angular/core';
 
-/** Llamada que pide la oferta: la confirmación con el correo o un código nuevo. */
+/** Llamada que pide la oferta: la confirmación o un código nuevo. */
 export type OfferCall = 'confirmation' | 'offers';
 
 /**
- * Lo que la interfaz necesita recordar entre Datos, QR y la pantalla de
- * error para pedir la oferta (EUD-286): el correo que ha escrito el titular
- * y qué llamada hay que hacer o repetir. Solo en memoria (design.md AD-3):
- * recargar la página lo pierde, y entonces QR sin oferta vuelve a Datos
- * (ac.md EC-03).
+ * Lo que la interfaz necesita recordar entre QR y la pantalla de error para
+ * pedir la oferta (EUD-286): qué llamada hay que hacer o repetir. El correo
+ * no se guarda: lo verifica el servicio y la confirmación no lo recibe
+ * (EUD-358). Solo en memoria (design.md AD-3): recargar la página lo pierde, y
+ * entonces QR decide con lo que dice `GET /journey`.
  */
 @Injectable({ providedIn: 'root' })
 export class JourneyIssuanceStore {
-  private readonly _email = signal<string | null>(null);
   private readonly _pendingCall = signal<OfferCall | null>(null);
-  private readonly _emailRejected = signal(false);
 
-  /** Correo con el que se pide la confirmación; también el de la cuenta del wallet. */
-  readonly email = this._email.asReadonly();
   /** Llamada que QR (generando) tiene que hacer al entrar. */
   readonly pendingCall = this._pendingCall.asReadonly();
-  /** El servicio ha rechazado el correo (400): Datos lo marca como no válido (ac.md ES-04). */
-  readonly emailRejected = this._emailRejected.asReadonly();
 
-  /** El titular confirma sus datos en Datos: QR pedirá la confirmación con este correo. */
-  confirm(email: string): void {
-    this._email.set(email);
-    this._emailRejected.set(false);
+  /** El correo está verificado: QR pedirá la confirmación. */
+  requestConfirmation(): void {
     this._pendingCall.set('confirmation');
   }
 
@@ -40,16 +32,8 @@ export class JourneyIssuanceStore {
     this._pendingCall.set(null);
   }
 
-  /** El servicio ha rechazado el correo: Datos lo muestra marcado. */
-  rejectEmail(): void {
-    this._emailRejected.set(true);
-    this._pendingCall.set(null);
-  }
-
-  /** El recorrido acaba: no queda nada del titular en memoria. */
+  /** El recorrido acaba: no queda nada en memoria. */
   clear(): void {
-    this._email.set(null);
     this._pendingCall.set(null);
-    this._emailRejected.set(false);
   }
 }

@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 import { journeyStepGuard } from './core/journey/journey-step.guard';
-import { DATA_PATH, ENTITLEMENT_PATH, QR_PATH } from './core/journey/journey-paths';
+import { DATA_PATH, EMAIL_PATH, ENTITLEMENT_PATH, QR_PATH } from './core/journey/journey-paths';
 import { CONFIG_UNAVAILABLE_PATH, configAvailableGuard, configUnavailableGuard } from './core/guards/config-available.guard';
 import { legacyQueryParamsGuard } from './core/guards/legacy-query-params.guard';
 import { ERROR_PATH, errorReasonGuard } from './features/error/error-reason';
@@ -47,6 +47,14 @@ export const routes: Routes = [
           import('./features/portal/user-data/user-data.component').then(
             (m) => m.UserDataComponent,
           ),
+        canActivate: [journeyStepGuard],
+      },
+      {
+        // Paso Verificar correo (EUD-358): el código que el servicio envió al correo de Datos.
+        path: EMAIL_PATH,
+        data: { back: DATA_PATH },
+        loadComponent: () =>
+          import('./features/portal/verify-email/verify-email.component').then((m) => m.VerifyEmailComponent),
         canActivate: [journeyStepGuard],
       },
       {

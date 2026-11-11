@@ -79,16 +79,16 @@ describe('OfferFlowService', () => {
     return of({ state: 'in_progress', step: 'entitlement_confirmed', ...overrides });
   }
 
-  describe('coming from Datos', () => {
-    beforeEach(() => store.confirm('maria@example.org'));
+  describe('with the confirmation pending', () => {
+    beforeEach(() => store.requestConfirmation());
 
-    it('AC-01, AC-02: confirms with only the email and presents the onboarding address as it comes', async () => {
+    it('AC-02: confirms with no body and presents the onboarding address as it comes', async () => {
       const offer = ticketOffer();
       journeyApi.confirmAndIssue.mockReturnValue(of(offer));
 
       await flow().enter();
 
-      expect(journeyApi.confirmAndIssue).toHaveBeenCalledWith({ email: 'maria@example.org' });
+      expect(journeyApi.confirmAndIssue).toHaveBeenCalledWith();
       expect(journeyApi.newOffer).not.toHaveBeenCalled();
       expect(presenter.status()).toBe('ready');
       expect(presenter.address()?.url).toBe(offer.onboarding_url);
@@ -125,7 +125,6 @@ describe('OfferFlowService', () => {
 
       expect(navigate).toHaveBeenCalledWith(['/', 'error', reason]);
       expect(store.pendingCall()).toBe('confirmation');
-      expect(store.email()).toBe('maria@example.org');
       expect(presenter.address()).toBeNull();
     });
 
@@ -138,22 +137,12 @@ describe('OfferFlowService', () => {
       expect(presenter.status()).toBe('loading');
     });
 
-    it.each(['email_required', 'email_invalid'])('ES-04: %s goes back to Datos with the email marked', async (type) => {
-      journeyApi.confirmAndIssue.mockReturnValue(problem(type, 400));
-
-      await flow().enter();
-
-      expect(store.emailRejected()).toBe(true);
-      expect(store.pendingCall()).toBeNull();
-      expect(navigate).toHaveBeenCalledWith(['/', 'user-data']);
-    });
-
-    it('AC-07, W4: offer_not_renewable forgets the email, discards the tokens and goes to the not renewable case', async () => {
+    it('AC-07, W4: offer_not_renewable forgets the pending call, discards the tokens and goes to the not renewable case', async () => {
       journeyApi.confirmAndIssue.mockReturnValue(problem('offer_not_renewable', 409));
 
       await flow().enter();
 
-      expect(store.email()).toBeNull();
+      expect(store.pendingCall()).toBeNull();
       expect(discardTokens).toHaveBeenCalledTimes(1);
       expect(navigate).toHaveBeenCalledWith(['/', 'error', 'offer-not-renewable']);
     });
@@ -236,20 +225,19 @@ describe('OfferFlowService', () => {
   });
 
   describe('repeating the call that failed (EC-04)', () => {
-    it('AC-08: after a failed confirmation, entering QR again repeats the confirmation with the same email', async () => {
-      store.confirm('maria@example.org');
+    it('AC-08, EC-05: after a failed confirmation, entering QR again repeats the confirmation with no body', async () => {
+      store.requestConfirmation();
       journeyApi.confirmAndIssue.mockReturnValueOnce(problem('onboarding_unavailable', 503)).mockReturnValueOnce(of(ticketOffer()));
       await flow().enter();
 
       await flow().enter();
 
-      expect(journeyApi.confirmAndIssue).toHaveBeenNthCalledWith(2, { email: 'maria@example.org' });
+      expect(journeyApi.confirmAndIssue).toHaveBeenNthCalledWith(2);
       expect(journeyApi.newOffer).not.toHaveBeenCalled();
       expect(presenter.status()).toBe('ready');
     });
 
     it('AC-08: after a failed new code, entering QR again asks for a new code, not a confirmation', async () => {
-      store.confirm('maria@example.org');
       store.offerReceived();
       presenter.present({ url: `${WALLET}/t/old`, expiresAt: Date.now() - 1000 });
       journeyApi.newOffer.mockReturnValueOnce(problem('onboarding_unavailable', 503)).mockReturnValueOnce(of(ticketOffer('new')));
@@ -338,7 +326,35 @@ describe('OfferFlowService', () => {
       expect(presenter.status()).toBe('expired');
     });
 
-    it('EC-03: without an offer and without the email in memory, goes back to Datos and does not confirm', async () => {
+    const verification = (verified: boolean): Journey['email_verification'] => ({
+      email: 'maria@example.org',
+      verified,
+      resend_available_at: IN_TEN_MINUTES(),
+      sends_left: 2,
+    });
+
+    it('AC-02, AC-09: without an offer and with the email verified, confirms with no body and keeps the call to repeat it', async () => {
+      const offer = ticketOffer();
+      journeyApi.getJourney.mockReturnValue(journey({ step: 'email_verified', email_verification: verification(true) }));
+      journeyApi.confirmAndIssue.mockReturnValue(of(offer));
+
+      await flow().enter();
+
+      expect(journeyApi.confirmAndIssue).toHaveBeenCalledWith();
+      expect(presenter.address()?.url).toBe(offer.onboarding_url);
+    });
+
+    it('AC-09: after reloading with the email verified, a failed confirmation is repeated', async () => {
+      journeyApi.getJourney.mockReturnValue(journey({ step: 'email_verified', email_verification: verification(true) }));
+      journeyApi.confirmAndIssue.mockReturnValue(problem('onboarding_unavailable', 503));
+
+      await flow().enter();
+
+      expect(store.pendingCall()).toBe('confirmation');
+      expect(navigate).toHaveBeenCalledWith(['/', 'error', 'onboarding-unavailable']);
+    });
+
+    it('AC-09: without an offer and without a code sent, goes back to Datos and does not confirm', async () => {
       journeyApi.getJourney.mockReturnValue(journey());
 
       await flow().enter();
@@ -347,15 +363,30 @@ describe('OfferFlowService', () => {
       expect(journeyApi.confirmAndIssue).not.toHaveBeenCalled();
     });
 
-    it('without an offer but with the email in memory, confirms', async () => {
-      store.confirm('maria@example.org');
-      store.offerReceived();
-      journeyApi.getJourney.mockReturnValue(journey());
-      journeyApi.confirmAndIssue.mockReturnValue(of(ticketOffer()));
+    it('AC-09: without an offer and with the code pending, goes to Verificar correo and does not confirm', async () => {
+      journeyApi.getJourney.mockReturnValue(journey({ email_verification: verification(false) }));
 
       await flow().enter();
 
-      expect(journeyApi.confirmAndIssue).toHaveBeenCalledWith({ email: 'maria@example.org' });
+      expect(navigate).toHaveBeenCalledWith(['/', 'verify-email'], { replaceUrl: true });
+      expect(journeyApi.confirmAndIssue).not.toHaveBeenCalled();
+    });
+
+    it('AC-07: a new code asked after verifying (step email_verified, not verified) goes to Verificar correo', async () => {
+      journeyApi.getJourney.mockReturnValue(journey({ step: 'email_verified', email_verification: verification(false) }));
+
+      await flow().enter();
+
+      expect(navigate).toHaveBeenCalledWith(['/', 'verify-email'], { replaceUrl: true });
+      expect(journeyApi.confirmAndIssue).not.toHaveBeenCalled();
+    });
+
+    it('a completed journey with no offer goes to the issuance case instead of waiting forever', async () => {
+      journeyApi.getJourney.mockReturnValue(journey({ state: 'completed', step: 'offer_obtained' }));
+
+      await flow().enter();
+
+      expect(navigate).toHaveBeenCalledWith(['/', 'error', 'issuance-failed'], { replaceUrl: true });
     });
 
     it('a 410 from GET /journey goes to the session expired case', async () => {
@@ -376,15 +407,15 @@ describe('OfferFlowService', () => {
   });
 
   describe('He terminado (AC-15)', () => {
-    beforeEach(() => store.confirm('maria@example.org'));
+    beforeEach(() => store.requestConfirmation());
 
-    it('ends the journey, forgets the email, discards the tokens and goes to Inicio', async () => {
+    it('ends the journey, forgets the pending call, discards the tokens and goes to Inicio', async () => {
       journeyApi.withdrawJourney.mockReturnValue(journey({ state: 'completed', step: 'offer_obtained' }));
 
       await flow().finish();
 
       expect(journeyApi.withdrawJourney).toHaveBeenCalledTimes(1);
-      expect(store.email()).toBeNull();
+      expect(store.pendingCall()).toBeNull();
       expect(discardTokens).toHaveBeenCalledTimes(1);
       expect(navigate).toHaveBeenCalledWith(['/']);
     });
@@ -403,7 +434,7 @@ describe('OfferFlowService', () => {
 
       await flow().finish();
 
-      expect(store.email()).toBeNull();
+      expect(store.pendingCall()).toBeNull();
       expect(navigate).not.toHaveBeenCalled();
     });
 

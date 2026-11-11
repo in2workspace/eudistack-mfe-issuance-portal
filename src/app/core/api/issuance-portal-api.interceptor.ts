@@ -39,9 +39,15 @@ function toApiProblemError(err: unknown): ApiProblemError {
   }
   const body: unknown = err.error;
   if (isProblem(body)) {
-    return new ApiProblemError(body.type, body.status, body.title);
+    return new ApiProblemError(body.type, body.status, body.title, retryAfterSeconds(err));
   }
   return new ApiProblemError(UNEXPECTED_ERROR, err.status, 'Unexpected error');
+}
+
+/** `Retry-After` en segundos enteros; una fecha HTTP o un valor ilegible se ignoran. */
+function retryAfterSeconds(err: HttpErrorResponse): number | undefined {
+  const value = err.headers?.get('Retry-After');
+  return value !== null && value !== undefined && /^\d+$/.test(value.trim()) ? Number(value.trim()) : undefined;
 }
 
 function isProblem(body: unknown): body is { type: string; title: string; status: number } {
