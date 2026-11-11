@@ -417,14 +417,44 @@ describe('UserDataComponent', () => {
         }
       });
 
-      it('AC-07: resend_too_soon with the email already verified stays in Datos, the guard would send it to QR', () => {
-        sendEmailCode.mockReturnValue(problem('resend_too_soon', 429, 120));
+      it('AC-07: Continuar with the email already verified, unchanged, sends no code and goes straight to QR', () => {
         create(PREVIEW, verification({ verified: true }));
 
         click('Continuar');
 
-        expect(navigate).not.toHaveBeenCalled();
-        expect(element().textContent).toContain('Podrás pedir otro código en');
+        expect(sendEmailCode).not.toHaveBeenCalled();
+        expect(navigate).toHaveBeenCalledWith(['/', 'offer']);
+      });
+
+      it('AC-07: the verified email typed with spaces around it is still the same email', () => {
+        create(PREVIEW, verification({ verified: true }));
+        type(' maria@example.org ');
+
+        click('Continuar');
+
+        expect(sendEmailCode).not.toHaveBeenCalled();
+        expect(navigate).toHaveBeenCalledWith(['/', 'offer']);
+      });
+
+      it('AC-07: the comparison is exact: the same verified email in another case sends a new code', () => {
+        sendEmailCode.mockReturnValue(of(verification()));
+        create(PREVIEW, verification({ verified: true }));
+        type('MARIA@example.org');
+
+        click('Continuar');
+
+        expect(sendEmailCode).toHaveBeenCalledWith({ email: 'MARIA@example.org' }, 'es');
+      });
+
+      it('AC-07: a different email than the verified one still sends a code', () => {
+        sendEmailCode.mockReturnValue(of(verification({ email: 'nuevo@example.org' })));
+        create(PREVIEW, verification({ verified: true }));
+        type('nuevo@example.org');
+
+        click('Continuar');
+
+        expect(sendEmailCode).toHaveBeenCalledWith({ email: 'nuevo@example.org' }, 'es');
+        expect(navigate).toHaveBeenCalledWith(['/', 'verify-email']);
       });
 
       it('AC-07: resend_too_soon with no Retry-After says to try again later', () => {

@@ -18,7 +18,7 @@ import {
 import { AttestationPreview, EmailVerification, JourneyApi } from '../../../core/api/generated/journey';
 import { TenantLanguageService } from '../../../core/branding/tenant-language.service';
 import { JourneyNavigator, isJourneyClosed } from '../../../core/journey/journey-navigator';
-import { EMAIL_PATH } from '../../../core/journey/journey-paths';
+import { EMAIL_PATH, QR_PATH } from '../../../core/journey/journey-paths';
 import { SESSION_ACTIONS } from '../../../core/session/session-actions';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { injectCountdown } from '../../../shared/countdown';
@@ -106,6 +106,11 @@ export class UserDataComponent implements OnInit {
     }
     this.continuing.set(true);
     this.sendProblem.set(null);
+    if (this.isVerifiedEmail()) {
+      // El correo escrito ya está verificado: no hace falta otro código, QR confirma con él (AC-07).
+      void this.router.navigate(['/', QR_PATH]).finally(() => this.continuing.set(false));
+      return;
+    }
     this.journeyApi
       .sendEmailCode({ email: this.email.value.trim() }, this.language.current() || undefined)
       .subscribe({
@@ -160,6 +165,11 @@ export class UserDataComponent implements OnInit {
         this.sendProblem.set('unavailable');
     }
     this.continuing.set(false);
+  }
+
+  private isVerifiedEmail(): boolean {
+    const verification = this.verification();
+    return verification !== null && verification.verified && verification.email === this.email.value.trim();
   }
 
   private hasPendingCodeForTypedEmail(): boolean {
