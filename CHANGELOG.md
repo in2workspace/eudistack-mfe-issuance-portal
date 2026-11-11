@@ -10,6 +10,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **EUD-358 — paso Verificar correo**:
+  - Ruta `verify-email` entre Datos y QR. Muestra el correo, un componente propio de 6 casillas (admite pegar el código, el autocompletado del sistema y el teclado), Reenviar con la cuenta atrás, Cambiar el correo y Cancelar.
+  - El código correcto lleva a QR. Los mensajes del código se anuncian en `aria-live`.
+  - Sin más códigos en el recorrido, Volver al inicio retira el recorrido y descarta los tokens.
+
 - **EUD-286 — Comprobación, Datos y QR conectados con el servicio del portal**:
   - Comprobación (`entitlement`), con la guarda de pasos y botón de volver a Inicio: indicador de espera mientras `POST /entitlement` comprueba el derecho; `confirmed` pasa a Datos, `not_confirmed` al caso sin derecho y 503 `authentic_source_unavailable`, un fallo de red o un error sin Problem al caso de fuente no disponible, cuyo reintento repite la comprobación. Sale sin dejar Comprobación en el historial.
   - Los avisos de espera de Comprobación, Datos y QR y el de código caducado se anuncian como estado (`<output>`). En Comprobación, el texto de espera es también el título de la pantalla (`h1`).
@@ -33,6 +38,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - Ayuda enviada (`incidents/sent`), sin botón de volver, con el plazo de respuesta que devuelve el servicio, que se guarda solo en memoria. Solo se llega justo después de enviar: un enlace directo, una recarga o el historial llevan a Inicio.
 
 ### Changed
+
+- **EUD-358**: Continuar en Datos envía el código al correo con el idioma de la interfaz (`Accept-Language`) y va a Verificar correo. Los fallos del envío se muestran en Datos: correo no válido, envío no disponible y demasiados envíos con cuenta atrás.
+- **EUD-358**: QR confirma sin cuerpo y solo con el correo verificado. El correo ya no se guarda en memoria para la confirmación.
+- **EUD-358**: la guarda y el navegador del recorrido eligen entre Datos, Verificar correo y QR según `email_verification`. El interceptor guarda `Retry-After` en el error.
+- **EUD-358**: contrato `api/journey.openapi.yaml` actualizado con la verificación del correo.
 
 - **EUD-286 — recorrido `completed` en QR**: el servicio pasa el recorrido a `completed` con la primera oferta. La guarda y la ruta del paso lo llevan a QR, no a Inicio, para que el código nuevo, los reintentos de la pantalla de error y el 409 `step_not_allowed` sigan en QR. Una sesión caducada olvida también el correo escrito en Datos. Abrir el wallet en el ordenador solo admite direcciones `https`. `npm run api:sync` copia el contrato de Fuente auténtica de `EUD-330-fuente-autentica`.
 
