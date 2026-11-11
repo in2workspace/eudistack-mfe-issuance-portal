@@ -55,7 +55,7 @@ export class CodeInputComponent {
   readonly completed = output<string>();
 
   protected readonly labelId = `code-input-label-${nextId++}`;
-  protected readonly digits: string[] = Array<string>(6).fill('');
+  protected readonly digits: string[] = new Array<string>(6).fill('');
   private readonly boxes = viewChildren<ElementRef<HTMLInputElement>>('box');
 
   constructor() {
