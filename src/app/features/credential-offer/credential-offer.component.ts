@@ -4,7 +4,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import QRCode from 'qrcode';
 import { CredentialOfferService, MAX_QR_PAYLOAD_CHARS } from './credential-offer.service';
 import { OfferFlowService } from './offer-flow.service';
-import { formatCountdown } from './credential-offer-expiry';
+import { formatCountdown } from '../../shared/format-countdown';
 import { MobileLayout, OPEN_WALLET } from '../../core/layout/mobile-layout';
 import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/confirm-dialog.component';
 import { CredentialOfferUrlBoxComponent } from '../../shared/components/credential-offer-url-box/credential-offer-url-box.component';

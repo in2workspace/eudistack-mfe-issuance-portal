@@ -1,5 +1,5 @@
 import { DestroyRef, NgZone, Signal, computed, inject, signal } from '@angular/core';
-import { formatCountdown } from '../features/credential-offer/credential-offer-expiry';
+import { formatCountdown } from './format-countdown';
 
 /** Cuenta atrás hasta un instante, para los plazos que da el servicio (reenvío del código, `Retry-After`). */
 export interface Countdown {
