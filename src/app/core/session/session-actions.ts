@@ -3,8 +3,9 @@ import { Router } from '@angular/router';
 
 /**
  * Lo que la pantalla de error necesita de la sesión del titular con el
- * Verifier. Lo provee el cliente OIDC (EUD-314); hasta entonces no hay
- * tokens que descartar y volver a identificarse empieza en Inicio.
+ * Verifier. La aplicación lo provee con el cliente OIDC (`provideHolderAuth`);
+ * este valor por defecto es el de quien no lo registra, sin tokens que
+ * descartar, y volver a identificarse empieza en Inicio.
  */
 export interface SessionActions {
   /** Vuelve a llevar al titular al inicio de sesión del Verifier. */

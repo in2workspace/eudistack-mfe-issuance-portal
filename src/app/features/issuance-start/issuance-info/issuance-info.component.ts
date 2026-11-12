@@ -57,8 +57,7 @@ export class IssuanceInfoComponent {
   });
 
   /**
-   * Lleva al titular al inicio de sesión del Verifier. EUD-314 da la
-   * implementación real de `restartLogin()`; hasta entonces navega a Inicio.
+   * Lleva al titular al inicio de sesión del Verifier (EUD-314).
    */
   onStart(): Promise<void> {
     return this.session.restartLogin();

@@ -6,7 +6,8 @@ import { ISSUANCE_PORTAL_API_BASE_PATH, isIncidentRequest } from './issuance-por
 
 /**
  * Access Token del titular para las llamadas al servicio, o `null` si no hay.
- * Por defecto no hay ninguno: lo provee el cliente OIDC del Verifier (EUD-314).
+ * Por defecto no hay ninguno: la aplicación lo provee con el Access Token del
+ * cliente OIDC del Verifier (`provideHolderAuth`).
  */
 export const ISSUANCE_PORTAL_ACCESS_TOKEN = new InjectionToken<() => string | null>('ISSUANCE_PORTAL_ACCESS_TOKEN', {
   providedIn: 'root',
