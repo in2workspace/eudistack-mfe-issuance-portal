@@ -1,0 +1,98 @@
+<div class="min-h-screen bg-gray-50">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div class="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border p-8">
+      @if (loading()) {
+        <output class="flex flex-col items-center text-center py-12">
+          <svg class="w-10 h-10 text-brand-accent animate-spin mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          <span class="text-gray-600">{{ 'verifyEmail.loading' | translate }}</span>
+        </output>
+      } @else {
+        <div class="text-center">
+          <h1 class="text-2xl font-bold text-gray-900 mb-2">{{ 'verifyEmail.title' | translate }}</h1>
+          <p class="text-gray-600">{{ 'verifyEmail.sentTo' | translate }}</p>
+          <p class="mt-1 font-medium text-gray-900 break-all">{{ verification()?.email }}</p>
+          @if (!noMoreCodes()) {
+            <button
+              type="button"
+              (click)="onChangeEmail()"
+              class="mt-2 text-sm font-medium text-brand-accent underline hover:opacity-80"
+            >
+              {{ 'verifyEmail.change' | translate }}
+            </button>
+          }
+        </div>
+
+        @if (!noMoreCodes()) {
+          <app-code-input
+            [label]="'verifyEmail.code.label' | translate"
+            describedBy="verify-email-message"
+            [invalid]="message() === 'invalid'"
+            [autofocus]="true"
+            (completed)="onCode($event)"
+          />
+        }
+
+        <!-- Región aria-live="polite" siempre presente: los mensajes se anuncian al aparecer. -->
+        <div id="verify-email-message" aria-live="polite" class="min-h-6 text-center text-sm">
+          @if (message(); as key) {
+            <p [class]="messageIsError() ? 'text-red-700' : 'text-gray-600'">
+              {{ 'verifyEmail.message.' + key | translate: { countdown: resend.text() } }}
+            </p>
+          }
+        </div>
+
+        @if (!noMoreCodes()) {
+          <div class="flex flex-col items-center gap-2 text-sm text-gray-600 sm:flex-row sm:justify-center">
+            <span>{{ 'verifyEmail.resend.prompt' | translate }}</span>
+            <button
+              type="button"
+              (click)="onResend()"
+              [disabled]="resend.seconds() > 0 || sending()"
+              class="inline-flex items-center justify-center rounded-md text-sm font-medium h-10 px-4 border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            >
+              @if (resend.seconds() > 0) {
+                {{ 'verifyEmail.resend.wait' | translate: { countdown: resend.text() } }}
+              } @else {
+                {{ 'verifyEmail.resend.action' | translate }}
+              }
+            </button>
+          </div>
+        }
+
+        <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
+          <button
+            type="button"
+            (click)="onCancel()"
+            [disabled]="withdrawing()"
+            class="inline-flex items-center justify-center rounded-md text-sm font-medium h-10 px-4 border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+          >
+            {{ 'verifyEmail.cancel' | translate }}
+          </button>
+          @if (noMoreCodes()) {
+            <button
+              type="button"
+              (click)="onWithdraw()"
+              [disabled]="withdrawing()"
+              class="inline-flex items-center justify-center rounded-md text-sm font-medium h-10 px-4 bg-brand-secondary hover:opacity-90 text-brand-secondary-contrast transition-colors disabled:opacity-50"
+            >
+              {{ 'verifyEmail.home' | translate }}
+            </button>
+          }
+        </div>
+      }
+    </div>
+  </div>
+</div>
+
+<app-confirm-dialog
+  [open]="cancelOpen()"
+  [title]="'userData.cancelDialog.title' | translate"
+  [description]="['userData.cancelDialog.description' | translate]"
+  [dismissLabel]="'userData.cancelDialog.keepGoing' | translate"
+  [confirmLabel]="'userData.cancelDialog.confirm' | translate"
+  (dismissed)="onKeepGoing()"
+  (confirmed)="onWithdraw()"
+/>

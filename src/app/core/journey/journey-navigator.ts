@@ -6,14 +6,39 @@ import { Journey, JourneyApi } from '../api/generated/journey';
 import { errorUrl } from '../../features/error/error-reason';
 import { SESSION_ACTIONS } from '../session/session-actions';
 import { JourneyIssuanceStore } from './journey-issuance.store';
-import { DATA_PATH, ENTITLEMENT_PATH, QR_PATH } from './journey-paths';
+import { DATA_PATH, EMAIL_PATH, ENTITLEMENT_PATH, QR_PATH } from './journey-paths';
 
-/** Ruta del último paso alcanzado del recorrido. */
-export const STEP_PATH: Record<Journey.StepEnum, string> = {
-  identified: ENTITLEMENT_PATH,
-  entitlement_confirmed: DATA_PATH,
-  offer_obtained: QR_PATH,
-};
+/**
+ * El derecho está confirmado y la oferta aún no se ha obtenido: el titular
+ * está en Datos, Verificar correo o QR (generando). El paso nunca retrocede
+ * (ac.md de EUD-358, decisión 2): tras la primera verificación sigue en
+ * `email_verified` aunque pida un código nuevo, así que lo que decide la
+ * pantalla es `email_verification`, no el paso.
+ */
+export function hasConfirmedEntitlement(journey: Journey): boolean {
+  return journey.step === 'entitlement_confirmed' || journey.step === 'email_verified';
+}
+
+/** Hay un código pendiente de comprobar: Verificar correo. */
+export function hasPendingEmailCode(journey: Journey): boolean {
+  return hasConfirmedEntitlement(journey) && journey.email_verification?.verified === false;
+}
+
+/** El correo está verificado y falta la oferta: QR (generando) confirma. */
+export function hasVerifiedEmail(journey: Journey): boolean {
+  return hasConfirmedEntitlement(journey) && journey.email_verification?.verified === true;
+}
+
+/** Ruta que corresponde al recorrido (prd.md §3.3, design.md §3.4, punto 5). */
+function screenPath(journey: Journey): string {
+  if (journey.step === 'identified') {
+    return ENTITLEMENT_PATH;
+  }
+  if (journey.step === 'offer_obtained' || hasVerifiedEmail(journey)) {
+    return QR_PATH;
+  }
+  return hasPendingEmailCode(journey) ? EMAIL_PATH : DATA_PATH;
+}
 
 /**
  * Recorrido en el que el titular sigue teniendo un paso: en curso o, tras la
@@ -27,7 +52,7 @@ export function isJourneyActive(journey: Journey): boolean {
 
 /** Adónde va el titular según el recorrido: la ruta de su paso o, si ya no tiene paso, Inicio. */
 export function stepUrl(journey: Journey): string[] {
-  return isJourneyActive(journey) ? ['/', STEP_PATH[journey.step]] : ['/'];
+  return isJourneyActive(journey) ? ['/', screenPath(journey)] : ['/'];
 }
 
 export function isJourneyClosed(error: unknown): boolean {
@@ -44,8 +69,8 @@ export class JourneyNavigator {
 
   /**
    * El recorrido ha caducado: descarta los tokens (design.md §3.1, punto 7) y
-   * el correo que el titular escribió en Datos, y devuelve la dirección de la
-   * sesión caducada. Es el único camino del 410, venga de una llamada, de la
+   * la llamada pendiente de la oferta, y devuelve la dirección de la sesión
+   * caducada. Es el único camino del 410, venga de una llamada, de la
    * guarda o del temporizador de inactividad.
    */
   expireSession(): string[] {

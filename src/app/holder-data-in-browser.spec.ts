@@ -50,7 +50,7 @@ describe('Holder data in the browser', () => {
     return [...read(sessionStorage), ...read(localStorage)].join('\n');
   }
 
-  it.each(['/', '/identify', '/entitlement', '/user-data', '/offer', '/incidents', '/incidents/sent', '/error/config-unavailable', '/error/session-expired', '/cliente'])(
+  it.each(['/', '/identify', '/entitlement', '/user-data', '/verify-email', '/offer', '/incidents', '/incidents/sent', '/error/config-unavailable', '/error/session-expired', '/cliente'])(
     'AC-05: visiting %s leaves no holder data in the storage or the address',
     async (url) => {
       const harness = await RouterTestingHarness.create();
@@ -102,8 +102,10 @@ describe('Holder data in the browser', () => {
     }
   });
 
-  describe('NFR-1 (EUD-286): Comprobación, Datos and QR', () => {
+  describe('NFR-1 (EUD-286, EUD-358): Comprobación, Datos, Verificar correo and QR', () => {
     const email = 'maria.holder@example.org';
+    const code = '482913';
+    const IN_THREE_MINUTES = () => new Date(Date.now() + 180_000).toISOString();
     const onboardingUrl = 'https://cgcom.example/t/Zk3q9Xw2Lp7Rt4Vb8Nc1Ha';
     const attestation = {
       type_name: 'DoctorID',
@@ -135,6 +137,16 @@ describe('Holder data in the browser', () => {
       TestBed.overrideProvider(JourneyApi, {
         useValue: {
           getJourney: () => of(journey),
+          sendEmailCode: () => {
+            const verification = { email, verified: false, resend_available_at: IN_THREE_MINUTES(), sends_left: 2 };
+            journey = { state: 'in_progress', step: 'entitlement_confirmed', attestation, email_verification: verification };
+            return of(verification);
+          },
+          checkEmailCode: () => {
+            const verification = { email, verified: true, resend_available_at: IN_THREE_MINUTES(), sends_left: 2 };
+            journey = { state: 'in_progress', step: 'email_verified', attestation, email_verification: verification };
+            return of(journey);
+          },
           confirmAndIssue: () => {
             journey = { state: 'completed', step: 'offer_obtained', attestation, offer };
             return of(offer);
@@ -160,12 +172,21 @@ describe('Holder data in the browser', () => {
       await harness.fixture.whenStable();
       harness.detectChanges();
 
-      expect(TestBed.inject(Router).url).toBe('/offer');
-      // QR pide la oferta al entrar: se deja terminar esa llamada.
+      expect(TestBed.inject(Router).url).toBe('/verify-email');
+      const first = (harness.routeNativeElement as HTMLElement).querySelector('input')!;
+      const paste = new Event('paste', { bubbles: true, cancelable: true });
+      Object.defineProperty(paste, 'clipboardData', { value: { getData: () => code } });
+      first.dispatchEvent(paste);
       await harness.fixture.whenStable();
+      harness.detectChanges();
+
+      expect(TestBed.inject(Router).url).toBe('/offer');
+      // QR lee el recorrido y pide la oferta al entrar: se dejan terminar esas llamadas.
+      await harness.fixture.whenStable();
+      await new Promise((resolve) => setTimeout(resolve));
       expect(TestBed.inject(CredentialOfferService).address()?.url).toBe(onboardingUrl);
       const browser = [storageContents(), TestBed.inject(Router).url, JSON.stringify(history.state ?? {})].join('\n');
-      for (const value of [email, onboardingUrl, 'María Holder Privada', '282809999']) {
+      for (const value of [email, code, onboardingUrl, 'María Holder Privada', '282809999']) {
         expect(browser).not.toContain(value);
       }
     });

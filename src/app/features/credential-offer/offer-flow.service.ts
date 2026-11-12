@@ -3,8 +3,6 @@ import { Router } from '@angular/router';
 import { Observable, firstValueFrom } from 'rxjs';
 import {
   ApiProblemError,
-  EMAIL_INVALID,
-  EMAIL_REQUIRED,
   ISSUANCE_REJECTED,
   ISSUANCE_UNAVAILABLE,
   NETWORK_ERROR,
@@ -13,11 +11,11 @@ import {
   STEP_NOT_ALLOWED,
   UNEXPECTED_ERROR,
 } from '../../core/api/api-problem.error';
-import { JourneyApi, Offer } from '../../core/api/generated/journey';
+import { Journey, JourneyApi, Offer } from '../../core/api/generated/journey';
 import { PortalConfigService } from '../../core/config/portal-config.service';
 import { JourneyIssuanceStore, OfferCall } from '../../core/journey/journey-issuance.store';
 import { JourneyNavigator, isJourneyClosed, stepUrl } from '../../core/journey/journey-navigator';
-import { DATA_PATH, QR_PATH } from '../../core/journey/journey-paths';
+import { QR_PATH } from '../../core/journey/journey-paths';
 import { SESSION_ACTIONS } from '../../core/session/session-actions';
 import { ErrorReason, errorUrl } from '../error/error-reason';
 import { CredentialOfferService } from './credential-offer.service';
@@ -39,9 +37,11 @@ const ISSUANCE_FAILURES: Readonly<Record<string, ErrorReason>> = {
 
 /**
  * Pide la oferta al servicio y la presenta en QR (EUD-286, ac.md AC-08,
- * EC-02 a EC-04, ES-01 a ES-04). Qué llamada hacer lo dice
- * `JourneyIssuanceStore`: la confirmación con el correo al llegar de Datos, o
- * un código nuevo tras caducar el QR, y, tras un fallo, la misma que falló.
+ * EC-02 a EC-04, ES-01 a ES-04). La confirmación no lleva cuerpo: usa el
+ * correo que el servicio ya verificó (EUD-358). Qué llamada hacer lo dice
+ * `JourneyIssuanceStore` o, sin llamada pendiente, `GET /journey`: la
+ * confirmación con el correo verificado, un código nuevo tras caducar el QR y,
+ * tras un fallo, la misma que falló.
  * Se provee en la pantalla QR: si el titular ya ha salido, no navega ni
  * presenta nada.
  */
@@ -74,11 +74,12 @@ export class OfferFlowService {
     if (journey.offer) {
       // Recarga con la oferta ya obtenida: se presenta la que tiene el servicio (EC-02).
       this.present(journey.offer);
-    } else if (this.store.email()) {
+    } else if (journey.email_verification?.verified) {
+      this.store.requestConfirmation();
       return this.request('confirmation');
     } else {
-      // Sin el correo, que solo vive en memoria, no se puede confirmar: vuelta a Datos (EC-03).
-      void this.router.navigate(['/', DATA_PATH], { replaceUrl: true });
+      // Sin el correo verificado no se puede confirmar (AC-09): al paso que toca, Datos o Verificar correo.
+      this.leaveForStep(journey);
     }
   }
 
@@ -132,8 +133,18 @@ export class OfferFlowService {
 
   private call(call: OfferCall): Observable<Offer> {
     return call === 'confirmation'
-      ? this.journeyApi.confirmAndIssue({ email: this.store.email() ?? undefined })
+      ? this.journeyApi.confirmAndIssue()
       : this.journeyApi.newOffer();
+  }
+
+  /**
+   * Va a la ruta del paso. Si esa ruta es la propia QR (un recorrido sin
+   * oferta que el servicio da por completado) el router no navegaría y la
+   * pantalla se quedaría en «generando»: se va al caso de emisión.
+   */
+  private leaveForStep(journey: Journey): void {
+    const url = stepUrl(journey);
+    void this.router.navigate(url.at(-1) === QR_PATH ? errorUrl('issuance-failed') : url, { replaceUrl: true });
   }
 
   /** Sin una dirección que funcione no hay QR: error de emisión (ES-03). */
@@ -165,9 +176,6 @@ export class OfferFlowService {
       this.store.clear();
       this.session.discardTokens();
       void this.router.navigate(errorUrl('offer-not-renewable'));
-    } else if (error.type === EMAIL_REQUIRED || error.type === EMAIL_INVALID) {
-      this.store.rejectEmail();
-      void this.router.navigate(['/', DATA_PATH]);
     } else if (error.type === STEP_NOT_ALLOWED) {
       // El servicio ya tiene una oferta vigente (desfase de reloj en un código
       // nuevo, o una confirmación repetida con atrás y adelante): se presenta (ES-02).

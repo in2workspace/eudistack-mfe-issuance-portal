@@ -33,6 +33,16 @@ describe('routes', () => {
     expect(offer.canActivate).toEqual([journeyStepGuard]);
   });
 
+  it('EUD-358: "verify-email" lazy-loads VerifyEmailComponent, is protected by journeyStepGuard and goes back to Datos', async () => {
+    const verifyEmail = findRoute('verify-email');
+
+    const loaded = await (verifyEmail.loadComponent as () => Promise<unknown>)();
+
+    expect((loaded as { name: string }).name).toBe('VerifyEmailComponent');
+    expect(verifyEmail.canActivate).toEqual([journeyStepGuard]);
+    expect(verifyEmail.data?.['back']).toBe('user-data');
+  });
+
   it('"incidents/sent" lazy-loads IncidentSentComponent, only after sending an incident, without a back button', async () => {
     const sent = findRoute('incidents/sent');
 

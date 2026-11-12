@@ -14,7 +14,12 @@ info:
 
     The journey is linked to the holder of the token. A holder has at most one journey in progress per tenant,
     and every call works on that journey. The verified identity and the attestation data live only in the
-    service and never come from the browser: this module only accepts the holder's confirmation and the email.
+    service and never come from the browser: this module only accepts the holder's confirmation, the email and
+    the code that verifies it.
+
+    Before confirming, the holder verifies the email with a 6-digit code sent to it (valid 10 minutes, 5
+    attempts; a new code voids the previous one). At most one send every 3 minutes, 3 per journey and 10 per
+    origin and hour. The confirmation, the issuance request and the onboarding ticket use only the verified email.
 
     Journey states: `in_progress`, `completed` (an offer was obtained) and `withdrawn` (cancelled by the
     holder, not entitled according to the authentic source, or expired after 15 minutes of inactivity, before
@@ -119,48 +124,137 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "410": { $ref: "#/components/responses/JourneyClosed" }
 
+  /journey/email-verification:
+    post:
+      tags: [Journey]
+      operationId: sendEmailCode
+      summary: Send a verification code to the holder's email
+      description: |
+        Requires a confirmed entitlement and no offer delivered yet. Sends a 6-digit code to `email`, valid 10
+        minutes with 5 attempts. A new code voids the previous one, also for another email, and the journey's
+        email is no longer verified until the new code is checked (step back to `entitlement_confirmed`).
+
+        At most one send every 3 minutes and 3 sends per journey, plus 10 sends per origin and hour. A send that
+        could not go out does not count. The email of the code is written in the language of `Accept-Language`
+        when the service has it, and in Spanish otherwise.
+      security: [{ idpAccessToken: [] }]
+      parameters:
+        - name: Accept-Language
+          in: header
+          required: false
+          schema: { type: string }
+          description: Language the interface is showing, for the code email.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email, maxLength: 254 }
+      responses:
+        "202":
+          description: Code sent.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EmailVerification" }
+        "400":
+          description: "`type` `email_required` or `email_invalid`."
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "409": { $ref: "#/components/responses/StepNotAllowed" }
+        "429":
+          description: |
+            No code is sent.
+            - `type` `resend_too_soon`: less than 3 minutes since the last send. `Retry-After` gives the seconds left.
+            - `type` `too_many_codes`: the journey already sent 3 codes. The holder starts again.
+            - `type` `too_many_requests`: 10 sends from the same origin in the last hour. `Retry-After` gives the seconds left.
+          headers:
+            Retry-After:
+              schema: { type: integer }
+              description: Seconds until another send is allowed. Absent with `too_many_codes`.
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "410": { $ref: "#/components/responses/JourneyClosed" }
+        "503":
+          description: "`type` `email_unavailable`: the code email could not be sent. It does not count as a send."
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /journey/email-verification/code:
+    post:
+      tags: [Journey]
+      operationId: checkEmailCode
+      summary: Check the verification code
+      description: |
+        Checks the code of the pending verification. If it is right, the email becomes the journey's verified
+        email, the code stops working and the step becomes `email_verified`. A wrong code uses one attempt.
+      security: [{ idpAccessToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: { type: string, pattern: "^[0-9]{6}$" }
+      responses:
+        "200":
+          description: Email verified.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Journey" }
+        "400":
+          description: |
+            - `type` `invalid_code`: wrong code; one attempt used.
+            - `type` `expired_code`: more than 10 minutes old, or replaced by a newer code.
+            - `type` `too_many_attempts`: 5 wrong attempts; the holder asks for another code.
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "409":
+          description: "`type` `step_not_allowed`: no code pending in the journey."
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "410": { $ref: "#/components/responses/JourneyClosed" }
+
   /journey/confirmation:
     post:
       tags: [Journey]
       operationId: confirmAndIssue
       summary: Confirm the data and request issuance
       description: |
-        Requires a verified identity and a confirmed entitlement in the journey. Only `email` is accepted; any
-        other field is ignored. The email is also the holder's wallet account email. The service requests
-        issuance with delivery by link and authorization code grant, then, if the tenant uses onboarding tickets,
-        requests one from the Wallet Unit Service with that email and the offer link. The journey becomes `completed`
-        when the offer is returned.
+        Requires a verified identity, a confirmed entitlement and a verified email in the journey. It takes no
+        data: any body is ignored. The verified email is also the holder's wallet account email. The service
+        requests issuance with delivery by link and authorization code grant, then, if the tenant uses onboarding
+        tickets, requests one from the Wallet Unit Service with that email and the offer link. The journey becomes
+        `completed` when the offer is returned.
 
         If the Wallet Unit Service rejects the ticket request or does not answer, the service answers 503
         `onboarding_unavailable` and returns no offer. The offer obtained is never used and no attestation is issued.
-        The journey stays `in_progress` at step `entitlement_confirmed`; the interface calls this operation again.
+        The journey stays `in_progress` at step `email_verified`; the interface calls this operation again.
         Once the journey has its issuance process, a repeated confirmation does not request issuance again: it
         renews the offer of that process and asks for a new ticket, like `POST /journey/offers`. Retries of the
         issuance request reuse the journey's idempotency key.
       security: [{ idpAccessToken: [] }]
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                email: { type: string, format: email }
       responses:
         "200":
           description: Offer ready.
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Offer" }
-        "400":
-          description: "`type` `email_required` or `email_invalid`."
-          content:
-            application/problem+json:
-              schema: { $ref: "#/components/schemas/Problem" }
         "409":
           description: |
-            - `type` `step_not_allowed`: what the step needs is not in the journey yet, or the address already
-              delivered has not expired.
+            - `type` `step_not_allowed`: what the step needs is not in the journey yet (for example, no verified
+              email), or the address already delivered has not expired.
             - `type` `offer_not_renewable`: the issuance process of the journey is no longer a draft (the holder
               collected the attestation, or it was withdrawn or revoked). The journey ends, its personal data is
               deleted and no other issuance is requested.
@@ -321,7 +415,7 @@ components:
           enum: [in_progress, completed, withdrawn]
         step:
           type: string
-          enum: [identified, entitlement_confirmed, offer_obtained]
+          enum: [identified, entitlement_confirmed, email_verified, offer_obtained]
           description: Last step reached.
         withdrawal_reason:
           type: string
@@ -329,8 +423,38 @@ components:
           description: Only with `withdrawn`.
         attestation:
           $ref: "#/components/schemas/AttestationPreview"
+        email_verification:
+          $ref: "#/components/schemas/EmailVerification"
         offer:
           $ref: "#/components/schemas/Offer"
+
+    EmailVerification:
+      type: object
+      description: |
+        The email of the pending or completed verification. Present once a code has been sent, until the journey
+        obtains its offer or ends.
+      required: [email, verified, resend_available_at, sends_left]
+      properties:
+        email:
+          type: string
+          format: email
+          description: The email the code was sent to, the holder's own.
+        verified:
+          type: boolean
+          description: True once the right code has been checked.
+        code_expires_at:
+          type: string
+          format: date-time
+          description: Only while a code is pending.
+        resend_available_at:
+          type: string
+          format: date-time
+          description: From when another code can be sent.
+        sends_left:
+          type: integer
+          minimum: 0
+          maximum: 3
+          description: Codes the journey can still send.
 
     AttestationPreview:
       type: object
