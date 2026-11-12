@@ -2,6 +2,8 @@
 export const UNEXPECTED_ERROR = 'unexpected_error';
 /** `type` cuando no hubo respuesta (red caída, petición cancelada). */
 export const NETWORK_ERROR = 'network_error';
+/** `type` del 503 de cualquier llamada: la configuración del tenant en el servicio está incompleta. */
+export const CONFIG_UNAVAILABLE = 'config_unavailable';
 /** `type` del 410: el recorrido ya no está en curso o ha caducado. */
 export const JOURNEY_CLOSED = 'journey_closed';
 /** `type` del 409: el paso pedido no corresponde al recorrido. */

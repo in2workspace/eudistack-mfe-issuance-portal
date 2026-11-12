@@ -13,9 +13,9 @@ const PORTAL_BASE_PATH = '/issuance-portal';
  * AD-6): código de autorización con PKCE `S256`, `state` y `nonce` que genera
  * la librería, y `acr` de nivel alto como claim esencial del ID Token.
  *
- * Sin renovación silenciosa ni comprobación de sesión: la renovación con el
- * Refresh Token y el login sin interacción al recargar llegan en la tarea 6
- * de EUD-314 y se añaden aquí.
+ * La renovación es solo con el Refresh Token y la dispara el interceptor de
+ * `HolderAuthService.renew`, no la librería: sin `silentRenew` ni
+ * comprobación de sesión, no hay temporizadores ni iframes.
  */
 export function buildOidcConfig(tenant: string, origin: string): OpenIdConfiguration {
   if (!tenant) {
@@ -33,6 +33,10 @@ export function buildOidcConfig(tenant: string, origin: string): OpenIdConfigura
       claims: JSON.stringify({ id_token: { acr: { essential: true, value: REQUIRED_ACR } } }),
     },
     useRefreshToken: true,
+    // El ID Token dura 60 s y no decide si hay sesión: lo hace el Access Token.
+    triggerRefreshWhenIdTokenExpired: false,
+    // El ID Token de una renovación puede no traer el `nonce` de la ida.
+    ignoreNonceAfterRefresh: true,
     autoUserInfo: false,
     historyCleanupOff: false,
     // El ID Token del Verifier dura 60 s: la ventana de `iat` tolera un reloj

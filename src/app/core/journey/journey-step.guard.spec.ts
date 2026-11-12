@@ -12,17 +12,19 @@ describe('journeyStepGuard', () => {
   let token: string | null;
   let getJourney: jest.Mock<Observable<Journey>>;
   let discardTokens: jest.Mock;
+  let resumeLogin: jest.Mock;
 
   beforeEach(() => {
     token = 'access-token';
     getJourney = jest.fn();
     discardTokens = jest.fn();
+    resumeLogin = jest.fn().mockResolvedValue(undefined);
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
         { provide: ISSUANCE_PORTAL_ACCESS_TOKEN, useValue: () => token },
         { provide: JourneyApi, useValue: { getJourney } },
-        { provide: SESSION_ACTIONS, useValue: { restartLogin: jest.fn(), discardTokens } },
+        { provide: SESSION_ACTIONS, useValue: { restartLogin: jest.fn(), resumeLogin, discardTokens } },
       ],
     });
   });
@@ -118,11 +120,20 @@ describe('journeyStepGuard', () => {
     },
   );
 
-  it('AC-01, ES-02: with no Access Token goes to Inicio without calling the service', async () => {
+  it('AC-07: with no Access Token (the page was reloaded) tries the silent login, cancels the navigation and does not call the service', async () => {
     token = null;
 
-    expect(await run('offer')).toBe('/');
+    expect(await run('offer')).toBe(false);
+    expect(resumeLogin).toHaveBeenCalledTimes(1);
     expect(getJourney).not.toHaveBeenCalled();
+  });
+
+  it('AC-07: with an Access Token it does not start any login', async () => {
+    getJourney.mockReturnValue(journey('entitlement_confirmed'));
+
+    await run('user-data');
+
+    expect(resumeLogin).not.toHaveBeenCalled();
   });
 
   it('ES-02: a 401 goes to Inicio', async () => {

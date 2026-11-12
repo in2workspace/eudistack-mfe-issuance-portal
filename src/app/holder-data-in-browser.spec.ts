@@ -220,7 +220,7 @@ describe('Holder data in the browser', () => {
           completeLogin: async () => {
             libraryStoresTheTokens();
             storage.clearFlow();
-            return true;
+            return 'authenticated';
           },
           accessToken: () => accessToken,
           discard: () => storage.clear(),

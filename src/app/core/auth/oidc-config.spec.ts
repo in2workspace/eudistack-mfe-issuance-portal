@@ -26,6 +26,13 @@ describe('buildOidcConfig', () => {
     expect(config.historyCleanupOff).toBe(false);
   });
 
+  it('renews with the Refresh Token only, tolerating an ID Token of 60 s and a refresh without nonce', () => {
+    expect(config.useRefreshToken).toBe(true);
+    expect(config.silentRenew).toBeUndefined();
+    expect(config.triggerRefreshWhenIdTokenExpired).toBe(false);
+    expect(config.ignoreNonceAfterRefresh).toBe(true);
+  });
+
   it('refuses to build a configuration without a tenant', () => {
     expect(() => buildOidcConfig('', 'https://sandbox.example')).toThrow();
   });

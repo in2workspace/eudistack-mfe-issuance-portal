@@ -10,6 +10,11 @@ import { Router } from '@angular/router';
 export interface SessionActions {
   /** Vuelve a llevar al titular al inicio de sesión del Verifier. */
   restartLogin(): Promise<void>;
+  /**
+   * Recupera los tokens tras recargar la página con un `authorize` sin
+   * interacción (`prompt=none`) contra la sesión SSO del Verifier.
+   */
+  resumeLogin(): Promise<void>;
   /** Descarta los tokens del titular. */
   discardTokens(): void;
 }
@@ -20,6 +25,9 @@ export const SESSION_ACTIONS = new InjectionToken<SessionActions>('SESSION_ACTIO
     const router = inject(Router);
     return {
       restartLogin: async () => {
+        await router.navigate(['/']);
+      },
+      resumeLogin: async () => {
         await router.navigate(['/']);
       },
       discardTokens: () => undefined,

@@ -12,6 +12,17 @@ export const configAvailableGuard: CanActivateFn = () =>
     ? inject(Router).createUrlTree([`/${CONFIG_UNAVAILABLE_PATH}`])
     : true;
 
-/** El caso de configuración no disponible solo se ve cuando lo está. */
-export const configUnavailableGuard: CanActivateFn = () =>
-  inject(PortalConfigService).state().status === 'loaded' ? inject(Router).createUrlTree(['/']) : true;
+/**
+ * Estado de navegación con el que se llega al caso de configuración no
+ * disponible cuando es el servicio quien la da por incompleta (503
+ * `config_unavailable` al abrir el recorrido), aunque `GET /config` haya
+ * respondido.
+ */
+export const SERVICE_CONFIG_UNAVAILABLE_STATE = { serviceConfigUnavailable: true };
+
+/** El caso de configuración no disponible solo se ve cuando lo está, o cuando el servicio lo ha dicho. */
+export const configUnavailableGuard: CanActivateFn = () => {
+  const router = inject(Router);
+  const reportedByService = router.getCurrentNavigation()?.extras.state?.['serviceConfigUnavailable'] === true;
+  return inject(PortalConfigService).state().status === 'loaded' && !reportedByService ? router.createUrlTree(['/']) : true;
+};

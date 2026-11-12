@@ -39,7 +39,7 @@ describe('IssuanceInfoComponent', () => {
   beforeEach(() => {
     sessionStorage.clear();
     localStorage.clear();
-    session = { restartLogin: jest.fn().mockResolvedValue(undefined), discardTokens: jest.fn() };
+    session = { restartLogin: jest.fn().mockResolvedValue(undefined), resumeLogin: jest.fn().mockResolvedValue(undefined), discardTokens: jest.fn() };
     TestBed.configureTestingModule({
       imports: [IssuanceInfoComponent, TranslateModule.forRoot()],
       providers: [

@@ -3,6 +3,7 @@ import { CanActivateFn, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { Journey, JourneyApi } from '../api/generated/journey';
 import { ISSUANCE_PORTAL_ACCESS_TOKEN } from '../api/issuance-portal-api.interceptor';
+import { SESSION_ACTIONS } from '../session/session-actions';
 import { DATA_PATH, EMAIL_PATH, ENTITLEMENT_PATH, QR_PATH } from './journey-paths';
 import {
   JourneyNavigator,
@@ -32,13 +33,16 @@ const ALLOWED: Record<string, (journey: Journey) => boolean> = {
  * Guarda de los pasos del recorrido (prd.md §3.3, design.md AD-3): el paso
  * lo dice `GET /journey`, no el navegador. Si no corresponde a la ruta, lleva
  * a la que toca (`stepUrl`); un recorrido sin paso (`isJourneyActive`) lleva a Inicio y uno
- * caducado (410), a sesión caducada. Sin token o con 401 va a Inicio; la
- * renovación del token y la vuelta al Verifier son de EUD-314.
+ * caducado (410), a sesión caducada. Sin token (el titular recargó la página)
+ * intenta el login sin interacción y cancela la navegación: a la vuelta, el
+ * callback abre el recorrido y va a su paso (AC-07). La renovación del token
+ * ante un 401 es del interceptor `tokenRenewalInterceptor`.
  */
 export const journeyStepGuard: CanActivateFn = async (route) => {
   const router = inject(Router);
   if (!inject(ISSUANCE_PORTAL_ACCESS_TOKEN)()) {
-    return router.createUrlTree(['/']);
+    await inject(SESSION_ACTIONS).resumeLogin();
+    return false;
   }
   const journeyApi = inject(JourneyApi);
   const navigator = inject(JourneyNavigator);

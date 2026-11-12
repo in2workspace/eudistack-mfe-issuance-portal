@@ -116,6 +116,28 @@ describe('provideHolderAuth', () => {
     expect(backend.expectOne('/issuance-portal/api/v1/incidents').request.headers.has('Authorization')).toBe(false);
   });
 
+  it('AC-07: the silent login authorize carries prompt=none and keeps the high level of assurance claim', async () => {
+    const target = new Promise<string>((resolve) => {
+      TestBed.inject(OidcSecurityService).authorize(undefined, { customParams: { prompt: 'none' }, urlHandler: resolve });
+    });
+    await answerDiscovery();
+
+    const url = new URL(await target);
+
+    expect(url.searchParams.get('prompt')).toBe('none');
+    expect(url.searchParams.get('client_id')).toBe('issuance-portal-sandbox');
+    expect(JSON.parse(url.searchParams.get('claims') as string).id_token.acr.value).toBe('http://eidas.europa.eu/LoA/high');
+  });
+
+  it('AC-07: resumeLogin is the silent login of the holder session', async () => {
+    const auth = TestBed.inject(HolderAuthService);
+    const silent = jest.spyOn(auth, 'loginSilently').mockImplementation(() => undefined);
+
+    await TestBed.inject(SESSION_ACTIONS).resumeLogin();
+
+    expect(silent).toHaveBeenCalledTimes(1);
+  });
+
   it('AC-03: restartLogin goes to the Verifier and discardTokens forgets the token', async () => {
     const auth = TestBed.inject(HolderAuthService);
     const login = jest.spyOn(auth, 'login').mockImplementation(() => undefined);
@@ -135,7 +157,7 @@ describe('provideHolderAuth', () => {
 
     const completed = await auth.completeLogin(`${origin}/issuance-portal/callback?code=abc&state=forged-state`);
 
-    expect(completed).toBe(false);
+    expect(completed).toBe('failed');
     expect(auth.accessToken()).toBeNull();
     backend.expectNone(`${origin}/verifier/oidc/token`);
     expect(sessionStorage.length).toBe(0);
