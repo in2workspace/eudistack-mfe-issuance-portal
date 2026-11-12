@@ -10,6 +10,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **EUD-314 — inicio de sesión con el Verifier**:
+  - Cliente OIDC público del Verifier del tenant con `angular-auth-oidc-client` 19: `client_id` `issuance-portal-<tenant>`, PKCE S256, `claims` con `acr` alto esencial y scope `openid profile email personal_administrative_number`.
+  - Empezar lleva al Verifier; la ruta `callback` canjea el código, abre el recorrido con `POST /journey` y sigue a su paso. Un error de la vuelta (o un `state` o `nonce` que no cuadran) lleva a la identificación no completada; un 503 `config_unavailable`, al error de configuración.
+  - Cada llamada al servicio lleva el Access Token, salvo `GET /config` y `POST /incidents`. Con el token caducado o un 401, se renueva con el Refresh Token y se repite la llamada; si no se puede, vuelve al Verifier y retoma el paso.
+  - Al recargar, login sin interacción (`prompt=none`); con `login_required` o `interaction_required`, login normal.
+  - Tokens, ID Token y nombre del titular solo en memoria. El verificador PKCE, el `state` y el `nonce` van a `sessionStorage` solo mientras el titular está en el Verifier.
+  - El nombre del ID Token (`given_name`) queda en memoria para el saludo de Comprobación.
+
 - **EUD-358 — paso Verificar correo**:
   - Ruta `verify-email` entre Datos y QR. Muestra el correo, un componente propio de 6 casillas (admite pegar el código, el autocompletado del sistema y el teclado), Reenviar con la cuenta atrás, Cambiar el correo y Cancelar.
   - El código correcto lleva a QR. Los mensajes del código se anuncian en `aria-live`.
@@ -39,6 +47,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - Ayuda enviada (`incidents/sent`), sin botón de volver, con el plazo de respuesta que devuelve el servicio, que se guarda solo en memoria. Solo se llega justo después de enviar: un enlace directo, una recarga o el historial llevan a Inicio.
 
 ### Changed
+
+- **EUD-314**: `SESSION_ACTIONS` ya inicia el login y descarta los tokens de verdad en todos los finales del recorrido. La guarda de pasos ya no manda a Inicio sin token o con un 401.
+- **EUD-314**: la guarda de parámetros conserva `code` y `state` en la ruta `callback`; en las demás sigue borrando `u`, `code` e `identified`.
+- **EUD-314**: el build de producción no incrusta el CSS crítico (`inlineCritical: false`): su `onload` en línea lo bloquea la política de seguridad de contenido.
 
 - **EUD-358**: Continuar en Datos envía el código al correo con el idioma de la interfaz (`Accept-Language`) y va a Verificar correo. Si el correo del campo es el que ya está verificado (comparado sin los espacios de los extremos), Continuar va directamente a QR sin enviar ningún código. Los fallos del envío se muestran en Datos: correo no válido, envío no disponible y demasiados envíos con cuenta atrás.
 - **EUD-358**: QR confirma sin cuerpo y solo con el correo verificado. El correo ya no se guarda en memoria para la confirmación.
