@@ -1,8 +1,10 @@
 import { inject } from '@angular/core';
-import { HttpEvent, HttpInterceptorFn, HttpRequest } from '@angular/common/http';
-import { NEVER, Observable, catchError, defer, from, switchMap, throwError } from 'rxjs';
+import { Router } from '@angular/router';
+import { HttpEvent, HttpEventType, HttpInterceptorFn, HttpRequest } from '@angular/common/http';
+import { NEVER, Observable, catchError, defer, from, switchMap, tap, throwError } from 'rxjs';
 import { ApiProblemError } from '../api/api-problem.error';
-import { ISSUANCE_PORTAL_API_BASE_PATH, isIncidentRequest } from '../api/issuance-portal-api.providers';
+import { ISSUANCE_PORTAL_API_BASE_PATH, isPublicRequest } from '../api/issuance-portal-api.providers';
+import { errorUrl } from '../../features/error/error-reason';
 import { HolderAuthService } from './holder-auth.service';
 
 /** `POST /journey` abre el recorrido con el token recién emitido: un 401 ahí es identificación no completada, no un token que renovar. */
@@ -28,21 +30,29 @@ function isUnauthenticated(error: unknown): boolean {
  * a pasar por quien añade el token, que lee el nuevo.
  */
 export const tokenRenewalInterceptor: HttpInterceptorFn = (req, next) => {
-  if (!req.url.startsWith(`${ISSUANCE_PORTAL_API_BASE_PATH}/`) || isIncidentRequest(req) || isOpenJourney(req)) {
+  if (!req.url.startsWith(`${ISSUANCE_PORTAL_API_BASE_PATH}/`) || isPublicRequest(req) || isOpenJourney(req)) {
     return next(req);
   }
   const auth = inject(HolderAuthService);
+  const router = inject(Router);
 
   const toVerifier = (): Observable<never> =>
     defer(() => {
-      auth.redirectToVerifier();
+      if (!auth.redirectToVerifier()) {
+        void router.navigate(errorUrl('identification-failed'));
+      }
       return NEVER;
     });
+  const confirmOnResponse = tap<HttpEvent<unknown>>((event) => {
+    if (event.type === HttpEventType.Response) {
+      auth.confirmSession();
+    }
+  });
   const renewAndRetry = (): Observable<HttpEvent<unknown>> =>
     from(auth.renew()).pipe(
       switchMap((renewed) =>
         renewed
-          ? next(req).pipe(catchError((error: unknown) => (isUnauthenticated(error) ? toVerifier() : throwError(() => error))))
+          ? next(req).pipe(confirmOnResponse, catchError((error: unknown) => (isUnauthenticated(error) ? toVerifier() : throwError(() => error))))
           : toVerifier(),
       ),
     );
@@ -50,5 +60,8 @@ export const tokenRenewalInterceptor: HttpInterceptorFn = (req, next) => {
   if (auth.isAccessTokenExpired()) {
     return renewAndRetry();
   }
-  return next(req).pipe(catchError((error: unknown) => (isUnauthenticated(error) ? renewAndRetry() : throwError(() => error))));
+  return next(req).pipe(
+    confirmOnResponse,
+    catchError((error: unknown) => (isUnauthenticated(error) ? renewAndRetry() : throwError(() => error))),
+  );
 };

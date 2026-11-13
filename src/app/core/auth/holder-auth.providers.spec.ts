@@ -110,9 +110,11 @@ describe('provideHolderAuth', () => {
     const http = TestBed.inject(HttpClient);
 
     http.get('/issuance-portal/api/v1/journey').subscribe();
+    http.get('/issuance-portal/api/v1/config').subscribe();
     http.post('/issuance-portal/api/v1/incidents', {}).subscribe();
 
     expect(backend.expectOne('/issuance-portal/api/v1/journey').request.headers.get('Authorization')).toBe('Bearer real-token');
+    expect(backend.expectOne('/issuance-portal/api/v1/config').request.headers.has('Authorization')).toBe(false);
     expect(backend.expectOne('/issuance-portal/api/v1/incidents').request.headers.has('Authorization')).toBe(false);
   });
 

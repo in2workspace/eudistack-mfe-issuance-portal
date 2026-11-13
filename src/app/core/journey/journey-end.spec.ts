@@ -34,7 +34,7 @@ describe('The end of the journey discards the tokens', () => {
         provideHttpClient(withInterceptors(httpInterceptors)),
         provideHttpClientTesting(),
         { provide: ISSUANCE_PORTAL_ACCESS_TOKEN, useValue: () => 'access-token' },
-        { provide: HolderAuthService, useValue: { isAccessTokenExpired: () => false, renew: jest.fn(), redirectToVerifier: jest.fn() } },
+        { provide: HolderAuthService, useValue: { isAccessTokenExpired: () => false, renew: jest.fn(), redirectToVerifier: jest.fn().mockReturnValue(true), confirmSession: jest.fn() } },
         { provide: SESSION_ACTIONS, useValue: { restartLogin: jest.fn(), resumeLogin: jest.fn(), discardTokens } },
         { provide: JourneyApi, useValue: { getJourney } },
       ],

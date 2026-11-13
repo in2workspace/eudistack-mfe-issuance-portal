@@ -7,7 +7,8 @@ import { OidcFlowStorage } from './oidc-flow-storage';
 describe('HolderAuthService', () => {
   const CALLBACK = 'https://sandbox.example/issuance-portal/callback?code=abc&state=xyz';
   let oidc: { authorize: jest.Mock; checkAuth: jest.Mock; logoffLocal: jest.Mock; forceRefreshSession: jest.Mock };
-  let flow: { clearFlow: jest.Mock; clear: jest.Mock };
+  let flow: { clearFlow: jest.Mock; clear: jest.Mock; readRedirectMark: jest.Mock; writeRedirectMark: jest.Mock; clearRedirectMark: jest.Mock };
+  let mark: number | null;
   let service: HolderAuthService;
 
   function authenticated(userData: unknown, accessToken = 'access-token'): LoginResponse {
@@ -16,7 +17,14 @@ describe('HolderAuthService', () => {
 
   beforeEach(() => {
     oidc = { authorize: jest.fn(), checkAuth: jest.fn(), logoffLocal: jest.fn(), forceRefreshSession: jest.fn() };
-    flow = { clearFlow: jest.fn(), clear: jest.fn() };
+    mark = null;
+    flow = {
+      clearFlow: jest.fn(),
+      clear: jest.fn(),
+      readRedirectMark: jest.fn(() => mark),
+      writeRedirectMark: jest.fn((at: number) => (mark = at)),
+      clearRedirectMark: jest.fn(() => (mark = null)),
+    };
     TestBed.configureTestingModule({
       providers: [
         { provide: OidcSecurityService, useValue: oidc },
@@ -200,12 +208,93 @@ describe('HolderAuthService', () => {
     it('goes to the Verifier once, discarding the session first, however many requests fail', async () => {
       await login('old-token');
 
-      service.redirectToVerifier();
-      service.redirectToVerifier();
+      expect(service.redirectToVerifier()).toBe(true);
+      expect(service.redirectToVerifier()).toBe(true);
 
       expect(service.accessToken()).toBeNull();
       expect(oidc.logoffLocal).toHaveBeenCalledTimes(1);
       expect(oidc.authorize).toHaveBeenCalledTimes(1);
+    });
+
+    describe('W4: at most one trip to the Verifier by failed renewal in a short window', () => {
+      beforeEach(() => jest.useFakeTimers());
+      afterEach(() => jest.useRealTimers());
+
+      it('writes the time of the trip and keeps it through the discard of the old session', () => {
+        jest.setSystemTime(1_000_000);
+
+        service.redirectToVerifier();
+
+        expect(flow.writeRedirectMark).toHaveBeenCalledWith(1_000_000);
+        expect(mark).toBe(1_000_000);
+      });
+
+      it('a second failure inside the window does not go to the Verifier again: it discards the session and says no', async () => {
+        jest.setSystemTime(1_000_000);
+        service.redirectToVerifier();
+        jest.advanceTimersByTime(10_001);
+        await login('token-after-return');
+
+        const second = service.redirectToVerifier();
+
+        expect(second).toBe(false);
+        expect(oidc.authorize).toHaveBeenCalledTimes(1);
+        expect(service.accessToken()).toBeNull();
+        expect(mark).toBeNull();
+      });
+
+      it('after the window a new failure may go to the Verifier again', () => {
+        jest.setSystemTime(1_000_000);
+        service.redirectToVerifier();
+        jest.setSystemTime(1_000_000 + 60_001);
+        jest.advanceTimersByTime(60_001);
+
+        expect(service.redirectToVerifier()).toBe(true);
+        expect(oidc.authorize).toHaveBeenCalledTimes(2);
+      });
+
+      it('confirmSession clears the mark, so a later failure goes to the Verifier', () => {
+        jest.setSystemTime(1_000_000);
+        service.redirectToVerifier();
+        jest.advanceTimersByTime(10_001);
+
+        service.confirmSession();
+
+        expect(mark).toBeNull();
+        expect(service.redirectToVerifier()).toBe(true);
+        expect(oidc.authorize).toHaveBeenCalledTimes(2);
+      });
+
+      it('discard clears the mark', () => {
+        mark = 5;
+
+        service.discard();
+
+        expect(mark).toBeNull();
+      });
+
+      it('if authorize throws, the flag is reset and it says no, with the session discarded', () => {
+        oidc.authorize.mockImplementationOnce(() => {
+          throw new Error('no discovery');
+        });
+
+        expect(service.redirectToVerifier()).toBe(false);
+        expect(service.accessToken()).toBeNull();
+        expect(mark).toBeNull();
+
+        expect(service.redirectToVerifier()).toBe(true);
+        expect(oidc.authorize).toHaveBeenCalledTimes(2);
+      });
+
+      it('if authorize fails without throwing and the page is still here, the flag is reset after a while', () => {
+        service.redirectToVerifier();
+        mark = null;
+
+        jest.advanceTimersByTime(10_001);
+
+        expect(service.redirectToVerifier()).toBe(true);
+        expect(oidc.authorize).toHaveBeenCalledTimes(2);
+      });
     });
   });
 });

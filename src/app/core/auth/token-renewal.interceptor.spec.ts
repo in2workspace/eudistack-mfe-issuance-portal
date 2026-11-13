@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { provideRouter, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { httpInterceptors } from '../../app.config';
 import { ApiProblemError } from '../api/api-problem.error';
@@ -14,7 +15,8 @@ describe('tokenRenewalInterceptor', () => {
   let token: string;
   let expired: boolean;
   let renew: jest.Mock<Promise<boolean>>;
-  let redirectToVerifier: jest.Mock;
+  let redirectToVerifier: jest.Mock<boolean>;
+  let confirmSession: jest.Mock;
   let http: HttpClient;
   let backend: HttpTestingController;
 
@@ -26,13 +28,15 @@ describe('tokenRenewalInterceptor', () => {
       expired = false;
       return true;
     });
-    redirectToVerifier = jest.fn();
+    redirectToVerifier = jest.fn(() => true);
+    confirmSession = jest.fn();
     TestBed.configureTestingModule({
       providers: [
+        provideRouter([]),
         provideHttpClient(withInterceptors(httpInterceptors)),
         provideHttpClientTesting(),
         { provide: ISSUANCE_PORTAL_ACCESS_TOKEN, useValue: () => token },
-        { provide: HolderAuthService, useValue: { isAccessTokenExpired: () => expired, renew, redirectToVerifier } },
+        { provide: HolderAuthService, useValue: { isAccessTokenExpired: () => expired, renew, redirectToVerifier, confirmSession } },
         { provide: JourneyNavigator, useValue: { toSessionExpired: jest.fn(), toCurrentStep: jest.fn() } },
         { provide: JourneyInactivityService, useValue: { touch: jest.fn() } },
       ],
@@ -136,6 +140,50 @@ describe('tokenRenewalInterceptor', () => {
     expect(await result).toBeInstanceOf(ApiProblemError);
     expect(renew).not.toHaveBeenCalled();
     expect(redirectToVerifier).not.toHaveBeenCalled();
+  });
+
+  it('AC-04, B2: GET /config goes without the token and a 401 there does not renew nor go to the Verifier', async () => {
+    const result = firstValueFrom(http.get('/issuance-portal/api/v1/config')).catch((error: unknown) => error);
+
+    const call = backend.expectOne('/issuance-portal/api/v1/config');
+    expect(call.request.headers.has('Authorization')).toBe(false);
+    call.flush(unauthorized, unauthorizedOptions);
+
+    expect(await result).toBeInstanceOf(ApiProblemError);
+    expect(renew).not.toHaveBeenCalled();
+    expect(redirectToVerifier).not.toHaveBeenCalled();
+  });
+
+  it('W4: when the Verifier trip is not allowed (a second failure inside the window) shows identification-failed, with no loop', async () => {
+    renew.mockResolvedValue(false);
+    redirectToVerifier.mockReturnValue(false);
+    const navigate = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    const error = jest.fn();
+    http.post(URL, {}).subscribe({ error });
+
+    backend.expectOne(URL).flush(unauthorized, unauthorizedOptions);
+    await tick();
+
+    expect(navigate).toHaveBeenCalledWith(['/', 'error', 'identification-failed']);
+    expect(error).not.toHaveBeenCalled();
+  });
+
+  it('W4: a successful call confirms the session, so the trip counter is cleared', async () => {
+    const result = firstValueFrom(http.post(URL, {}));
+    backend.expectOne(URL).flush({ ok: true });
+    await result;
+
+    expect(confirmSession).toHaveBeenCalledTimes(1);
+  });
+
+  it('W4: a call that succeeds after the renewal also confirms the session', async () => {
+    const result = firstValueFrom(http.post(URL, {}));
+    backend.expectOne(URL).flush(unauthorized, unauthorizedOptions);
+    await tick();
+    backend.expectOne(URL).flush({ ok: true });
+    await result;
+
+    expect(confirmSession).toHaveBeenCalledTimes(1);
   });
 
   it('calls outside the service and the public incident are not renewed', async () => {

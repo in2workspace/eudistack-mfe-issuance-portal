@@ -22,7 +22,7 @@ describe('HTTP interceptors of the app', () => {
       providers: [
         provideHttpClient(withInterceptors(httpInterceptors)),
         provideHttpClientTesting(),
-        { provide: HolderAuthService, useValue: { isAccessTokenExpired: () => false, renew: jest.fn(), redirectToVerifier: jest.fn() } },
+        { provide: HolderAuthService, useValue: { isAccessTokenExpired: () => false, renew: jest.fn(), redirectToVerifier: jest.fn().mockReturnValue(true), confirmSession: jest.fn() } },
         { provide: JourneyNavigator, useValue: navigator },
         { provide: JourneyInactivityService, useValue: { touch } },
       ],

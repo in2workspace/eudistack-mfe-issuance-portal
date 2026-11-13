@@ -20,6 +20,16 @@ export function isIncidentRequest(req: HttpRequest<unknown>): boolean {
 }
 
 /**
+ * Llamadas públicas (`security: []` en el contrato): `GET /config` y
+ * `POST /incidents`. No llevan el Access Token y un 401 no dispara la
+ * renovación: el servicio validaría un token caducado también ahí.
+ */
+export function isPublicRequest(req: HttpRequest<unknown>): boolean {
+  const path = req.url.split('?')[0];
+  return isIncidentRequest(req) || (req.method === 'GET' && path === `${ISSUANCE_PORTAL_API_BASE_PATH}/config`);
+}
+
+/**
  * Clientes generados de los contratos de los dos módulos del servicio
  * (design.md AD-2): Recorrido y Fuente auténtica.
  */

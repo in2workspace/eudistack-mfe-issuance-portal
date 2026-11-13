@@ -9,6 +9,12 @@ export type LoginOutcome = 'authenticated' | 'interaction-required' | 'failed';
 /** Errores con los que el Verifier dice que un login sin interacción (`prompt=none`) no puede resolverse solo (OIDC Core 3.1.2.6). */
 const INTERACTION_ERRORS: readonly string[] = ['login_required', 'interaction_required'];
 
+/** Ventana en la que una renovación fallida puede llevar al Verifier una sola vez (W4). */
+export const REDIRECT_WINDOW_MS = 60_000;
+
+/** Si `authorize` no ha sacado la página del portal pasado este tiempo, se da por fallido y se permite otra ida. */
+const REDIRECT_PENDING_MS = 10_000;
+
 /** Margen con el que un Access Token se da por caducado antes de enviarlo, por el desfase de relojes. */
 const EXPIRY_MARGIN_SECONDS = 5;
 
@@ -45,15 +51,39 @@ export class HolderAuthService {
    * renovar el Access Token (design.md §3.1, punto 5). Varias peticiones
    * pueden fallar a la vez y cada `authorize` guarda su propio verificador
    * PKCE: solo el primero sale hacia el Verifier. A la vuelta, `POST /journey`
-   * devuelve el recorrido que ya existe.
+   * devuelve el recorrido que ya existe. Como mucho una ida por ventana de
+   * `REDIRECT_WINDOW_MS`, con una marca de tiempo en `sessionStorage` que
+   * borra `confirmSession` o `discard`: si tras volver sigue el 401, no hay
+   * otra ida y devuelve `false`, con la sesión descartada (W4). También
+   * `false` si `authorize` falla.
    */
-  redirectToVerifier(): void {
+  redirectToVerifier(): boolean {
     if (this.redirecting) {
-      return;
+      return true;
+    }
+    const last = this.storage.readRedirectMark();
+    if (last !== null && Date.now() - last < REDIRECT_WINDOW_MS) {
+      this.discard();
+      return false;
     }
     this.redirecting = true;
-    this.discard();
-    this.login();
+    this.clearSession();
+    this.storage.writeRedirectMark(Date.now());
+    try {
+      this.login();
+    } catch {
+      this.redirecting = false;
+      this.discard();
+      return false;
+    }
+    // `authorize` falla de forma asíncrona sin avisar: si la página sigue aquí, se permite otra ida.
+    setTimeout(() => (this.redirecting = false), REDIRECT_PENDING_MS);
+    return true;
+  }
+
+  /** Una llamada al servicio ha tenido éxito con el token vigente: la ida por renovación ya no cuenta. */
+  confirmSession(): void {
+    this.storage.clearRedirectMark();
   }
 
   /**
@@ -116,6 +146,11 @@ export class HolderAuthService {
 
   /** Descarta los tokens y el nombre del titular. No cierra su sesión en el Verifier. */
   discard(): void {
+    this.clearSession();
+    this.storage.clearRedirectMark();
+  }
+
+  private clearSession(): void {
     this.accessTokenState.set(null);
     this.givenNameState.set('');
     this.oidc.logoffLocal();

@@ -4,6 +4,9 @@ import { AbstractSecurityStorage } from 'angular-auth-oidc-client';
 /** Clave de `sessionStorage` con lo que el login necesita para sobrevivir a la ida al Verifier. */
 export const FLOW_STORAGE_KEY = 'portal-login-flow';
 
+/** Clave de `sessionStorage` con la hora de la última ida al Verifier por una renovación fallida (W4). */
+export const REDIRECT_MARK_KEY = 'portal-verifier-redirect';
+
 /**
  * Campos que la librería escribe antes de salir hacia el Verifier y lee en la
  * vuelta: el `code_verifier` de PKCE, el `state` y el `nonce`. Son aleatorios,
@@ -56,6 +59,32 @@ export class OidcFlowStorage extends AbstractSecurityStorage {
   clear(): void {
     this.memory.clear();
     this.clearFlow();
+  }
+
+  /** Hora (ms) de la última ida al Verifier por una renovación fallida, o `null`. Sin datos del titular. */
+  readRedirectMark(): number | null {
+    try {
+      const value = Number(sessionStorage.getItem(REDIRECT_MARK_KEY));
+      return Number.isFinite(value) && value > 0 ? value : null;
+    } catch {
+      return null;
+    }
+  }
+
+  writeRedirectMark(at: number): void {
+    try {
+      sessionStorage.setItem(REDIRECT_MARK_KEY, String(at));
+    } catch {
+      // Sin sessionStorage no se puede limitar las idas: la ventana no se aplica.
+    }
+  }
+
+  clearRedirectMark(): void {
+    try {
+      sessionStorage.removeItem(REDIRECT_MARK_KEY);
+    } catch {
+      // Sin sessionStorage tampoco hay marca que borrar.
+    }
   }
 
   /** Borra de `sessionStorage` lo que dejó la ida al Verifier. */

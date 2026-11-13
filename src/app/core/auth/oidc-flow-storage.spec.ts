@@ -1,4 +1,4 @@
-import { FLOW_STORAGE_KEY, OidcFlowStorage } from './oidc-flow-storage';
+import { FLOW_STORAGE_KEY, OidcFlowStorage, REDIRECT_MARK_KEY } from './oidc-flow-storage';
 
 describe('OidcFlowStorage', () => {
   const KEY = 'issuance-portal';
@@ -64,6 +64,25 @@ describe('OidcFlowStorage', () => {
 
     expect(browserContents()).toBe('');
     expect(JSON.parse(storage.read(KEY) as string)).toEqual({ userData: { given_name: 'Maria' } });
+  });
+
+  it('W4, NFR-3: the redirect mark is only a timestamp, read back, and cleared on its own', () => {
+    storage.writeRedirectMark(1_700_000_000_000);
+
+    expect(sessionStorage.getItem(REDIRECT_MARK_KEY)).toBe('1700000000000');
+    expect(localStorage.length).toBe(0);
+    expect(storage.readRedirectMark()).toBe(1_700_000_000_000);
+
+    storage.clearRedirectMark();
+
+    expect(storage.readRedirectMark()).toBeNull();
+    expect(browserContents()).toBe('');
+  });
+
+  it('W4: an unreadable redirect mark counts as none', () => {
+    sessionStorage.setItem(REDIRECT_MARK_KEY, 'not-a-number');
+
+    expect(storage.readRedirectMark()).toBeNull();
   });
 
   it('clear forgets everything', () => {
