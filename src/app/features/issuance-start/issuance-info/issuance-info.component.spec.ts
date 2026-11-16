@@ -9,6 +9,7 @@ import { IssuanceInfoComponent } from './issuance-info.component';
 
 const FULL_CONFIG: PortalConfig = {
   wallet_url: 'https://wallet.example',
+  assurance_level: 'high',
   texts: {},
   support: { email: 'soporte@tenant.example', phone: '911 000 000', schedule: 'L-V 8:00-15:00', response_time: '24 horas' },
   legal_links: {

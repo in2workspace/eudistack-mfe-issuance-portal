@@ -10,18 +10,23 @@ function isObject(value: unknown): value is Record<string, unknown> {
  * cada enlace de `legal_links` es `https` o una ruta del propio host. En el
  * contrato `support` no trae enlaces (correo, teléfono, horario y plazo), así
  * que no se valida como URL. La marca y los idiomas no vienen de aquí, sino
- * del `theme.json` del tenant. Una configuración que no lo cumple es como no
+ * del `theme.json` del tenant. `assurance_level`, si viene, solo puede ser
+ * `high` o `substantial`; si no viene, se pide nivel alto (AD-14). Una
+ * configuración que no lo cumple es como no
  * tenerla (ES-02): la interfaz muestra "configuración no disponible".
  */
 export function validatePortalConfig(raw: unknown): PortalConfig | null {
   if (!isObject(raw)) {
     return null;
   }
-  const { texts, support, legal_links, wallet_url } = raw;
+  const { texts, support, legal_links, wallet_url, assurance_level } = raw;
   if (!isObject(texts) || !isObject(support) || !isObject(legal_links)) {
     return null;
   }
   if (!isHttpsUrl(wallet_url)) {
+    return null;
+  }
+  if (assurance_level !== undefined && assurance_level !== 'high' && assurance_level !== 'substantial') {
     return null;
   }
   if (!Object.values(legal_links).every(isSafeLink)) {

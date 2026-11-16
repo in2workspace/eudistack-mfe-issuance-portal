@@ -15,6 +15,7 @@ expect.extend(toHaveNoViolations);
 /** Configuración completa, para que la comprobación cubra la franja de ayuda, los enlaces legales y el soporte. */
 const FULL_CONFIG: PortalConfig = {
   wallet_url: 'https://wallet.example',
+  assurance_level: 'high',
   texts: {},
   support: { email: 'soporte@tenant.example', phone: '911 000 000', schedule: 'L-V 8:00-15:00' },
   legal_links: {

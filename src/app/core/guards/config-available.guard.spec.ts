@@ -7,7 +7,7 @@ import { PortalConfig } from '../api/generated/journey';
 
 describe('configuration guards', () => {
   const state = signal<PortalConfigState>({ status: 'loading' });
-  const config: PortalConfig = { texts: {}, support: {}, legal_links: {}, wallet_url: 'https://cgcom.example/wallet' };
+  const config: PortalConfig = { texts: {}, support: {}, legal_links: {}, wallet_url: 'https://cgcom.example/wallet', assurance_level: 'high' };
 
   beforeEach(() => {
     TestBed.configureTestingModule({

@@ -26,7 +26,7 @@ jest.mock('qrcode', () => ({
  * atestación o correo del titular.
  */
 describe('Holder data in the browser', () => {
-  const config: PortalConfig = { texts: {}, support: {}, legal_links: {}, wallet_url: 'https://cgcom.example/wallet' };
+  const config: PortalConfig = { texts: {}, support: {}, legal_links: {}, wallet_url: 'https://cgcom.example/wallet', assurance_level: 'high' };
   const holderData = /dni|nif|givenName|familyName|email|correo|colegiado|collegiate|specialty|especialidad|@/i;
   const sendIncident = jest.fn();
 

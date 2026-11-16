@@ -381,8 +381,12 @@ components:
   schemas:
     PortalConfig:
       type: object
-      required: [texts, support, legal_links, wallet_url]
+      required: [texts, support, legal_links, wallet_url, assurance_level]
       properties:
+        assurance_level:
+          type: string
+          enum: [high, substantial]
+          description: Level of assurance (eIDAS) the interface asks the Verifier for as essential, and the lowest the service accepts in the Access Token. `high` when the tenant does not configure it.
         wallet_url:
           type: string
           format: uri

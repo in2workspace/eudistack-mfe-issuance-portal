@@ -8,6 +8,8 @@ import { environment } from '../../../environments/environment';
 import { httpInterceptors } from '../../app.config';
 import { ISSUANCE_PORTAL_ACCESS_TOKEN } from '../api/issuance-portal-api.interceptor';
 import { SESSION_ACTIONS } from '../session/session-actions';
+import { PortalConfig } from '../api/generated/journey';
+import { PortalConfigService } from '../config/portal-config.service';
 import { HolderAuthService } from './holder-auth.service';
 import { provideHolderAuth } from './holder-auth.providers';
 
@@ -55,11 +57,17 @@ describe('provideHolderAuth', () => {
     });
   }
 
-  /** La URL de `authorize` a la que la librería llevaría al titular. */
-  async function authorizeUrl(): Promise<string> {
+  /**
+   * La URL de `authorize` a la que la librería llevaría al titular cuando
+   * `HolderAuthService` inicia el login (`go`): se captura en lugar de navegar.
+   */
+  async function authorizeUrl(go: (auth: HolderAuthService) => void = (auth) => auth.login()): Promise<string> {
+    const oidc = TestBed.inject(OidcSecurityService);
+    const real = oidc.authorize.bind(oidc);
     const target = new Promise<string>((resolve) => {
-      TestBed.inject(OidcSecurityService).authorize(undefined, { urlHandler: resolve });
+      jest.spyOn(oidc, 'authorize').mockImplementation((configId, options) => real(configId, { ...options, urlHandler: resolve }));
     });
+    go(TestBed.inject(HolderAuthService));
     await answerDiscovery();
     return target;
   }
@@ -118,13 +126,18 @@ describe('provideHolderAuth', () => {
     expect(backend.expectOne('/issuance-portal/api/v1/incidents').request.headers.has('Authorization')).toBe(false);
   });
 
-  it('AC-07: the silent login authorize carries prompt=none and keeps the high level of assurance claim', async () => {
-    const target = new Promise<string>((resolve) => {
-      TestBed.inject(OidcSecurityService).authorize(undefined, { customParams: { prompt: 'none' }, urlHandler: resolve });
-    });
-    await answerDiscovery();
+  it('AC-29: with a tenant of substantial level the authorize asks for it as essential', async () => {
+    jest.spyOn(TestBed.inject(PortalConfigService), 'config').mockReturnValue({ assurance_level: 'substantial' } as PortalConfig);
 
-    const url = new URL(await target);
+    const url = new URL(await authorizeUrl());
+
+    expect(JSON.parse(url.searchParams.get('claims') as string)).toEqual({
+      id_token: { acr: { essential: true, value: 'http://eidas.europa.eu/LoA/substantial' } },
+    });
+  });
+
+  it('AC-07: the silent login authorize carries prompt=none and keeps the high level of assurance claim', async () => {
+    const url = new URL(await authorizeUrl((auth) => auth.loginSilently()));
 
     expect(url.searchParams.get('prompt')).toBe('none');
     expect(url.searchParams.get('client_id')).toBe('issuance-portal-sandbox');

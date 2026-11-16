@@ -1,6 +1,9 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { LoginResponse, OidcSecurityService } from 'angular-auth-oidc-client';
 import { Subject, of, throwError } from 'rxjs';
+import { PortalConfig } from '../api/generated/journey';
+import { PortalConfigService } from '../config/portal-config.service';
 import { HolderAuthService } from './holder-auth.service';
 import { OidcFlowStorage } from './oidc-flow-storage';
 
@@ -9,6 +12,7 @@ describe('HolderAuthService', () => {
   let oidc: { authorize: jest.Mock; checkAuth: jest.Mock; logoffLocal: jest.Mock; forceRefreshSession: jest.Mock };
   let flow: { clearFlow: jest.Mock; clear: jest.Mock; readRedirectMark: jest.Mock; writeRedirectMark: jest.Mock; clearRedirectMark: jest.Mock };
   let mark: number | null;
+  const portalConfig = signal<Partial<PortalConfig> | null>(null);
   let service: HolderAuthService;
 
   function authenticated(userData: unknown, accessToken = 'access-token'): LoginResponse {
@@ -17,6 +21,7 @@ describe('HolderAuthService', () => {
 
   beforeEach(() => {
     oidc = { authorize: jest.fn(), checkAuth: jest.fn(), logoffLocal: jest.fn(), forceRefreshSession: jest.fn() };
+    portalConfig.set(null);
     mark = null;
     flow = {
       clearFlow: jest.fn(),
@@ -29,15 +34,32 @@ describe('HolderAuthService', () => {
       providers: [
         { provide: OidcSecurityService, useValue: oidc },
         { provide: OidcFlowStorage, useValue: flow },
+        { provide: PortalConfigService, useValue: { config: portalConfig } },
       ],
     });
     service = TestBed.inject(HolderAuthService);
   });
 
+  function claimsOfCall(call: number): { id_token: { acr: { essential: boolean; value: string } } } {
+    return JSON.parse(oidc.authorize.mock.calls[call][1].customParams.claims as string);
+  }
+
   it('AC-01: login goes to the authorize of the Verifier', () => {
     service.login();
 
     expect(oidc.authorize).toHaveBeenCalledTimes(1);
+  });
+
+  it('AC-29: login asks for the level of the tenant as essential: high without configuration or level, substantial when configured', () => {
+    service.login();
+    portalConfig.set({ assurance_level: 'high' });
+    service.login();
+    portalConfig.set({ assurance_level: 'substantial' });
+    service.login();
+
+    expect(claimsOfCall(0).id_token.acr).toEqual({ essential: true, value: 'http://eidas.europa.eu/LoA/high' });
+    expect(claimsOfCall(1).id_token.acr).toEqual({ essential: true, value: 'http://eidas.europa.eu/LoA/high' });
+    expect(claimsOfCall(2).id_token.acr).toEqual({ essential: true, value: 'http://eidas.europa.eu/LoA/substantial' });
   });
 
   it('AC-02: a valid return keeps the Access Token and the given name in memory', async () => {
@@ -127,10 +149,14 @@ describe('HolderAuthService', () => {
     },
   );
 
-  it('AC-07: the silent login is an authorize with prompt=none', () => {
+  it('AC-07: the silent login is an authorize with prompt=none and the level of the tenant', () => {
+    portalConfig.set({ assurance_level: 'substantial' });
+
     service.loginSilently();
 
-    expect(oidc.authorize).toHaveBeenCalledWith(undefined, { customParams: { prompt: 'none' } });
+    expect(oidc.authorize).toHaveBeenCalledWith(undefined, {
+      customParams: { prompt: 'none', claims: JSON.stringify({ id_token: { acr: { essential: true, value: 'http://eidas.europa.eu/LoA/substantial' } } }) },
+    });
   });
 
   describe('renewal (AC-06, EC-06)', () => {

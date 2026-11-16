@@ -1,4 +1,4 @@
-import { buildOidcConfig, REQUIRED_ACR } from './oidc-config';
+import { ACR_BY_LEVEL, DEFAULT_ASSURANCE_LEVEL, acrClaims, buildOidcConfig } from './oidc-config';
 
 describe('buildOidcConfig', () => {
   const config = buildOidcConfig('sandbox', 'https://sandbox.example');
@@ -12,11 +12,17 @@ describe('buildOidcConfig', () => {
     expect(config.scope).toBe('openid profile email personal_administrative_number');
   });
 
-  it('AC-01: asks for the high level of assurance as an essential claim of the ID Token', () => {
-    expect(JSON.parse(String(config.customParamsAuthRequest?.['claims']))).toEqual({
-      id_token: { acr: { essential: true, value: 'http://eidas.europa.eu/LoA/high' } },
+  it('AC-29: the static configuration carries no level: each authorize adds the one of the tenant', () => {
+    expect(config.customParamsAuthRequest).toBeUndefined();
+    expect(DEFAULT_ASSURANCE_LEVEL).toBe('high');
+  });
+
+  it('AC-29: acrClaims asks for the acr of the level as an essential claim of the ID Token', () => {
+    expect(JSON.parse(acrClaims('high'))).toEqual({ id_token: { acr: { essential: true, value: 'http://eidas.europa.eu/LoA/high' } } });
+    expect(JSON.parse(acrClaims('substantial'))).toEqual({
+      id_token: { acr: { essential: true, value: 'http://eidas.europa.eu/LoA/substantial' } },
     });
-    expect(REQUIRED_ACR).toBe('http://eidas.europa.eu/LoA/high');
+    expect(ACR_BY_LEVEL).toEqual({ high: 'http://eidas.europa.eu/LoA/high', substantial: 'http://eidas.europa.eu/LoA/substantial' });
   });
 
   it('keeps PKCE on, no user info call, no silent renewal and the history cleanup', () => {

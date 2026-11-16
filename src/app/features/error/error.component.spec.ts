@@ -33,7 +33,7 @@ describe('ErrorComponent', () => {
   let token: string | null;
 
   function configWith(support: PortalConfigSupport): PortalConfig {
-    return { texts: {}, support, legal_links: {}, wallet_url: 'https://cgcom.example/wallet' };
+    return { texts: {}, support, legal_links: {}, wallet_url: 'https://cgcom.example/wallet', assurance_level: 'high' };
   }
 
   function show(reason: string): HTMLElement {

@@ -1,6 +1,8 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { OidcSecurityService } from 'angular-auth-oidc-client';
 import { firstValueFrom } from 'rxjs';
+import { PortalConfigService } from '../config/portal-config.service';
+import { AssuranceLevel, DEFAULT_ASSURANCE_LEVEL, acrClaims } from './oidc-config';
 import { OidcFlowStorage } from './oidc-flow-storage';
 
 /** Resultado de procesar la vuelta del Verifier. */
@@ -27,6 +29,7 @@ const EXPIRY_MARGIN_SECONDS = 5;
 export class HolderAuthService {
   private readonly oidc = inject(OidcSecurityService);
   private readonly storage = inject(OidcFlowStorage);
+  private readonly portalConfig = inject(PortalConfigService);
 
   private readonly accessTokenState = signal<string | null>(null);
   private readonly givenNameState = signal('');
@@ -41,9 +44,9 @@ export class HolderAuthService {
     return this.accessTokenState();
   }
 
-  /** Lleva al titular al `authorize` del Verifier. */
+  /** Lleva al titular al `authorize` del Verifier, pidiendo como esencial el nivel del tenant (AD-14). */
   login(): void {
-    this.oidc.authorize();
+    this.oidc.authorize(undefined, { customParams: { claims: acrClaims(this.assuranceLevel()) } });
   }
 
   /**
@@ -99,7 +102,7 @@ export class HolderAuthService {
    * con `login_required` o `interaction_required` y `completeLogin` lo dice.
    */
   loginSilently(): void {
-    this.oidc.authorize(undefined, { customParams: { prompt: 'none' } });
+    this.oidc.authorize(undefined, { customParams: { prompt: 'none', claims: acrClaims(this.assuranceLevel()) } });
   }
 
   /** El Access Token ya ha caducado (o caduca en unos segundos). Sin `exp` legible no se da por caducado: lo dirá el servicio con un 401. */
@@ -154,6 +157,11 @@ export class HolderAuthService {
   discard(): void {
     this.clearSession();
     this.storage.clearRedirectMark();
+  }
+
+  /** Nivel del tenant de la configuración cargada; alto si aún no hay configuración. */
+  private assuranceLevel(): AssuranceLevel {
+    return this.portalConfig.config()?.assurance_level === 'substantial' ? 'substantial' : DEFAULT_ASSURANCE_LEVEL;
   }
 
   private isInsideRedirectWindow(): boolean {
