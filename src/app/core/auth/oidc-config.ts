@@ -50,6 +50,9 @@ export function buildOidcConfig(tenant: string, origin: string): OpenIdConfigura
     responseType: 'code',
     scope: 'openid profile email personal_administrative_number',
     useRefreshToken: true,
+    // La vuelta la lleva LoginCallbackComponent, que navega al paso del recorrido. Sin esto la librería
+    // navega antes a `postLoginRoute` (`/`, Inicio) y el titular ve Inicio un momento.
+    triggerAuthorizationResultEvent: true,
     // El ID Token dura 60 s y no decide si hay sesión: lo hace el Access Token.
     triggerRefreshWhenIdTokenExpired: false,
     // El ID Token de una renovación puede no traer el `nonce` de la ida.

@@ -39,6 +39,10 @@ describe('buildOidcConfig', () => {
     expect(config.ignoreNonceAfterRefresh).toBe(true);
   });
 
+  it('AC-02: the library does not navigate after the return: the callback route goes to the step', () => {
+    expect(config.triggerAuthorizationResultEvent).toBe(true);
+  });
+
   it('refuses to build a configuration without a tenant', () => {
     expect(() => buildOidcConfig('', 'https://sandbox.example')).toThrow();
   });
