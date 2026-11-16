@@ -9,10 +9,13 @@ export type AssuranceLevel = 'high' | 'substantial';
 /** Nivel que se pide si no hay configuración cargada. */
 export const DEFAULT_ASSURANCE_LEVEL: AssuranceLevel = 'high';
 
-/** `acr` de eIDAS de cada nivel. */
+/**
+ * `acr` de eIDAS de cada nivel. Son identificadores que la norma define con
+ * `http:`, no direcciones a las que se llame (typescript:S5332, falso positivo).
+ */
 export const ACR_BY_LEVEL: Readonly<Record<AssuranceLevel, string>> = {
-  high: 'http://eidas.europa.eu/LoA/high',
-  substantial: 'http://eidas.europa.eu/LoA/substantial',
+  high: 'http://eidas.europa.eu/LoA/high', // NOSONAR: identificador de eIDAS, no se llama
+  substantial: 'http://eidas.europa.eu/LoA/substantial', // NOSONAR: identificador de eIDAS, no se llama
 };
 
 /**

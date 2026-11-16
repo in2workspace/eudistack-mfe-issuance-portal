@@ -38,7 +38,11 @@ export class LoginCallbackComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly document = inject(DOCUMENT);
 
-  async ngOnInit(): Promise<void> {
+  ngOnInit(): void {
+    void this.handleReturn();
+  }
+
+  private async handleReturn(): Promise<void> {
     const destination = await this.destination();
     if (destination) {
       await this.router.navigate(destination.commands, { replaceUrl: true, ...destination.extras });
