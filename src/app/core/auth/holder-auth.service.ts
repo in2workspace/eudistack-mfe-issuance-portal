@@ -36,6 +36,16 @@ export class HolderAuthService {
   private renewal: Promise<boolean> | null = null;
   private redirecting = false;
 
+  constructor() {
+    // Si el titular vuelve con «Atrás» y el navegador restaura esta página de su caché, la ida al Verifier no
+    // ocurrió aquí: sin esto `redirecting` seguiría en `true` y las llamadas con 401 quedarían colgadas.
+    window.addEventListener('pageshow', (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        this.redirecting = false;
+      }
+    });
+  }
+
   /** `given_name` del ID Token ya validado; vacío si el token no lo trae (EC-08). */
   readonly givenName = this.givenNameState.asReadonly();
 
@@ -170,7 +180,12 @@ export class HolderAuthService {
 
   private isInsideRedirectWindow(): boolean {
     const last = this.storage.readRedirectMark();
-    return last !== null && Date.now() - last < REDIRECT_WINDOW_MS;
+    if (last === null) {
+      return false;
+    }
+    // Una marca en el futuro (el reloj del equipo ha retrocedido) no abre la ventana.
+    const elapsed = Date.now() - last;
+    return elapsed >= 0 && elapsed < REDIRECT_WINDOW_MS;
   }
 
   /**

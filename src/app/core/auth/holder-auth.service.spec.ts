@@ -326,6 +326,28 @@ describe('HolderAuthService', () => {
         expect(oidc.logoffLocal).toHaveBeenCalledTimes(1);
       });
 
+      it('F3: a mark in the future (the clock went back) does not hold the window open', () => {
+        jest.setSystemTime(1_000_000);
+        mark = 1_000_000 + 30_000;
+
+        expect(service.redirectToVerifier()).toBe(true);
+        expect(oidc.authorize).toHaveBeenCalledTimes(1);
+      });
+
+      it('F4: a page restored from the back-forward cache may go to the Verifier again', () => {
+        jest.setSystemTime(1_000_000);
+        service.redirectToVerifier();
+        window.dispatchEvent(new Event('beforeunload'));
+        mark = null;
+
+        const restored = new Event('pageshow');
+        Object.defineProperty(restored, 'persisted', { value: true });
+        window.dispatchEvent(restored);
+
+        expect(service.redirectToVerifier()).toBe(true);
+        expect(oidc.authorize).toHaveBeenCalledTimes(2);
+      });
+
       it('discard clears the mark', () => {
         mark = 5;
 
