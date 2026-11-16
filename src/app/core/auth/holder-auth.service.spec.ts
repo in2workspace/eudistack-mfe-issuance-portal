@@ -253,16 +253,39 @@ describe('HolderAuthService', () => {
         expect(oidc.authorize).toHaveBeenCalledTimes(2);
       });
 
-      it('confirmSession clears the mark, so a later failure goes to the Verifier', () => {
+      it('N1: a success inside the window keeps the mark, so a repeated 401 does not go to the Verifier again', () => {
         jest.setSystemTime(1_000_000);
         service.redirectToVerifier();
         jest.advanceTimersByTime(10_001);
 
         service.confirmSession();
 
+        expect(mark).toBe(1_000_000);
+        expect(service.redirectToVerifier()).toBe(false);
+        expect(oidc.authorize).toHaveBeenCalledTimes(1);
+      });
+
+      it('a success after the window clears the mark', () => {
+        jest.setSystemTime(1_000_000);
+        service.redirectToVerifier();
+        jest.setSystemTime(1_000_000 + 60_001);
+        jest.advanceTimersByTime(60_001);
+
+        service.confirmSession();
+
         expect(mark).toBeNull();
+      });
+
+      it('N2: once the page starts leaving for the Verifier, the pending timer no longer allows another trip', () => {
+        jest.setSystemTime(1_000_000);
+        service.redirectToVerifier();
+
+        window.dispatchEvent(new Event('beforeunload'));
+        jest.advanceTimersByTime(10_001);
+
         expect(service.redirectToVerifier()).toBe(true);
-        expect(oidc.authorize).toHaveBeenCalledTimes(2);
+        expect(oidc.authorize).toHaveBeenCalledTimes(1);
+        expect(oidc.logoffLocal).toHaveBeenCalledTimes(1);
       });
 
       it('discard clears the mark', () => {

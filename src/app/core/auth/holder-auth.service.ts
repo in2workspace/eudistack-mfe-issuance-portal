@@ -52,17 +52,17 @@ export class HolderAuthService {
    * pueden fallar a la vez y cada `authorize` guarda su propio verificador
    * PKCE: solo el primero sale hacia el Verifier. A la vuelta, `POST /journey`
    * devuelve el recorrido que ya existe. Como mucho una ida por ventana de
-   * `REDIRECT_WINDOW_MS`, con una marca de tiempo en `sessionStorage` que
-   * borra `confirmSession` o `discard`: si tras volver sigue el 401, no hay
-   * otra ida y devuelve `false`, con la sesión descartada (W4). También
-   * `false` si `authorize` falla.
+   * `REDIRECT_WINDOW_MS`, con una marca de tiempo en `sessionStorage` (decisión
+   * 9 de `ac.md`) que solo se borra cuando ha pasado la ventana o al descartar
+   * la sesión: si tras volver sigue el 401, no hay otra ida y devuelve
+   * `false`, con la sesión descartada (W4). También `false` si `authorize`
+   * falla.
    */
   redirectToVerifier(): boolean {
     if (this.redirecting) {
       return true;
     }
-    const last = this.storage.readRedirectMark();
-    if (last !== null && Date.now() - last < REDIRECT_WINDOW_MS) {
+    if (this.isInsideRedirectWindow()) {
       this.discard();
       return false;
     }
@@ -76,14 +76,20 @@ export class HolderAuthService {
       this.discard();
       return false;
     }
-    // `authorize` falla de forma asíncrona sin avisar: si la página sigue aquí, se permite otra ida.
-    setTimeout(() => (this.redirecting = false), REDIRECT_PENDING_MS);
+    this.watchPendingRedirect();
     return true;
   }
 
-  /** Una llamada al servicio ha tenido éxito con el token vigente: la ida por renovación ya no cuenta. */
+  /**
+   * Una llamada al servicio ha tenido éxito: borra la marca de la última ida
+   * solo si ya ha pasado su ventana. Un éxito de otro endpoint no la borra
+   * antes, para que un 401 que se repite no lleve al Verifier en cada página
+   * (N1 de la ronda 2).
+   */
   confirmSession(): void {
-    this.storage.clearRedirectMark();
+    if (!this.isInsideRedirectWindow()) {
+      this.storage.clearRedirectMark();
+    }
   }
 
   /**
@@ -148,6 +154,27 @@ export class HolderAuthService {
   discard(): void {
     this.clearSession();
     this.storage.clearRedirectMark();
+  }
+
+  private isInsideRedirectWindow(): boolean {
+    const last = this.storage.readRedirectMark();
+    return last !== null && Date.now() - last < REDIRECT_WINDOW_MS;
+  }
+
+  /**
+   * `authorize` falla de forma asíncrona sin avisar: si la página sigue aquí
+   * pasado `REDIRECT_PENDING_MS`, se permite otra ida. En cuanto el navegador
+   * empieza a salir hacia el Verifier (`beforeunload`), el temporizador se
+   * anula: un Verifier lento no debe dejar que otro 401 enseñe la pantalla de
+   * error mientras la página se va (N2 de la ronda 2).
+   */
+  private watchPendingRedirect(): void {
+    const leaving = (): void => clearTimeout(timer);
+    const timer = setTimeout(() => {
+      window.removeEventListener('beforeunload', leaving);
+      this.redirecting = false;
+    }, REDIRECT_PENDING_MS);
+    window.addEventListener('beforeunload', leaving, { once: true });
   }
 
   private clearSession(): void {
