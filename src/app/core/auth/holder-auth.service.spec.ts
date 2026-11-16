@@ -9,7 +9,13 @@ import { OidcFlowStorage } from './oidc-flow-storage';
 
 describe('HolderAuthService', () => {
   const CALLBACK = 'https://sandbox.example/issuance-portal/callback?code=abc&state=xyz';
-  let oidc: { authorize: jest.Mock; checkAuth: jest.Mock; logoffLocal: jest.Mock; forceRefreshSession: jest.Mock };
+  let oidc: {
+    authorize: jest.Mock;
+    checkAuth: jest.Mock;
+    logoffLocal: jest.Mock;
+    forceRefreshSession: jest.Mock;
+    preloadAuthWellKnownDocument: jest.Mock;
+  };
   let flow: { clearFlow: jest.Mock; clear: jest.Mock; readRedirectMark: jest.Mock; writeRedirectMark: jest.Mock; clearRedirectMark: jest.Mock };
   let mark: number | null;
   const portalConfig = signal<Partial<PortalConfig> | null>(null);
@@ -20,7 +26,13 @@ describe('HolderAuthService', () => {
   }
 
   beforeEach(() => {
-    oidc = { authorize: jest.fn(), checkAuth: jest.fn(), logoffLocal: jest.fn(), forceRefreshSession: jest.fn() };
+    oidc = {
+      authorize: jest.fn(),
+      checkAuth: jest.fn(),
+      logoffLocal: jest.fn(),
+      forceRefreshSession: jest.fn(),
+      preloadAuthWellKnownDocument: jest.fn(() => of({})),
+    };
     portalConfig.set(null);
     mark = null;
     flow = {

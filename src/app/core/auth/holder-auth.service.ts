@@ -137,6 +137,10 @@ export class HolderAuthService {
         this.discard();
         return INTERACTION_ERRORS.includes(error) ? 'interaction-required' : 'failed';
       }
+      // El descubrimiento del Verifier (`token_endpoint`, `jwks_uri`) vive en el
+      // almacenamiento en memoria y no sobrevive a la ida al Verifier: sin él,
+      // `checkAuth` no canjea el código. Se vuelve a cargar antes.
+      await firstValueFrom(this.oidc.preloadAuthWellKnownDocument());
       const result = await firstValueFrom(this.oidc.checkAuth(url));
       if (!result.isAuthenticated || !result.accessToken) {
         this.discard();

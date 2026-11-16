@@ -170,12 +170,35 @@ describe('provideHolderAuth', () => {
     await authorizeUrl();
     const auth = TestBed.inject(HolderAuthService);
 
-    const completed = await auth.completeLogin(`${origin}/issuance-portal/callback?code=abc&state=forged-state`);
+    const pending = auth.completeLogin(`${origin}/issuance-portal/callback?code=abc&state=forged-state`);
+    await answerDiscovery();
+    const completed = await pending;
 
     expect(completed).toBe('failed');
     expect(auth.accessToken()).toBeNull();
     backend.expectNone(`${origin}/verifier/oidc/token`);
     expect(sessionStorage.length).toBe(0);
     expect(localStorage.length).toBe(0);
+  });
+
+  it('AC-02: after the trip to the Verifier, with only the flow values left, the return loads the discovery again and exchanges the code', async () => {
+    // Lo que queda tras la recarga de la ida al Verifier: la memoria de la librería vacía y el flujo en sessionStorage.
+    sessionStorage.setItem('portal-login-flow', JSON.stringify({ authStateControl: 'state-1', codeVerifier: 'verifier-1', authNonce: 'nonce-1' }));
+    const auth = TestBed.inject(HolderAuthService);
+
+    const pending = auth.completeLogin(`${origin}/issuance-portal/callback?code=abc&state=state-1`);
+    await answerDiscovery();
+    let token = backend.match(`${origin}/verifier/oidc/token`);
+    for (let attempt = 0; attempt < 20 && token.length === 0; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve));
+      token = backend.match(`${origin}/verifier/oidc/token`);
+    }
+
+    expect(token).toHaveLength(1);
+    const body = new URLSearchParams(token[0].request.body as string);
+    expect(body.get('code')).toBe('abc');
+    expect(body.get('code_verifier')).toBe('verifier-1');
+    token[0].flush({ error: 'invalid_grant' }, { status: 400, statusText: 'Bad Request' });
+    expect(await pending).toBe('failed');
   });
 });
