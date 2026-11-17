@@ -29,7 +29,7 @@ describe('IncidentsComponent', () => {
   const config = signal<PortalConfig | null>(null);
 
   function render(support: PortalConfigSupport = SUPPORT): void {
-    config.set({ wallet_url: 'https://wallet.example', texts: {}, legal_links: {}, support });
+    config.set({ wallet_url: 'https://wallet.example', assurance_level: 'high', texts: {}, legal_links: {}, support });
     fixture = TestBed.createComponent(IncidentsComponent);
     fixture.detectChanges();
     page = fixture.nativeElement as HTMLElement;

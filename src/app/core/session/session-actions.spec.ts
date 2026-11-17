@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { SESSION_ACTIONS } from './session-actions';
 
-describe('SESSION_ACTIONS (default, until EUD-314)', () => {
+describe('SESSION_ACTIONS (default, without the Verifier login)', () => {
   beforeEach(() => TestBed.configureTestingModule({ providers: [provideRouter([])] }));
 
   it('starts the login again from Inicio', async () => {

@@ -12,6 +12,8 @@ import { EntitlementApi } from './core/api/generated/authentic-source';
 import { ISSUANCE_PORTAL_ACCESS_TOKEN } from './core/api/issuance-portal-api.interceptor';
 import { CredentialOfferService } from './features/credential-offer/credential-offer.service';
 import { of } from 'rxjs';
+import { HolderAuthService } from './core/auth/holder-auth.service';
+import { OidcFlowStorage } from './core/auth/oidc-flow-storage';
 
 jest.mock('qrcode', () => ({
   __esModule: true,
@@ -24,7 +26,7 @@ jest.mock('qrcode', () => ({
  * atestación o correo del titular.
  */
 describe('Holder data in the browser', () => {
-  const config: PortalConfig = { texts: {}, support: {}, legal_links: {}, wallet_url: 'https://cgcom.example/wallet' };
+  const config: PortalConfig = { texts: {}, support: {}, legal_links: {}, wallet_url: 'https://cgcom.example/wallet', assurance_level: 'high' };
   const holderData = /dni|nif|givenName|familyName|email|correo|colegiado|collegiate|specialty|especialidad|@/i;
   const sendIncident = jest.fn();
 
@@ -189,6 +191,69 @@ describe('Holder data in the browser', () => {
       for (const value of [email, code, onboardingUrl, 'María Holder Privada', '282809999']) {
         expect(browser).not.toContain(value);
       }
+    });
+  });
+
+  describe('NFR-3 (EUD-314): the login with the Verifier', () => {
+    const accessToken = 'at.secret-access-token';
+    const idToken = 'idt.secret-id-token';
+    const refreshToken = 'secret-refresh-token';
+    const givenName = 'Maria Holder Privada';
+    let storage: OidcFlowStorage;
+
+    /** Lo que la librería OIDC guarda al canjear el código, escrito como ella: un único valor JSON por configuración. */
+    function libraryStoresTheTokens(): void {
+      storage.write(
+        'issuance-portal',
+        JSON.stringify({
+          authnResult: { access_token: accessToken, id_token: idToken, refresh_token: refreshToken },
+          userData: { given_name: givenName, family_name: 'Apellido Privado', personal_administrative_number: 'IDESX-00000000T' },
+        }),
+      );
+    }
+
+    beforeEach(() => {
+      TestBed.overrideProvider(JourneyApi, { useValue: { openJourney: () => of({ state: 'in_progress', step: 'identified' }), getJourney: () => of({ state: 'in_progress', step: 'identified' }) } });
+      TestBed.overrideProvider(ISSUANCE_PORTAL_ACCESS_TOKEN, { useValue: () => accessToken });
+      TestBed.overrideProvider(HolderAuthService, {
+        useValue: {
+          completeLogin: async () => {
+            libraryStoresTheTokens();
+            storage.clearFlow();
+            return 'authenticated';
+          },
+          accessToken: () => accessToken,
+          discard: () => storage.clear(),
+        },
+      });
+      storage = TestBed.inject(OidcFlowStorage);
+    });
+
+    it('AC-08: coming back from the Verifier leaves no token, name or code in the storage or the address', async () => {
+      // Lo que deja la ida al Verifier: el verificador PKCE, el state y el nonce.
+      storage.write('issuance-portal', JSON.stringify({ codeVerifier: 'cv', authStateControl: 'st', authNonce: 'no' }));
+      const harness = await RouterTestingHarness.create();
+
+      await harness.navigateByUrl('/callback?code=abc&state=st');
+      for (let attempt = 0; attempt < 20 && TestBed.inject(Router).url.startsWith('/callback'); attempt++) {
+        await new Promise((resolve) => setTimeout(resolve));
+      }
+      await harness.fixture.whenStable();
+
+      expect(TestBed.inject(Router).url).toBe('/entitlement');
+      const browser = [storageContents(), TestBed.inject(Router).url, JSON.stringify(history.state ?? {})].join('\n');
+      for (const value of [accessToken, idToken, refreshToken, givenName, 'Apellido Privado', 'IDESX-00000000T', 'code=', 'cv', 'secret']) {
+        expect(browser).not.toContain(value);
+      }
+      expect(sessionStorage.length).toBe(0);
+      expect(localStorage.length).toBe(0);
+    });
+
+    it('the tokens the library keeps are only in memory', () => {
+      libraryStoresTheTokens();
+
+      expect(storageContents()).toBe('');
+      expect(storage.read('issuance-portal')).toContain(accessToken);
     });
   });
 

@@ -7,7 +7,7 @@ import { PortalConfig } from '../api/generated/journey';
 
 describe('configuration guards', () => {
   const state = signal<PortalConfigState>({ status: 'loading' });
-  const config: PortalConfig = { texts: {}, support: {}, legal_links: {}, wallet_url: 'https://cgcom.example/wallet' };
+  const config: PortalConfig = { texts: {}, support: {}, legal_links: {}, wallet_url: 'https://cgcom.example/wallet', assurance_level: 'high' };
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -38,5 +38,14 @@ describe('configuration guards', () => {
 
     state.set({ status: 'loaded', config });
     expect(run(configUnavailableGuard)).toBe('/');
+  });
+
+  it('design 3.2: shows the unavailable screen with the configuration loaded when the service reported it on opening the journey', () => {
+    state.set({ status: 'loaded', config });
+    jest.spyOn(TestBed.inject(Router), 'getCurrentNavigation').mockReturnValue({
+      extras: { state: { serviceConfigUnavailable: true } },
+    } as unknown as ReturnType<Router['getCurrentNavigation']>);
+
+    expect(run(configUnavailableGuard)).toBe(true);
   });
 });

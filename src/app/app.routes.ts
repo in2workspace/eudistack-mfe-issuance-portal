@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { journeyStepGuard } from './core/journey/journey-step.guard';
 import { DATA_PATH, EMAIL_PATH, ENTITLEMENT_PATH, QR_PATH } from './core/journey/journey-paths';
 import { CONFIG_UNAVAILABLE_PATH, configAvailableGuard, configUnavailableGuard } from './core/guards/config-available.guard';
+import { LOGIN_CALLBACK_PATH } from './core/auth/oidc-config';
 import { legacyQueryParamsGuard } from './core/guards/legacy-query-params.guard';
 import { ERROR_PATH, errorReasonGuard } from './features/error/error-reason';
 import {
@@ -31,6 +32,12 @@ export const routes: Routes = [
           import('./features/issuance-start/issuance-info/issuance-info.component').then(
             (m) => m.IssuanceInfoComponent,
           ),
+      },
+      {
+        // Vuelta del inicio de sesión del Verifier (EUD-314): abre el recorrido y sigue a su paso.
+        path: LOGIN_CALLBACK_PATH,
+        loadComponent: () =>
+          import('./features/login-callback/login-callback.component').then((m) => m.LoginCallbackComponent),
       },
       {
         // Paso Comprobación (EUD-286): comprueba el derecho y pasa solo a Datos o a Error.

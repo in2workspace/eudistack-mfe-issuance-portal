@@ -33,7 +33,7 @@ describe('ErrorComponent', () => {
   let token: string | null;
 
   function configWith(support: PortalConfigSupport): PortalConfig {
-    return { texts: {}, support, legal_links: {}, wallet_url: 'https://cgcom.example/wallet' };
+    return { texts: {}, support, legal_links: {}, wallet_url: 'https://cgcom.example/wallet', assurance_level: 'high' };
   }
 
   function show(reason: string): HTMLElement {
@@ -65,7 +65,7 @@ describe('ErrorComponent', () => {
     reloadTexts = jest.fn().mockResolvedValue(undefined);
     withdrawJourney = jest.fn().mockReturnValue(of({ state: 'withdrawn', step: 'identified' }));
     token = 'access-token';
-    session = { restartLogin: jest.fn().mockResolvedValue(undefined), discardTokens: jest.fn() };
+    session = { restartLogin: jest.fn().mockResolvedValue(undefined), resumeLogin: jest.fn().mockResolvedValue(undefined), discardTokens: jest.fn() };
     config.set(configWith({ email: 'soporte@cgcom.example', phone: '900 000 000', schedule: 'L-V 9-18' }));
     TestBed.configureTestingModule({
       imports: [ErrorComponent, TranslateModule.forRoot()],

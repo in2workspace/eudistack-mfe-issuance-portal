@@ -4,6 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { firstValueFrom } from 'rxjs';
 import { httpInterceptors } from './app.config';
 import { ApiProblemError } from './core/api/api-problem.error';
+import { HolderAuthService } from './core/auth/holder-auth.service';
 import { JourneyInactivityService } from './core/journey/journey-inactivity.service';
 import { JourneyNavigator } from './core/journey/journey-navigator';
 
@@ -21,6 +22,7 @@ describe('HTTP interceptors of the app', () => {
       providers: [
         provideHttpClient(withInterceptors(httpInterceptors)),
         provideHttpClientTesting(),
+        { provide: HolderAuthService, useValue: { isAccessTokenExpired: () => false, renew: jest.fn(), redirectToVerifier: jest.fn().mockReturnValue(true), confirmSession: jest.fn() } },
         { provide: JourneyNavigator, useValue: navigator },
         { provide: JourneyInactivityService, useValue: { touch } },
       ],
@@ -35,6 +37,7 @@ describe('HTTP interceptors of the app', () => {
     expect(httpInterceptors.map((interceptor) => interceptor.name)).toEqual([
       'journeyActivityInterceptor',
       'journeyErrorsInterceptor',
+      'tokenRenewalInterceptor',
       'issuancePortalApiInterceptor',
     ]);
   });

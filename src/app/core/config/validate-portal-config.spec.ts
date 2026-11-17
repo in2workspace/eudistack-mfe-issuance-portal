@@ -12,6 +12,14 @@ describe('validatePortalConfig', () => {
     expect(validatePortalConfig(valid)).toEqual(valid);
   });
 
+  it.each(['high', 'substantial', undefined])('AC-29: accepts the assurance level %p', (level) => {
+    expect(validatePortalConfig({ ...valid, assurance_level: level })).not.toBeNull();
+  });
+
+  it.each(['low', 'HIGH', '', 1, null])('AC-29, ES-02: rejects an unknown assurance level (%p)', (level) => {
+    expect(validatePortalConfig({ ...valid, assurance_level: level })).toBeNull();
+  });
+
   it.each(['texts', 'support', 'legal_links', 'wallet_url'])('ES-02: rejects a configuration without %s', (field) => {
     const raw: Record<string, unknown> = { ...valid };
     delete raw[field];
