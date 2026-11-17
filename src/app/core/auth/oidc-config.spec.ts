@@ -1,4 +1,4 @@
-import { ACR_BY_LEVEL, DEFAULT_ASSURANCE_LEVEL, acrClaims, buildOidcConfig } from './oidc-config';
+import { ACR_BY_LEVEL, DEFAULT_ASSURANCE_LEVEL, acrClaims, buildOidcConfig, withScope } from './oidc-config';
 
 describe('buildOidcConfig', () => {
   const config = buildOidcConfig('sandbox', 'https://sandbox.example');
@@ -45,5 +45,24 @@ describe('buildOidcConfig', () => {
 
   it('refuses to build a configuration without a tenant', () => {
     expect(() => buildOidcConfig('', 'https://sandbox.example')).toThrow();
+  });
+});
+
+describe('withScope', () => {
+  const url = 'https://cgcom.example/verifier/oidc/authorize?client_id=c&scope=openid%20profile&state=s&claims=%7B%7D';
+
+  it('AC-13: adds the login attestation scope to the scope and keeps every other parameter', () => {
+    const result = new URL(withScope(url, 'doctorid'));
+
+    expect(result.searchParams.getAll('scope')).toEqual(['openid profile doctorid']);
+    expect(result.searchParams.get('client_id')).toBe('c');
+    expect(result.searchParams.get('state')).toBe('s');
+    expect(result.searchParams.get('claims')).toBe('{}');
+  });
+
+  it('AC-13: leaves the URL as it is without a scope or when it already carries it', () => {
+    expect(withScope(url, undefined)).toBe(url);
+    expect(withScope(url, '')).toBe(url);
+    expect(withScope(url, 'profile')).toBe(url);
   });
 });

@@ -20,6 +20,17 @@ describe('validatePortalConfig', () => {
     expect(validatePortalConfig({ ...valid, assurance_level: level })).toBeNull();
   });
 
+  it.each(['doctorid', 'urn:es.cgcom:doctorid', undefined])('AC-13: accepts the login attestation scope %p', (scope) => {
+    expect(validatePortalConfig({ ...valid, login_attestation_scope: scope })).not.toBeNull();
+  });
+
+  it.each(['', 'doctorid openid', 'doc"torid', 'doc\torid', 'médico', 1, null])(
+    'AC-13, ES-02: rejects a login attestation scope that is not one OAuth scope (%p)',
+    (scope) => {
+      expect(validatePortalConfig({ ...valid, login_attestation_scope: scope })).toBeNull();
+    },
+  );
+
   it.each(['texts', 'support', 'legal_links', 'wallet_url'])('ES-02: rejects a configuration without %s', (field) => {
     const raw: Record<string, unknown> = { ...valid };
     delete raw[field];
