@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: EUDIStack — Issuance Portal Service · Journey module
-  version: "4"
+  version: "5"
   summary: Journey module of the issuance portal service, used by the issuance portal interface.
   description: |
     The issuance portal service has two modules, each with its own part of the API under the same base URL
