@@ -157,6 +157,16 @@ describe('VerifyEmailComponent', () => {
     expect(stepOf()).toBe('Paso 1 de 3');
   });
 
+  it('Correo, estado 2: a small hint that the email may take a minute or be in junk, right above «¿No te ha llegado?»', () => {
+    create(verification());
+    const root = fixture.nativeElement as HTMLElement;
+    const hint = root.querySelector('[data-testid="delay-hint"]')!;
+
+    expect(hint.textContent?.trim()).toBe('Puede tardar un minuto. Mira también en «Correo no deseado».');
+    const prompt = Array.from(root.querySelectorAll('span')).find((e) => e.textContent?.trim() === '¿No te ha llegado?')!;
+    expect(hint.compareDocumentPosition(prompt) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('while GET /journey answers, shows the waiting notice as a status region and no boxes', () => {
     getJourney.mockReturnValue(NEVER);
     fixture = TestBed.createComponent(VerifyEmailComponent);

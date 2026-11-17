@@ -217,5 +217,6 @@
   "issuanceInfo.handy.device": "El dispositivo donde tienes o quieres tener tu cartera",
   "issuanceInfo.duration": "Tardarás unos 5 minutos",
   "credentialOffer.saveFailed": "No se ha podido anotar. Inténtalo de nuevo.",
-  "stepIndicator.label": "Paso {{step}} de {{total}}"
+  "stepIndicator.label": "Paso {{step}} de {{total}}",
+  "verifyEmail.delayHint": "Puede tardar un minuto. Mira también en «Correo no deseado»."
 }
