@@ -12,6 +12,7 @@ import { REQUESTS_PATH, REQUEST_ID_PARAM, qrUrl } from '../../../core/journey/jo
 import { HeaderBackService } from '../../../shared/components/portal-header/header-back.service';
 import { SESSION_ACTIONS } from '../../../core/session/session-actions';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
+import { StepIndicatorComponent } from '../../../shared/components/step-indicator/step-indicator.component';
 
 /**
  * Paso Datos de una solicitud (wireframes, Datos): la vista previa de la
@@ -23,7 +24,7 @@ import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialo
  */
 @Component({
   selector: 'app-user-data',
-  imports: [TranslatePipe, ConfirmDialogComponent],
+  imports: [TranslatePipe, ConfirmDialogComponent, StepIndicatorComponent],
   templateUrl: './user-data.component.html',
 })
 export class UserDataComponent implements OnInit {

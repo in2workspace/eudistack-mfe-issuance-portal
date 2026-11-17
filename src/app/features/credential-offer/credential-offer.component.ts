@@ -10,6 +10,7 @@ import { REQUEST_ID_PARAM } from '../../core/journey/journey-paths';
 import { MobileLayout, OPEN_WALLET } from '../../core/layout/mobile-layout';
 import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/confirm-dialog.component';
 import { CredentialOfferUrlBoxComponent } from '../../shared/components/credential-offer-url-box/credential-offer-url-box.component';
+import { StepIndicatorComponent } from '../../shared/components/step-indicator/step-indicator.component';
 
 /**
  * Paso QR (wireframes, QR; design.md §3.3 y AD-5). Estados de
@@ -26,7 +27,7 @@ import { CredentialOfferUrlBoxComponent } from '../../shared/components/credenti
  */
 @Component({
   selector: 'app-credential-offer',
-  imports: [NgTemplateOutlet, TranslateModule, CredentialOfferUrlBoxComponent, ConfirmDialogComponent],
+  imports: [NgTemplateOutlet, TranslateModule, CredentialOfferUrlBoxComponent, ConfirmDialogComponent, StepIndicatorComponent],
   providers: [OfferFlowService],
   templateUrl: './credential-offer.component.html',
 })

@@ -216,5 +216,6 @@
   "issuanceInfo.handy.certificate": "Your digital certificate, installed on this computer",
   "issuanceInfo.handy.device": "The device where you have or want to have your wallet",
   "issuanceInfo.duration": "It will take about 5 minutes",
-  "credentialOffer.saveFailed": "It could not be recorded. Try again."
+  "credentialOffer.saveFailed": "It could not be recorded. Try again.",
+  "stepIndicator.label": "Step {{step}} of {{total}}"
 }

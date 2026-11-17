@@ -146,6 +146,17 @@ describe('VerifyEmailComponent', () => {
     fixture.detectChanges();
   }
 
+  it('wireframes, Navegación: Correo shows "Paso 1 de 3" above its title, in both states', () => {
+    create(null);
+    const stepOf = (): string | undefined =>
+      (fixture.nativeElement as HTMLElement).querySelector('[data-testid="step-indicator"]')?.textContent?.trim();
+    expect(stepOf()).toBe('Paso 1 de 3');
+
+    fixture.destroy();
+    create(verification());
+    expect(stepOf()).toBe('Paso 1 de 3');
+  });
+
   it('while GET /journey answers, shows the waiting notice as a status region and no boxes', () => {
     getJourney.mockReturnValue(NEVER);
     fixture = TestBed.createComponent(VerifyEmailComponent);

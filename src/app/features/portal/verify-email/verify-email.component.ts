@@ -27,6 +27,7 @@ import { HeaderBackService } from '../../../shared/components/portal-header/head
 import { CodeInputComponent } from '../../../shared/components/code-input/code-input.component';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { injectCountdown } from '../../../shared/countdown';
+import { StepIndicatorComponent } from '../../../shared/components/step-indicator/step-indicator.component';
 
 /** Mensaje bajo las casillas del código, anunciado en una región `aria-live="polite"`. */
 type Message =
@@ -70,7 +71,7 @@ function trimmedEmail(control: AbstractControl<string>): ValidationErrors | null
  */
 @Component({
   selector: 'app-verify-email',
-  imports: [ReactiveFormsModule, TranslatePipe, CodeInputComponent, ConfirmDialogComponent],
+  imports: [ReactiveFormsModule, TranslatePipe, CodeInputComponent, ConfirmDialogComponent, StepIndicatorComponent],
   templateUrl: './verify-email.component.html',
 })
 export class VerifyEmailComponent implements OnInit {

@@ -109,6 +109,12 @@ describe('UserDataComponent', () => {
     fixture.detectChanges();
   }
 
+  it('wireframes, Navegación: Datos shows "Paso 2 de 3" above its title', () => {
+    create();
+
+    expect(element().querySelector('[data-testid="step-indicator"]')?.textContent?.trim()).toBe('Paso 2 de 3');
+  });
+
   it('while GET /journey answers, shows the waiting notice as a status region and no data', () => {
     getJourney.mockReturnValue(NEVER);
     fixture = TestBed.createComponent(UserDataComponent);

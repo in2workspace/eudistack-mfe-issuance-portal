@@ -216,5 +216,6 @@
   "issuanceInfo.handy.certificate": "Tu certificado digital, instalado en este ordenador",
   "issuanceInfo.handy.device": "El dispositivo donde tienes o quieres tener tu cartera",
   "issuanceInfo.duration": "Tardarás unos 5 minutos",
-  "credentialOffer.saveFailed": "No se ha podido anotar. Inténtalo de nuevo."
+  "credentialOffer.saveFailed": "No se ha podido anotar. Inténtalo de nuevo.",
+  "stepIndicator.label": "Paso {{step}} de {{total}}"
 }

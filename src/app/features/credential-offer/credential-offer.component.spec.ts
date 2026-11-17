@@ -107,6 +107,12 @@ describe('CredentialOfferComponent', () => {
     expect(flow.enter).toHaveBeenCalledWith('r2');
   });
 
+  it('wireframes, Navegación: QR shows "Paso 3 de 3" above its title', async () => {
+    const element = await render();
+
+    expect(element.querySelector('[data-testid="step-indicator"]')?.textContent?.trim()).toBe('Paso 3 de 3');
+  });
+
   it('QR (generando): shows the waiting notice', async () => {
     service.startLoading();
 
