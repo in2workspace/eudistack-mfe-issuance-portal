@@ -37,8 +37,6 @@
   "issuanceInfo.footer.supportPhone": "Teléfono: {{phone}}",
   "issuanceInfo.footer.supportSchedule": "Horario: {{schedule}}",
   "issuanceInfo.footer.developedBy": "Desarrollado por",
-  "credentialOffer.title": "Escanea el código con la cámara del dispositivo donde tienes o quieres tener tu cartera",
-  "credentialOffer.mobile.title": "Añade tu atestación a tu cartera",
   "credentialOffer.mobile.otherDevice": "¿Usas otro dispositivo? Escanea este código:",
   "credentialOffer.openWallet": "Abrir en mi cartera",
   "credentialOffer.useThisComputer": "¿Tu cartera está en este dispositivo? Ábrela aquí",
@@ -220,5 +218,10 @@
   "stepIndicator.label": "Paso {{step}} de {{total}}",
   "verifyEmail.delayHint": "Puede tardar un minuto. Mira también en «Correo no deseado».",
   "requests.titleOfType": "Tienes {{count}} solicitudes de {{type}}",
-  "requests.subtitleOfType": "Obtén un {{type}} por cada una."
+  "requests.subtitleOfType": "Obtén un {{type}} por cada una.",
+  "credentialOffer.saveTitle": "Guarda tu atestación en tu cartera",
+  "credentialOffer.saveTitleOfType": "Guarda tu {{type}} en tu cartera",
+  "credentialOffer.steps.camera": "Abre la cámara del dispositivo donde tienes, o quieres tener, tu cartera.",
+  "credentialOffer.steps.point": "Apunta a este código.",
+  "credentialOffer.steps.follow": "Sigue los pasos que te muestre."
 }

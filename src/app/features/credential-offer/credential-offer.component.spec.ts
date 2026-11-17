@@ -37,7 +37,7 @@ const statusRegions = (root: HTMLElement): HTMLElement[] =>
 describe('CredentialOfferComponent', () => {
   let fixture: ComponentFixture<CredentialOfferComponent>;
   let service: CredentialOfferService;
-  let flow: { enter: jest.Mock; newCode: jest.Mock; declareSaved: jest.Mock };
+  let flow: { enter: jest.Mock; newCode: jest.Mock; declareSaved: jest.Mock; typeName: WritableSignal<string | null> };
   let mobile: WritableSignal<boolean>;
   let openWallet: jest.Mock;
 
@@ -47,6 +47,7 @@ describe('CredentialOfferComponent', () => {
       enter: jest.fn().mockResolvedValue(undefined),
       newCode: jest.fn().mockResolvedValue(undefined),
       declareSaved: jest.fn().mockResolvedValue('saved'),
+      typeName: signal<string | null>(null),
     };
     mobile = signal(false);
     openWallet = jest.fn();
@@ -113,6 +114,15 @@ describe('CredentialOfferComponent', () => {
     expect(element.querySelector('[data-testid="step-indicator"]')?.textContent?.trim()).toBe('Paso 3 de 3');
   });
 
+  it('wireframes, QR: the title names the attestation the service gives', async () => {
+    flow.typeName.set('DoctorID');
+    present(582);
+
+    const element = await render();
+
+    expect(element.querySelector('h1')?.textContent?.trim()).toBe('Guarda tu DoctorID en tu cartera');
+  });
+
   it('QR (generando): shows the waiting notice', async () => {
     service.startLoading();
 
@@ -129,7 +139,13 @@ describe('CredentialOfferComponent', () => {
 
       const element = await render();
 
-      expect(element.querySelector('h1')?.textContent).toContain('Escanea el código con la cámara del dispositivo donde tienes o quieres tener tu cartera');
+      expect(element.querySelector('h1')?.textContent?.trim()).toBe('Guarda tu atestación en tu cartera');
+      const steps = Array.from(element.querySelectorAll('[data-testid="save-steps"] li')).map((li) => li.textContent?.trim());
+      expect(steps).toEqual([
+        'Abre la cámara del dispositivo donde tienes, o quieres tener, tu cartera.',
+        'Apunta a este código.',
+        'Sigue los pasos que te muestre.',
+      ]);
       expect(QRCode.toDataURL).toHaveBeenCalledWith(ONBOARDING_URL, expect.anything());
       expect(element.querySelector('img[width="280"]')).not.toBeNull();
       expect((element.querySelector('app-credential-offer-url-box input') as HTMLInputElement).value).toBe(ONBOARDING_URL);
@@ -236,7 +252,7 @@ describe('CredentialOfferComponent', () => {
       const element = await render();
 
       const open = element.querySelector('a[href]') as HTMLAnchorElement;
-      expect(element.querySelector('h1')?.textContent).toContain('Añade tu atestación a tu cartera');
+      expect(element.querySelector('h1')?.textContent?.trim()).toBe('Guarda tu atestación en tu cartera');
       expect(open.textContent?.trim()).toBe('Abrir en mi cartera');
       expect(open.getAttribute('href')).toBe(ONBOARDING_URL);
       expect(open.hasAttribute('target')).toBe(false);

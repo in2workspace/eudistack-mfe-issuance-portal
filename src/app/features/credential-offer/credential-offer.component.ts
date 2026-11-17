@@ -39,6 +39,7 @@ export class CredentialOfferComponent implements OnInit, OnDestroy {
   private readonly requestId = inject(ActivatedRoute).snapshot.paramMap.get(REQUEST_ID_PARAM) ?? '';
 
   protected readonly mobile = inject(MobileLayout).mobile;
+  protected readonly typeName = this.flow.typeName;
   protected readonly status = this.service.status;
   protected readonly address = computed(() => this.service.address()?.url ?? null);
   protected readonly countdown = computed(() => formatCountdown(this.service.remainingSeconds()));

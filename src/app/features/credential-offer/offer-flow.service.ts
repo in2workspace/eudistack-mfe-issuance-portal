@@ -1,4 +1,4 @@
-import { DestroyRef, Injectable, inject } from '@angular/core';
+import { DestroyRef, Injectable, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, firstValueFrom } from 'rxjs';
 import {
@@ -66,6 +66,10 @@ export class OfferFlowService {
   private readonly navigator = inject(JourneyNavigator);
   private readonly router = inject(Router);
   private destroyed = false;
+  private readonly _typeName = signal<string | null>(null);
+
+  /** Nombre de la atestación de la solicitud, para el título del QR; `null` mientras no se sabe. */
+  readonly typeName = this._typeName.asReadonly();
 
   constructor() {
     inject(DestroyRef).onDestroy(() => (this.destroyed = true));
@@ -76,6 +80,7 @@ export class OfferFlowService {
     this.presenter.startLoading();
     const pending = this.store.pending();
     if (pending?.requestId === requestId) {
+      this._typeName.set(pending.typeName ?? null);
       return this.request(pending.call, requestId);
     }
     const journey = await this.readJourney();
@@ -83,15 +88,16 @@ export class OfferFlowService {
       return;
     }
     const request = requestOf(journey, requestId);
+    this._typeName.set(request?.attestation?.type_name ?? null);
     if (request?.offer) {
       // Recarga con la oferta ya obtenida: se presenta la que tiene el servicio (EC-02).
       this.present(request.offer);
     } else if (isAvailable(request) && isEmailVerified(journey)) {
-      this.store.requestConfirmation(requestId);
+      this.store.requestConfirmation(requestId, this._typeName());
       return this.request('confirmation', requestId);
     } else if (request?.status === 'in_offer') {
       // La solicitud tiene proceso pero no oferta (el alta falló): una oferta nueva del mismo proceso.
-      this.store.requestNewOffer(requestId);
+      this.store.requestNewOffer(requestId, this._typeName());
       return this.request('offers', requestId);
     } else {
       // Sin el correo verificado o con otro estado no se puede confirmar (AC-09, EC-07): al paso que toca.
@@ -108,7 +114,7 @@ export class OfferFlowService {
     if (this.presenter.status() !== 'expired') {
       return;
     }
-    this.store.requestNewOffer(requestId);
+    this.store.requestNewOffer(requestId, this._typeName());
     this.presenter.startLoading();
     return this.request('offers', requestId);
   }

@@ -8,6 +8,8 @@ export interface PendingOffer {
   call: OfferCall;
   /** Identificador opaco de la solicitud en el recorrido, el de la ruta de QR. */
   requestId: string;
+  /** Nombre de la atestación de la solicitud, para el título de QR al reintentar; sin él, el genérico. */
+  typeName?: string | null;
 }
 
 /**
@@ -26,13 +28,13 @@ export class JourneyIssuanceStore {
   readonly pending = this._pending.asReadonly();
 
   /** QR pedirá la confirmación de la solicitud. */
-  requestConfirmation(requestId: string): void {
-    this._pending.set({ call: 'confirmation', requestId });
+  requestConfirmation(requestId: string, typeName?: string | null): void {
+    this._pending.set({ call: 'confirmation', requestId, ...(typeName ? { typeName } : {}) });
   }
 
   /** QR caducado o fallo de un código nuevo: QR pedirá un código nuevo de la solicitud. */
-  requestNewOffer(requestId: string): void {
-    this._pending.set({ call: 'offers', requestId });
+  requestNewOffer(requestId: string, typeName?: string | null): void {
+    this._pending.set({ call: 'offers', requestId, ...(typeName ? { typeName } : {}) });
   }
 
   /** La oferta ha llegado: no queda ninguna llamada por hacer. */

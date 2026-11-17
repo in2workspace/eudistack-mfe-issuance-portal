@@ -37,8 +37,6 @@
   "issuanceInfo.footer.supportPhone": "Phone: {{phone}}",
   "issuanceInfo.footer.supportSchedule": "Hours: {{schedule}}",
   "issuanceInfo.footer.developedBy": "Developed by",
-  "credentialOffer.title": "Scan the code with the camera of the device where you have or want to have your wallet",
-  "credentialOffer.mobile.title": "Add your attestation to your wallet",
   "credentialOffer.mobile.otherDevice": "Using another device? Scan this code:",
   "credentialOffer.openWallet": "Open in my wallet",
   "credentialOffer.useThisComputer": "Is your wallet on this device? Open it here",
@@ -220,5 +218,10 @@
   "stepIndicator.label": "Step {{step}} of {{total}}",
   "verifyEmail.delayHint": "It may take a minute. Also check your junk or spam folder.",
   "requests.titleOfType": "You have {{count}} {{type}} requests",
-  "requests.subtitleOfType": "Get one {{type}} for each of them."
+  "requests.subtitleOfType": "Get one {{type}} for each of them.",
+  "credentialOffer.saveTitle": "Save your attestation in your wallet",
+  "credentialOffer.saveTitleOfType": "Save your {{type}} in your wallet",
+  "credentialOffer.steps.camera": "Open the camera of the device where you have, or want to have, your wallet.",
+  "credentialOffer.steps.point": "Point it at this code.",
+  "credentialOffer.steps.follow": "Follow the steps it shows you."
 }
