@@ -68,6 +68,16 @@ describe('IssuanceInfoComponent', () => {
     expect(handy).toEqual(['issuanceInfo.handy.certificate', 'issuanceInfo.handy.device']);
   });
 
+  it('wireframes, Inicio: "Ten a mano" comes right before how long it takes, before "Empezar"', () => {
+    const compiled = render(FULL_CONFIG);
+
+    const handy = compiled.querySelector('[data-testid="handy"]')!;
+    const duration = compiled.querySelector('[data-testid="duration"]')!;
+    const start = compiled.querySelector('[data-testid="hero-help"]')!;
+    expect(handy.compareDocumentPosition(duration) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(duration.compareDocumentPosition(start) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('AC-02: "Empezar" asks the session to go to the Verifier, without navigating or storing anything', () => {
     const compiled = render(FULL_CONFIG);
     const router = TestBed.inject(Router);

@@ -14,6 +14,17 @@
       </div>
       <h1 class="text-3xl font-bold sm:text-4xl">{{ 'issuanceInfo.title' | translate }}</h1>
       <p class="text-lg text-brand-secondary-contrast/80">{{ 'issuanceInfo.description' | translate }}</p>
+      <!-- Ten a mano, justo antes de cuánto tarda (prd.md §3.1 y wireframes, Inicio). -->
+      <section
+        class="w-full rounded-lg border border-dashed border-brand-secondary-contrast/40 bg-brand-secondary-contrast/10 p-4 text-left"
+        aria-labelledby="handy-title"
+      >
+        <h2 id="handy-title" class="text-base font-semibold">{{ 'issuanceInfo.handy.title' | translate }}</h2>
+        <ul class="mt-2 list-disc space-y-1 pl-5" data-testid="handy">
+          <li>{{ 'issuanceInfo.handy.certificate' | translate }}</li>
+          <li>{{ 'issuanceInfo.handy.device' | translate }}</li>
+        </ul>
+      </section>
       <p class="text-base font-medium text-brand-secondary-contrast" data-testid="duration">{{ 'issuanceInfo.duration' | translate }}</p>
       <div class="flex flex-col gap-4 sm:flex-row">
         <button
@@ -45,17 +56,6 @@
           {{ 'issuanceInfo.hero.help' | translate }}
         </button>
       </div>
-    </div>
-  </section>
-
-  <!-- Ten a mano (prd.md §3.1, Inicio): el certificado digital y el dispositivo de la cartera. -->
-  <section class="bg-white px-6 py-12" aria-labelledby="handy-title">
-    <div class="mx-auto max-w-2xl text-center">
-      <h2 id="handy-title" class="text-2xl font-bold text-gray-900 sm:text-3xl">{{ 'issuanceInfo.handy.title' | translate }}</h2>
-      <ul class="mt-6 space-y-3 text-left text-gray-700" data-testid="handy">
-        <li class="rounded-lg border bg-gray-50 p-4">{{ 'issuanceInfo.handy.certificate' | translate }}</li>
-        <li class="rounded-lg border bg-gray-50 p-4">{{ 'issuanceInfo.handy.device' | translate }}</li>
-      </ul>
     </div>
   </section>
 
