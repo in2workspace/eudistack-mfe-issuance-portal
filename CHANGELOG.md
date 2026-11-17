@@ -10,6 +10,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **EUD-359 — varias solicitudes por sesión, datos no correctos y «Ya lo he guardado»**:
+  - Contratos del servicio al día: Recorrido 4 y Fuente auténtica 2.
+  - Comprobación saluda al titular por su nombre, con «¿No eres…?» para volver a entrar. Pantallas Sin solicitudes y Tus datos no coinciden (una solicitud con los datos que difieren, o varias con su problema y qué hacer).
+  - Correo antes de las solicitudes, una sola vez por sesión, en `/email`, rellenado con el correo conocido.
+  - Lista de solicitudes (`/requests`) con organización, identificador, quién la pidió y cuándo, estado en palabras y «Obtener»; «Terminar» lleva a Final.
+  - La solicitud actual va en la ruta (`/requests/:requestId/data` y `/offer`) y la guarda de paso la comprueba; al recargar o al volver del Verifier se vuelve a la misma solicitud.
+  - Datos por solicitud con «Mis datos no son correctos», que avisa al servicio y explica qué hacer.
+  - QR por solicitud con «Ya lo he guardado» como acción principal: declara la atestación guardada y sigue a las solicitudes o a Final; si falla, avisa y deja reintentar. En el ordenador, abrir la cartera es un enlace discreto con el aviso de ordenador personal; en el teléfono, «Abrir en mi cartera» va primero.
+  - Una oferta que ya no se puede renovar (409 `request_saved`) deja la solicitud como guardada y el recorrido sigue.
+  - Pantalla Final (`/done`) con las guardadas, las que tienen un problema y las pendientes.
+  - Prueba que impide «wallet» y «móvil» en los textos en castellano.
+
 - **EUD-314 — inicio de sesión con el Verifier**:
   - Cliente OIDC público del Verifier del tenant con `angular-auth-oidc-client` 19: `client_id` `issuance-portal-<tenant>`, PKCE S256, `claims` con el `acr` del nivel del tenant como esencial y scope `openid profile email personal_administrative_number`.
   - Empezar lleva al Verifier; la ruta `callback` canjea el código, abre el recorrido con `POST /journey` y sigue a su paso. Un error de la vuelta (o un `state` o `nonce` que no cuadran) lleva a la identificación no completada; un 503 `config_unavailable`, al error de configuración.
@@ -49,6 +61,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **EUD-359**: los textos en castellano dicen «cartera» y «el dispositivo donde tienes o quieres tener tu cartera», nunca «wallet» ni «móvil». Inicio añade cuánto tarda y qué tener a mano. Datos ya no pide el correo y su botón dice «Son correctos, continuar». Botones de atrás de la cabecera en Correo y en Datos.
+
 - **EUD-314**: `SESSION_ACTIONS` ya inicia el login y descarta los tokens de verdad en todos los finales del recorrido. La guarda de pasos ya no manda a Inicio sin token o con un 401.
 - **EUD-314**: la guarda de parámetros conserva `code` y `state` en la ruta `callback`; en las demás sigue borrando `u`, `code` e `identified`.
 - **EUD-314**: el build de producción no incrusta el CSS crítico (`inlineCritical: false`): su `onload` en línea lo bloquea la política de seguridad de contenido.
@@ -66,6 +80,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **EUD-287 — configuración no disponible en la pantalla de error**: el caso pasa a `error/config-unavailable`, con la cabecera del tenant y el mismo reintento; el botón queda desactivado mientras reintenta.
 
 ### Removed
+
+- **EUD-359**: rutas `user-data`, `verify-email` y `offer`, el botón «He terminado» y el error terminal de oferta no renovable.
 
 - **EUD-286**: la ventana fija de 10 minutos de la oferta (`obtainedAt`, `CREDENTIAL_OFFER_PRESENTATION_TTL_MS`), el aviso de no disponible de QR y sus textos `credentialOffer.unavailable.*`, los botones Cancelar y «Marcar como completado» de QR, el `target="_blank"` del enlace al wallet y los `aria-label` que no contenían el texto visible.
 
