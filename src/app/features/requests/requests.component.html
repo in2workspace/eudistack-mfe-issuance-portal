@@ -1,0 +1,68 @@
+<div class="min-h-screen bg-gray-50">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div class="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border p-8">
+      @if (loading()) {
+        <output class="flex flex-col items-center text-center py-12">
+          <svg class="w-10 h-10 text-brand-accent animate-spin mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          <span class="text-gray-600">{{ 'requests.loading' | translate }}</span>
+        </output>
+      } @else {
+        <div class="text-center">
+          <h1 class="text-2xl font-bold text-gray-900 mb-2">{{ 'requests.title' | translate }}</h1>
+          <p class="text-gray-600">{{ 'requests.subtitle' | translate }}</p>
+        </div>
+
+        <ul class="flex flex-col gap-4">
+          @for (request of requests(); track request.id; let i = $index) {
+            <li class="rounded-lg border border-gray-200 p-4" data-testid="request">
+              <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div class="flex flex-col gap-1" [id]="'request-info-' + i">
+                  @if (request.organization || request.display_identifier) {
+                    <p class="font-semibold text-gray-900">
+                      @if (request.organization) {
+                        <span>{{ request.organization }}</span>
+                      }
+                      @if (request.organization && request.display_identifier) {
+                        <span aria-hidden="true"> · </span>
+                      }
+                      @if (request.display_identifier) {
+                        <span>{{ 'requests.identifier' | translate: { identifier: request.display_identifier } }}</span>
+                      }
+                    </p>
+                  }
+                  @if (request.requested_by && request.requested_at) {
+                    <p class="text-sm text-gray-600">
+                      {{ 'requests.requestedByOn' | translate: { by: request.requested_by, date: (request.requested_at | date: 'dd/MM/yyyy') } }}
+                    </p>
+                  } @else if (request.requested_by) {
+                    <p class="text-sm text-gray-600">{{ 'requests.requestedBy' | translate: { by: request.requested_by } }}</p>
+                  } @else if (request.requested_at) {
+                    <p class="text-sm text-gray-600">
+                      {{ 'requests.requestedOn' | translate: { date: (request.requested_at | date: 'dd/MM/yyyy') } }}
+                    </p>
+                  }
+                  <p class="text-sm font-medium" [class.text-gray-900]="!isProblem(request)" [class.text-red-800]="isProblem(request)">
+                    {{ 'requests.status.' + statusText(request) | translate }}
+                  </p>
+                </div>
+                @if (canGet(request)) {
+                  <button
+                    type="button"
+                    (click)="onGet(request)"
+                    [attr.aria-describedby]="'request-info-' + i"
+                    class="inline-flex items-center justify-center rounded-md text-sm font-medium h-10 px-4 bg-brand-secondary hover:opacity-90 text-brand-secondary-contrast transition-colors"
+                  >
+                    {{ 'requests.get' | translate }}
+                  </button>
+                }
+              </div>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+  </div>
+</div>

@@ -9,7 +9,9 @@ import {
   UNEXPECTED_ERROR,
 } from '../../core/api/api-problem.error';
 import { EntitlementApi, EntitlementResult } from '../../core/api/generated/authentic-source';
-import { EMAIL_PATH } from '../../core/journey/journey-paths';
+import { HolderAuthService } from '../../core/auth/holder-auth.service';
+import { EntitlementOutcomeStore } from '../../core/journey/entitlement-outcome.store';
+import { EMAIL_PATH, NO_REQUESTS_PATH, REQUEST_UNAVAILABLE_PATH } from '../../core/journey/journey-paths';
 import { SESSION_ACTIONS } from '../../core/session/session-actions';
 import { errorUrl } from '../error/error-reason';
 
@@ -23,9 +25,14 @@ import { errorUrl } from '../error/error-reason';
 const RETRYABLE_FAILURES: ReadonlySet<string> = new Set([AUTHENTIC_SOURCE_UNAVAILABLE, NETWORK_ERROR, UNEXPECTED_ERROR]);
 
 /**
- * Paso Comprobación (wireframes, Comprobación): mientras el módulo de fuente
- * auténtica comprueba el derecho, un indicador de espera; después pasa solo a
- * Correo o a la pantalla de error. La ruta la protege `journeyStepGuard`.
+ * Paso Comprobación (wireframes, Comprobación; design.md AD-13): saluda al
+ * titular por su nombre, con cómo volver a entrar si no es él, y mientras
+ * Fuente auténtica comprueba sus solicitudes muestra un indicador de espera.
+ * Después pasa solo a Correo (al menos una solicitud disponible), a Sin
+ * solicitudes, a Tus datos no coinciden (su única solicitud no está
+ * disponible) o a la pantalla de error de sin derecho. Cuando la fuente no
+ * confirma ninguna solicitud el servicio retira el recorrido y los tokens se
+ * descartan (design.md §3.1, punto 7). La ruta la protege `journeyStepGuard`.
  */
 @Component({
   selector: 'app-entitlement',
@@ -36,7 +43,11 @@ export class EntitlementComponent implements OnInit {
   private readonly entitlementApi = inject(EntitlementApi);
   private readonly router = inject(Router);
   private readonly session = inject(SESSION_ACTIONS);
+  private readonly outcome = inject(EntitlementOutcomeStore);
   private readonly destroyRef = inject(DestroyRef);
+
+  /** Nombre del ID Token; vacío si no lo trae (AD-13). */
+  protected readonly givenName = inject(HolderAuthService).givenName;
 
   ngOnInit(): void {
     this.entitlementApi
@@ -48,15 +59,37 @@ export class EntitlementComponent implements OnInit {
       });
   }
 
+  /** «¿No eres …?»: vuelve al Verifier para identificarse otra vez. */
+  protected onNotYou(): void {
+    void this.session.restartLogin();
+  }
+
   private onResult(result: EntitlementResult): void {
     if (result.result === 'confirmed') {
       this.leaveTo(['/', EMAIL_PATH]);
-    } else {
-      // El servicio ya ha retirado el recorrido: los tokens se descartan ya,
-      // no solo al pulsar «Volver al inicio» (design.md §3.1, punto 7; review W4).
-      this.session.discardTokens();
-      this.leaveTo(errorUrl('not-entitled'));
+      return;
     }
+    // El servicio ya ha retirado el recorrido: los tokens se descartan ya,
+    // no solo al pulsar «Volver al inicio» (design.md §3.1, punto 7; review W4).
+    this.session.discardTokens();
+    this.leaveTo(this.notConfirmedUrl(result));
+  }
+
+  /**
+   * Sin motivo y con una sola solicitud no disponible, Tus datos no coinciden.
+   * Con varias solicitudes y ninguna disponible el contrato no da pantalla
+   * propia (prd.md §3.1 solo trata la única): se muestra sin derecho.
+   */
+  private notConfirmedUrl(result: EntitlementResult): string[] {
+    if (result.reason === 'no_requests') {
+      this.outcome.hold({ kind: 'no-requests' });
+      return ['/', NO_REQUESTS_PATH];
+    }
+    if (result.reason === undefined && result.requests.length === 1) {
+      this.outcome.hold({ kind: 'request-unavailable', request: result.requests[0] });
+      return ['/', REQUEST_UNAVAILABLE_PATH];
+    }
+    return errorUrl('not-entitled');
   }
 
   private onFailure(error: unknown): void {

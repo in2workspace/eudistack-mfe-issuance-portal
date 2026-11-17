@@ -1,6 +1,15 @@
 import { Routes } from '@angular/router';
 import { journeyStepGuard } from './core/journey/journey-step.guard';
-import { DATA_ROUTE, EMAIL_PATH, ENTITLEMENT_PATH, QR_ROUTE } from './core/journey/journey-paths';
+import { heldOutcomeGuard } from './core/journey/entitlement-outcome.store';
+import {
+  DATA_ROUTE,
+  EMAIL_PATH,
+  ENTITLEMENT_PATH,
+  NO_REQUESTS_PATH,
+  QR_ROUTE,
+  REQUESTS_PATH,
+  REQUEST_UNAVAILABLE_PATH,
+} from './core/journey/journey-paths';
 import { CONFIG_UNAVAILABLE_PATH, configAvailableGuard, configUnavailableGuard } from './core/guards/config-available.guard';
 import { LOGIN_CALLBACK_PATH } from './core/auth/oidc-config';
 import { legacyQueryParamsGuard } from './core/guards/legacy-query-params.guard';
@@ -53,6 +62,27 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/portal/verify-email/verify-email.component').then((m) => m.VerifyEmailComponent),
         canActivate: [journeyStepGuard],
+      },
+      {
+        // Solicitudes (design.md §3.5): el estado de cada una, que se vuelve a pedir al entrar.
+        path: REQUESTS_PATH,
+        loadComponent: () => import('./features/requests/requests.component').then((m) => m.RequestsComponent),
+        canActivate: [journeyStepGuard],
+      },
+      {
+        // Sin solicitudes y Tus datos no coinciden (AD-8): sin guarda de paso, muestran lo que hay en memoria.
+        path: NO_REQUESTS_PATH,
+        loadComponent: () =>
+          import('./features/no-requests/no-requests.component').then((m) => m.NoRequestsComponent),
+        canActivate: [heldOutcomeGuard('no-requests')],
+      },
+      {
+        path: REQUEST_UNAVAILABLE_PATH,
+        loadComponent: () =>
+          import('./features/request-unavailable/request-unavailable.component').then(
+            (m) => m.RequestUnavailableComponent,
+          ),
+        canActivate: [heldOutcomeGuard('request-unavailable')],
       },
       {
         // Datos de una solicitud (design.md AD-9): su identificador va en la ruta.

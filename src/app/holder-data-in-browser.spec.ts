@@ -52,7 +52,7 @@ describe('Holder data in the browser', () => {
     return [...read(sessionStorage), ...read(localStorage)].join('\n');
   }
 
-  it.each(['/', '/identify', '/entitlement', '/email', '/requests/r1/data', '/requests/r1/offer', '/incidents', '/incidents/sent', '/error/config-unavailable', '/error/session-expired', '/cliente'])(
+  it.each(['/', '/identify', '/entitlement', '/email', '/requests', '/no-requests', '/request-unavailable', '/requests/r1/data', '/requests/r1/offer', '/incidents', '/incidents/sent', '/error/config-unavailable', '/error/session-expired', '/cliente'])(
     'AC-05: visiting %s leaves no holder data in the storage or the address',
     async (url) => {
       const harness = await RouterTestingHarness.create();
@@ -128,6 +128,7 @@ describe('Holder data in the browser', () => {
         onboarding_expires_at: new Date(Date.now() + 300_000).toISOString(),
       };
       TestBed.overrideProvider(ISSUANCE_PORTAL_ACCESS_TOKEN, { useValue: () => 'test-access-token' });
+      TestBed.overrideProvider(HolderAuthService, { useValue: { givenName: () => 'María' } });
       TestBed.overrideProvider(EntitlementApi, {
         useValue: {
           verifyEntitlement: () => {

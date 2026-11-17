@@ -51,6 +51,20 @@ describe('routes', () => {
     expect(email.canActivate).toEqual([journeyStepGuard]);
   });
 
+  it.each([
+    ['requests', 'RequestsComponent'],
+    ['no-requests', 'NoRequestsComponent'],
+    ['request-unavailable', 'RequestUnavailableComponent'],
+  ])('AD-8: "%s" lazy-loads %s', async (path, name) => {
+    const loaded = await (findRoute(path).loadComponent as () => Promise<unknown>)();
+
+    expect((loaded as { name: string }).name).toBe(name);
+  });
+
+  it.each(['no-requests', 'request-unavailable'])('AD-8: "%s" has no step guard of the journey', (path) => {
+    expect(findRoute(path).canActivate).not.toContain(journeyStepGuard);
+  });
+
   it.each(['user-data', 'verify-email', 'offer'])('AD-8: the old route "%s" no longer exists', (path) => {
     expect(screens.find((r) => r.path === path)).toBeUndefined();
   });
