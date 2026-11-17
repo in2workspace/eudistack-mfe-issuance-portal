@@ -62,12 +62,11 @@ describe('provideHolderAuth', () => {
    * `HolderAuthService` inicia el login (`go`): se captura en lugar de navegar.
    */
   async function authorizeUrl(go: (auth: HolderAuthService) => void = (auth) => auth.login()): Promise<string> {
-    const oidc = TestBed.inject(OidcSecurityService);
-    const real = oidc.authorize.bind(oidc);
+    const auth = TestBed.inject(HolderAuthService);
     const target = new Promise<string>((resolve) => {
-      jest.spyOn(oidc, 'authorize').mockImplementation((configId, options) => real(configId, { ...options, urlHandler: resolve }));
+      jest.spyOn(auth, 'navigateTo').mockImplementation(resolve);
     });
-    go(TestBed.inject(HolderAuthService));
+    go(auth);
     await answerDiscovery();
     return target;
   }
@@ -124,6 +123,33 @@ describe('provideHolderAuth', () => {
     expect(backend.expectOne('/issuance-portal/api/v1/journey').request.headers.get('Authorization')).toBe('Bearer real-token');
     expect(backend.expectOne('/issuance-portal/api/v1/config').request.headers.has('Authorization')).toBe(false);
     expect(backend.expectOne('/issuance-portal/api/v1/incidents').request.headers.has('Authorization')).toBe(false);
+  });
+
+  it('AC-13: with a login attestation scope in the configuration the authorize asks for it, so the Verifier offers the wallet', async () => {
+    jest
+      .spyOn(TestBed.inject(PortalConfigService), 'config')
+      .mockReturnValue({ assurance_level: 'substantial', login_attestation_scope: 'doctorid' } as PortalConfig);
+
+    const login = new URL(await authorizeUrl());
+
+    expect(login.searchParams.getAll('scope')).toEqual(['openid profile email personal_administrative_number doctorid']);
+    expect(login.searchParams.get('client_id')).toBe('issuance-portal-sandbox');
+    expect(login.searchParams.get('code_challenge_method')).toBe('S256');
+  });
+
+  it('AC-13: the silent login and the new identification ask for the login attestation scope too', async () => {
+    jest.spyOn(TestBed.inject(PortalConfigService), 'config').mockReturnValue({ login_attestation_scope: 'doctorid' } as PortalConfig);
+
+    const silent = new URL(await authorizeUrl((auth) => auth.loginSilently()));
+
+    expect(silent.searchParams.get('scope')).toBe('openid profile email personal_administrative_number doctorid');
+    expect(silent.searchParams.get('prompt')).toBe('none');
+  });
+
+  it('AC-13: without a login attestation scope the authorize asks only for the identity scopes', async () => {
+    const login = new URL(await authorizeUrl((auth) => auth.loginAgain()));
+
+    expect(login.searchParams.getAll('scope')).toEqual(['openid profile email personal_administrative_number']);
   });
 
   it('AC-29: with a tenant of substantial level the authorize asks for it as essential', async () => {

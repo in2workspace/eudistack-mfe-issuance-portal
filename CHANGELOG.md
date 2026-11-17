@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - Tokens, ID Token y nombre del titular solo en memoria. El verificador PKCE, el `state` y el `nonce` van a `sessionStorage` solo mientras el titular está en el Verifier.
   - El nombre del ID Token (`given_name`) queda en memoria para el saludo de Comprobación.
   - Nivel de garantía del tenant: `assurance_level` de `GET /config` (`high` o `substantial`; alto si no viene o aún no hay configuración) decide el `acr` esencial de cada `authorize`, también el de `prompt=none`. Un valor desconocido hace la configuración no válida.
+  - Scope de la atestación de login: si `GET /config` trae `login_attestation_scope` (por ejemplo `doctorid`), se añade al `scope` de cada `authorize`, también al de `prompt=none`, para que el Verifier ofrezca la cartera además del certificado. Un valor que no sea un único scope OAuth hace la configuración no válida.
 
 - **EUD-358 — paso Verificar correo**:
   - Ruta `verify-email` entre Datos y QR. Muestra el correo, un componente propio de 6 casillas (admite pegar el código, el autocompletado del sistema y el teclado), Reenviar con la cuenta atrás, Cambiar el correo y Cancelar.

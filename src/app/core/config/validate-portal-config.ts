@@ -11,7 +11,8 @@ function isObject(value: unknown): value is Record<string, unknown> {
  * contrato `support` no trae enlaces (correo, teléfono, horario y plazo), así
  * que no se valida como URL. La marca y los idiomas no vienen de aquí, sino
  * del `theme.json` del tenant. `assurance_level`, si viene, solo puede ser
- * `high` o `substantial`; si no viene, se pide nivel alto (AD-14). Una
+ * `high` o `substantial`; si no viene, se pide nivel alto (AD-14).
+ * `login_attestation_scope`, si viene, es un único scope OAuth (AD-15). Una
  * configuración que no lo cumple es como no
  * tenerla (ES-02): la interfaz muestra "configuración no disponible".
  */
@@ -19,7 +20,7 @@ export function validatePortalConfig(raw: unknown): PortalConfig | null {
   if (!isObject(raw)) {
     return null;
   }
-  const { texts, support, legal_links, wallet_url, assurance_level } = raw;
+  const { texts, support, legal_links, wallet_url, assurance_level, login_attestation_scope } = raw;
   if (!isObject(texts) || !isObject(support) || !isObject(legal_links)) {
     return null;
   }
@@ -29,10 +30,18 @@ export function validatePortalConfig(raw: unknown): PortalConfig | null {
   if (assurance_level !== undefined && assurance_level !== 'high' && assurance_level !== 'substantial') {
     return null;
   }
+  if (login_attestation_scope !== undefined && !isScopeToken(login_attestation_scope)) {
+    return null;
+  }
   if (!Object.values(legal_links).every(isSafeLink)) {
     return null;
   }
   return raw as unknown as PortalConfig;
+}
+
+/** Un scope OAuth (RFC 6749 §3.3): sin espacios, comillas ni barras invertidas. */
+function isScopeToken(value: unknown): boolean {
+  return typeof value === 'string' && /^[\x21\x23-\x5B\x5D-\x7E]+$/.test(value);
 }
 
 /**

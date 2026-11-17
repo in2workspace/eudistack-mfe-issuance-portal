@@ -2,7 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { OidcSecurityService } from 'angular-auth-oidc-client';
 import { firstValueFrom } from 'rxjs';
 import { PortalConfigService } from '../config/portal-config.service';
-import { AssuranceLevel, DEFAULT_ASSURANCE_LEVEL, acrClaims } from './oidc-config';
+import { AssuranceLevel, DEFAULT_ASSURANCE_LEVEL, acrClaims, withScope } from './oidc-config';
 import { OidcFlowStorage } from './oidc-flow-storage';
 
 /** Resultado de procesar la vuelta del Verifier. */
@@ -60,7 +60,7 @@ export class HolderAuthService {
    * fallida, o `prompt=none` sin resolver al recargar).
    */
   login(): void {
-    this.oidc.authorize(undefined, { customParams: { claims: acrClaims(this.assuranceLevel()) } });
+    this.authorize({ claims: acrClaims(this.assuranceLevel()) });
   }
 
   /**
@@ -69,7 +69,7 @@ export class HolderAuthService {
    * Empezar después no entra con la identidad del titular anterior (EUD-23 design.md §3.1, punto 7; AC-08).
    */
   loginAgain(): void {
-    this.oidc.authorize(undefined, { customParams: { prompt: 'login', claims: acrClaims(this.assuranceLevel()) } });
+    this.authorize({ prompt: 'login', claims: acrClaims(this.assuranceLevel()) });
   }
 
   /**
@@ -125,7 +125,7 @@ export class HolderAuthService {
    * con `login_required` o `interaction_required` y `completeLogin` lo dice.
    */
   loginSilently(): void {
-    this.oidc.authorize(undefined, { customParams: { prompt: 'none', claims: acrClaims(this.assuranceLevel()) } });
+    this.authorize({ prompt: 'none', claims: acrClaims(this.assuranceLevel()) });
   }
 
   /** El Access Token ya ha caducado (o caduca en unos segundos). Sin `exp` legible no se da por caducado: lo dirá el servicio con un 401. */
@@ -184,6 +184,21 @@ export class HolderAuthService {
   discard(): void {
     this.clearSession();
     this.storage.clearRedirectMark();
+  }
+
+  /** Lleva el navegador a `url`, la del `authorize` ya completa. */
+  navigateTo(url: string): void {
+    window.location.href = url;
+  }
+
+  /**
+   * `authorize` con `customParams` y, en el `scope`, el de la atestación de
+   * login del tenant si la configuración lo trae (AD-15): así el Verifier
+   * ofrece también la cartera.
+   */
+  private authorize(customParams: Record<string, string>): void {
+    const scope = this.portalConfig.config()?.login_attestation_scope;
+    this.oidc.authorize(undefined, { customParams, urlHandler: (url) => this.navigateTo(withScope(url, scope)) });
   }
 
   /** Nivel del tenant de la configuración cargada; alto si aún no hay configuración. */

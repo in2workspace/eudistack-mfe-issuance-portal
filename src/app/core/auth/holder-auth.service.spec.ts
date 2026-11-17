@@ -176,9 +176,30 @@ describe('HolderAuthService', () => {
 
     service.loginSilently();
 
-    expect(oidc.authorize).toHaveBeenCalledWith(undefined, {
-      customParams: { prompt: 'none', claims: JSON.stringify({ id_token: { acr: { essential: true, value: 'http://eidas.europa.eu/LoA/substantial' } } }) },
-    });
+    expect(oidc.authorize).toHaveBeenCalledWith(
+      undefined,
+      expect.objectContaining({
+        customParams: { prompt: 'none', claims: JSON.stringify({ id_token: { acr: { essential: true, value: 'http://eidas.europa.eu/LoA/substantial' } } }) },
+      }),
+    );
+  });
+
+  it('AC-13: every authorize navigates with the login attestation scope of the tenant added to the scope', () => {
+    const navigate = jest.spyOn(service, 'navigateTo').mockImplementation(() => undefined);
+    const built = 'https://cgcom.example/verifier/oidc/authorize?client_id=c&scope=openid+profile&state=s';
+    portalConfig.set({ login_attestation_scope: 'doctorid' });
+    service.login();
+    service.loginAgain();
+    service.loginSilently();
+    portalConfig.set({});
+    service.login();
+
+    for (const call of [0, 1, 2]) {
+      oidc.authorize.mock.calls[call][1].urlHandler(built);
+      expect(new URL(navigate.mock.calls[call][0]).searchParams.get('scope')).toBe('openid profile doctorid');
+    }
+    oidc.authorize.mock.calls[3][1].urlHandler(built);
+    expect(navigate.mock.calls[3][0]).toBe(built);
   });
 
   describe('renewal (AC-06, EC-06)', () => {
