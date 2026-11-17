@@ -47,6 +47,8 @@ export class CredentialOfferComponent implements OnInit, OnDestroy {
   protected readonly withoutQr = computed(() => this.status() === 'ready-without-qr' || this.qrFailed());
   protected readonly personalComputerNoticeOpen = signal(false);
   protected readonly saving = signal(false);
+  /** La declaración falló por red o por el servicio: se dice y se puede volver a pulsar. */
+  protected readonly saveFailed = signal(false);
 
   constructor() {
     // El QR se genera para cada dirección que cabe en él, y se conserva
@@ -99,10 +101,12 @@ export class CredentialOfferComponent implements OnInit, OnDestroy {
       return;
     }
     this.saving.set(true);
-    void this.flow.declareSaved(this.requestId).then((proceeded) => {
-      if (!proceeded) {
+    this.saveFailed.set(false);
+    void this.flow.declareSaved(this.requestId).then((result) => {
+      if (result !== 'saved') {
         this.saving.set(false);
       }
+      this.saveFailed.set(result === 'failed');
     });
   }
 }

@@ -46,7 +46,7 @@ describe('CredentialOfferComponent', () => {
     flow = {
       enter: jest.fn().mockResolvedValue(undefined),
       newCode: jest.fn().mockResolvedValue(undefined),
-      declareSaved: jest.fn().mockResolvedValue(true),
+      declareSaved: jest.fn().mockResolvedValue('saved'),
     };
     mobile = signal(false);
     openWallet = jest.fn();
@@ -123,7 +123,7 @@ describe('CredentialOfferComponent', () => {
 
       const element = await render();
 
-      expect(element.querySelector('h1')?.textContent).toContain('Escanea el código con la cámara de tu móvil');
+      expect(element.querySelector('h1')?.textContent).toContain('Escanea el código con la cámara del dispositivo donde tienes o quieres tener tu cartera');
       expect(QRCode.toDataURL).toHaveBeenCalledWith(ONBOARDING_URL, expect.anything());
       expect(element.querySelector('img[width="280"]')).not.toBeNull();
       expect((element.querySelector('app-credential-offer-url-box input') as HTMLInputElement).value).toBe(ONBOARDING_URL);
@@ -230,7 +230,7 @@ describe('CredentialOfferComponent', () => {
       const element = await render();
 
       const open = element.querySelector('a[href]') as HTMLAnchorElement;
-      expect(element.querySelector('h1')?.textContent).toContain('Añade tu atestación a tu wallet');
+      expect(element.querySelector('h1')?.textContent).toContain('Añade tu atestación a tu cartera');
       expect(open.textContent?.trim()).toBe('Abrir en mi cartera');
       expect(open.getAttribute('href')).toBe(ONBOARDING_URL);
       expect(open.hasAttribute('target')).toBe(false);
@@ -322,8 +322,32 @@ describe('CredentialOfferComponent', () => {
       expect(buttonWith(element, 'Ya lo he guardado')!.disabled).toBe(true);
     });
 
-    it('when the flow could not go on, the holder can press it again', async () => {
-      flow.declareSaved.mockResolvedValue(false);
+    it('ES-03: when the declaration failed, says it could not be recorded in an aria-live region, and the holder can press it again', async () => {
+      flow.declareSaved.mockResolvedValueOnce('failed').mockResolvedValueOnce('saved');
+      present(582);
+      const element = await render();
+      const region = element.querySelector('[data-testid="save-failed"]')!;
+      expect(region.getAttribute('aria-live')).toBe('polite');
+      expect(region.textContent?.trim()).toBe('');
+
+      click(element, 'Ya lo he guardado');
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(element.querySelector('[data-testid="save-failed"]')).toBe(region);
+      expect(region.textContent).toContain('No se ha podido anotar. Inténtalo de nuevo.');
+      expect(buttonWith(element, 'Ya lo he guardado')!.disabled).toBe(false);
+
+      click(element, 'Ya lo he guardado');
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(flow.declareSaved).toHaveBeenCalledTimes(2);
+      expect(region.textContent?.trim()).toBe('');
+    });
+
+    it('when the interceptor handled it (409, 410), shows no message and the button works again', async () => {
+      flow.declareSaved.mockResolvedValue('handled');
       present(582);
       const element = await render();
 
@@ -331,7 +355,19 @@ describe('CredentialOfferComponent', () => {
       await fixture.whenStable();
       fixture.detectChanges();
 
+      expect(element.querySelector('[data-testid="save-failed"]')!.textContent?.trim()).toBe('');
       expect(buttonWith(element, 'Ya lo he guardado')!.disabled).toBe(false);
+    });
+
+    it('NFR-5: has no accessibility violations with the failure message shown', async () => {
+      flow.declareSaved.mockResolvedValue('failed');
+      present(582);
+      const element = await render();
+      click(element, 'Ya lo he guardado');
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(await axe(element)).toHaveNoViolations();
     });
 
     it('is still there with the code expired: the holder may have saved it just before', async () => {

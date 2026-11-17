@@ -5,6 +5,7 @@ import {
   ApiProblemError,
   ISSUANCE_REJECTED,
   ISSUANCE_UNAVAILABLE,
+  JOURNEY_CLOSED,
   NETWORK_ERROR,
   REQUEST_SAVED,
   ONBOARDING_UNAVAILABLE,
@@ -41,6 +42,9 @@ const ISSUANCE_FAILURES: Readonly<Record<string, ErrorReason>> = {
   [UNEXPECTED_ERROR]: 'issuance-failed',
   [ONBOARDING_UNAVAILABLE]: 'onboarding-unavailable',
 };
+
+/** Qué pasó al declarar guardada una solicitud: siguió, lo resolvió el interceptor de EUD-287, o falló y se puede repetir. */
+export type SaveResult = 'saved' | 'handled' | 'failed';
 
 /**
  * Pide la oferta de una solicitud al servicio y la presenta en QR (EUD-286,
@@ -114,26 +118,27 @@ export class OfferFlowService {
    * solicitud y sigue: a Solicitudes si queda alguna pendiente, o a Final si
    * no. El portal no comprueba que la cartera la haya guardado. Con 409
    * `step_not_allowed` y con 410 el interceptor de EUD-287 lleva al paso o a
-   * la sesión caducada. Otro fallo deja al titular en QR, que puede volver a
-   * pulsarlo. Devuelve si ha seguido.
+   * la sesión caducada. Otro fallo (red, 5xx) deja al titular en QR con el
+   * aviso de que no se ha podido anotar, y puede volver a pulsarlo.
    */
-  async declareSaved(requestId: string): Promise<boolean> {
+  async declareSaved(requestId: string): Promise<SaveResult> {
     try {
       await firstValueFrom(this.journeyApi.declareRequestSaved(requestId));
-    } catch {
-      return false;
+    } catch (error: unknown) {
+      const type = error instanceof ApiProblemError ? error.type : undefined;
+      return type === STEP_NOT_ALLOWED || type === JOURNEY_CLOSED ? 'handled' : 'failed';
     }
     if (this.destroyed) {
-      return true;
+      return 'saved';
     }
     this.store.clear();
     const journey = await this.readJourney();
     if (journey === undefined || this.destroyed) {
-      return true;
+      return 'saved';
     }
     this.presenter.reset();
     void this.router.navigate(['/', hasPendingRequests(journey) ? REQUESTS_PATH : DONE_PATH]);
-    return true;
+    return 'saved';
   }
 
   private async request(call: OfferCall, requestId: string): Promise<void> {

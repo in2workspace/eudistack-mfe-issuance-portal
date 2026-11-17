@@ -476,7 +476,7 @@ describe('OfferFlowService', () => {
         journey([{ id: RID, status: 'saved' }, other], { state: 'completed', step: 'offer_obtained' }),
       );
 
-      expect(await flow().declareSaved(RID)).toBe(true);
+      expect(await flow().declareSaved(RID)).toBe('saved');
 
       expect(journeyApi.declareRequestSaved).toHaveBeenCalledWith(RID);
       expect(navigate).toHaveBeenCalledWith(['/', 'requests']);
@@ -528,16 +528,19 @@ describe('OfferFlowService', () => {
     ])('AC-14, ES-08: %s is left to the journey interceptor: no navigation here, and the call is not repeated', async (type, status) => {
       journeyApi.declareRequestSaved.mockReturnValue(problem(type, status));
 
-      expect(await flow().declareSaved(RID)).toBe(false);
+      expect(await flow().declareSaved(RID)).toBe('handled');
 
       expect(navigate).not.toHaveBeenCalled();
       expect(journeyApi.getJourney).not.toHaveBeenCalled();
     });
 
-    it('another failure leaves the holder in QR, able to press it again', async () => {
-      journeyApi.declareRequestSaved.mockReturnValue(problem(NETWORK_ERROR, 0));
+    it.each([
+      [NETWORK_ERROR, 0],
+      ['issuance_unavailable', 503],
+    ])('AC-05: %s leaves the holder in QR, able to press it again, and says it failed', async (type, status) => {
+      journeyApi.declareRequestSaved.mockReturnValue(problem(type, status));
 
-      expect(await flow().declareSaved(RID)).toBe(false);
+      expect(await flow().declareSaved(RID)).toBe('failed');
 
       expect(navigate).not.toHaveBeenCalled();
     });

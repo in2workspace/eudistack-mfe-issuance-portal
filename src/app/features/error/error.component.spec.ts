@@ -328,7 +328,7 @@ describe('ErrorComponent', () => {
       ['not-entitled', 'No constas con derecho a esta atestación', 'Volver al inicio'],
       ['source-unavailable', 'Ahora no podemos comprobar tus datos', 'Volver a intentarlo'],
       ['issuance-failed', 'No hemos podido generar tu atestación', 'Volver a intentarlo'],
-      ['onboarding-unavailable', 'No hemos podido preparar tu alta en el wallet', 'Generar un código nuevo'],
+      ['onboarding-unavailable', 'No hemos podido preparar tu alta en la cartera', 'Generar un código nuevo'],
       ['request-saved', 'Esta atestación ya está en tu cartera', 'Seguir con mis solicitudes'],
       ['session-expired', 'Tu sesión ha caducado', 'Empezar de nuevo'],
     ])('AC-03: %s shows the title «%s» and the action «%s»', (reason, title, action) => {
