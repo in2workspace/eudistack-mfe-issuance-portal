@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 import { OidcSecurityService } from 'angular-auth-oidc-client';
 import { firstValueFrom } from 'rxjs';
 import { PortalConfigService } from '../config/portal-config.service';
-import { AssuranceLevel, DEFAULT_ASSURANCE_LEVEL, acrClaims } from './oidc-config';
+import { AssuranceLevel, DEFAULT_ASSURANCE_LEVEL, acrClaims, withScope } from './oidc-config';
 import { OidcFlowStorage } from './oidc-flow-storage';
 
 /** Resultado de procesar la vuelta del Verifier. */
@@ -57,12 +57,22 @@ export class HolderAuthService {
   }
 
   /**
-   * Lleva al titular al `authorize` del Verifier, pidiendo como esencial el
-   * nivel del tenant (AD-14). `returnPath` es la ruta a la que volver (EC-06).
+   * Lleva al titular al `authorize` del Verifier, pidiendo como esencial el nivel del tenant (AD-14). Puede
+   * resolverse con la sesión SSO del Verifier: es la ida del mismo titular a mitad del recorrido (renovación
+   * fallida, o `prompt=none` sin resolver al recargar). `returnPath` es la ruta a la que volver (EUD-359, EC-06).
    */
   login(returnPath?: string): void {
     this.rememberReturnPath(returnPath);
-    this.oidc.authorize(undefined, { customParams: { claims: acrClaims(this.assuranceLevel()) } });
+    this.authorize({ claims: acrClaims(this.assuranceLevel()) });
+  }
+
+  /**
+   * Como `login`, pero con `prompt=login`: el Verifier no reutiliza su sesión SSO y quien llega tiene que
+   * identificarse. Es la ida de Empezar y de «Volver a intentarlo»: en un equipo compartido, quien pulse
+   * Empezar después no entra con la identidad del titular anterior (EUD-23 design.md §3.1, punto 7; AC-08).
+   */
+  loginAgain(): void {
+    this.authorize({ prompt: 'login', claims: acrClaims(this.assuranceLevel()) });
   }
 
   /**
@@ -120,7 +130,7 @@ export class HolderAuthService {
    */
   loginSilently(returnPath?: string): void {
     this.rememberReturnPath(returnPath);
-    this.oidc.authorize(undefined, { customParams: { prompt: 'none', claims: acrClaims(this.assuranceLevel()) } });
+    this.authorize({ prompt: 'none', claims: acrClaims(this.assuranceLevel()) });
   }
 
   /** La ruta a la que volver tras la vuelta del Verifier (EC-06), si se guardó una; se lee una sola vez. */
@@ -190,6 +200,21 @@ export class HolderAuthService {
   discard(): void {
     this.clearSession();
     this.storage.clearRedirectMark();
+  }
+
+  /** Lleva el navegador a `url`, la del `authorize` ya completa. */
+  navigateTo(url: string): void {
+    window.location.href = url;
+  }
+
+  /**
+   * `authorize` con `customParams` y, en el `scope`, el de la atestación de
+   * login del tenant si la configuración lo trae (AD-15): así el Verifier
+   * ofrece también la cartera.
+   */
+  private authorize(customParams: Record<string, string>): void {
+    const scope = this.portalConfig.config()?.login_attestation_scope;
+    this.oidc.authorize(undefined, { customParams, urlHandler: (url) => this.navigateTo(withScope(url, scope)) });
   }
 
   /** Nivel del tenant de la configuración cargada; alto si aún no hay configuración. */

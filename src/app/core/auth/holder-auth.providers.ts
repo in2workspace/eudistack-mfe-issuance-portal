@@ -38,7 +38,7 @@ export function provideHolderAuth(): EnvironmentProviders {
       useFactory: () => {
         const auth = inject(HolderAuthService);
         return {
-          restartLogin: async () => auth.login(),
+          restartLogin: async () => auth.loginAgain(),
           resumeLogin: async (returnTo?: string) => auth.loginSilently(returnTo),
           discardTokens: () => auth.discard(),
         };

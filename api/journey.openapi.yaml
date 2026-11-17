@@ -459,6 +459,11 @@ components:
           type: string
           enum: [high, substantial]
           description: Level of assurance (eIDAS) the interface asks the Verifier for as essential, and the lowest the service accepts in the Access Token. `high` when the tenant does not configure it.
+        login_attestation_scope:
+          type: string
+          pattern: '^[\x21\x23-\x5B\x5D-\x7E]+$'
+          example: doctorid
+          description: OAuth scope (RFC 6749 section 3.3) of the attestation the tenant accepts to log in with. The interface adds it to the scope of every authorize, so the Verifier offers the wallet. Absent when the tenant only accepts the certificate.
         wallet_url:
           type: string
           format: uri

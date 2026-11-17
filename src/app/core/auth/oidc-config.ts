@@ -27,6 +27,25 @@ export function acrClaims(level: AssuranceLevel): string {
   return JSON.stringify({ id_token: { acr: { essential: true, value: ACR_BY_LEVEL[level] } } });
 }
 
+/**
+ * La URL de `authorize` con `scope` añadido al de la configuración, si no lo
+ * lleva ya: el scope de la atestación de login del tenant (AD-15). La librería
+ * añade los parámetros extra sin sustituir los suyos, así que el `scope` se
+ * completa en la URL ya construida.
+ */
+export function withScope(url: string, scope: string | undefined): string {
+  if (!scope) {
+    return url;
+  }
+  const authorize = new URL(url);
+  const scopes = (authorize.searchParams.get('scope') ?? '').split(' ').filter(Boolean);
+  if (scopes.includes(scope)) {
+    return url;
+  }
+  authorize.searchParams.set('scope', [...scopes, scope].join(' '));
+  return authorize.toString();
+}
+
 const PORTAL_BASE_PATH = '/issuance-portal';
 
 /**

@@ -65,6 +65,16 @@ describe('HolderAuthService', () => {
     expect(oidc.authorize).toHaveBeenCalledTimes(1);
   });
 
+  it('AC-08: login keeps the SSO of the Verifier for the same holder, loginAgain asks for prompt=login with the level of the tenant', () => {
+    portalConfig.set({ assurance_level: 'substantial' });
+    service.login();
+    service.loginAgain();
+
+    expect(oidc.authorize.mock.calls[0][1].customParams.prompt).toBeUndefined();
+    expect(oidc.authorize.mock.calls[1][1].customParams.prompt).toBe('login');
+    expect(claimsOfCall(1).id_token.acr).toEqual({ essential: true, value: 'http://eidas.europa.eu/LoA/substantial' });
+  });
+
   it('AC-29: login asks for the level of the tenant as essential: high without configuration or level, substantial when configured', () => {
     service.login();
     portalConfig.set({ assurance_level: 'high' });
@@ -169,9 +179,30 @@ describe('HolderAuthService', () => {
 
     service.loginSilently();
 
-    expect(oidc.authorize).toHaveBeenCalledWith(undefined, {
-      customParams: { prompt: 'none', claims: JSON.stringify({ id_token: { acr: { essential: true, value: 'http://eidas.europa.eu/LoA/substantial' } } }) },
-    });
+    expect(oidc.authorize).toHaveBeenCalledWith(
+      undefined,
+      expect.objectContaining({
+        customParams: { prompt: 'none', claims: JSON.stringify({ id_token: { acr: { essential: true, value: 'http://eidas.europa.eu/LoA/substantial' } } }) },
+      }),
+    );
+  });
+
+  it('AC-13: every authorize navigates with the login attestation scope of the tenant added to the scope', () => {
+    const navigate = jest.spyOn(service, 'navigateTo').mockImplementation(() => undefined);
+    const built = 'https://cgcom.example/verifier/oidc/authorize?client_id=c&scope=openid+profile&state=s';
+    portalConfig.set({ login_attestation_scope: 'doctorid' });
+    service.login();
+    service.loginAgain();
+    service.loginSilently();
+    portalConfig.set({});
+    service.login();
+
+    for (const call of [0, 1, 2]) {
+      oidc.authorize.mock.calls[call][1].urlHandler(built);
+      expect(new URL(navigate.mock.calls[call][0]).searchParams.get('scope')).toBe('openid profile doctorid');
+    }
+    oidc.authorize.mock.calls[3][1].urlHandler(built);
+    expect(navigate.mock.calls[3][0]).toBe(built);
   });
 
   it('EC-06: the silent login remembers the route to come back to, and the interactive one too', () => {
