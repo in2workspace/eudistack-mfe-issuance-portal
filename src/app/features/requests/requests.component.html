@@ -62,6 +62,16 @@
             </li>
           }
         </ul>
+
+        <div class="flex justify-end">
+          <button
+            type="button"
+            (click)="onFinish()"
+            class="inline-flex items-center justify-center rounded-md text-sm font-medium h-10 px-6 border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            {{ 'requests.finish' | translate }}
+          </button>
+        </div>
       }
     </div>
   </div>

@@ -44,7 +44,7 @@ class HostComponent {
 }
 
 describe('OfferFlowService', () => {
-  let journeyApi: { getJourney: jest.Mock; confirmAndIssue: jest.Mock; newOffer: jest.Mock; withdrawJourney: jest.Mock };
+  let journeyApi: { getJourney: jest.Mock; confirmAndIssue: jest.Mock; newOffer: jest.Mock; declareRequestSaved: jest.Mock };
   let discardTokens: jest.Mock;
   let toSessionExpired: jest.Mock;
   let navigate: jest.SpyInstance;
@@ -54,7 +54,7 @@ describe('OfferFlowService', () => {
 
   beforeEach(() => {
     walletUrl = WALLET;
-    journeyApi = { getJourney: jest.fn(), confirmAndIssue: jest.fn(), newOffer: jest.fn(), withdrawJourney: jest.fn() };
+    journeyApi = { getJourney: jest.fn(), confirmAndIssue: jest.fn(), newOffer: jest.fn(), declareRequestSaved: jest.fn() };
     discardTokens = jest.fn();
     toSessionExpired = jest.fn().mockResolvedValue(true);
     TestBed.configureTestingModule({
@@ -155,14 +155,14 @@ describe('OfferFlowService', () => {
       expect(presenter.status()).toBe('loading');
     });
 
-    it('AC-07, W4: offer_not_renewable forgets the pending call, discards the tokens and goes to the not renewable case', async () => {
-      journeyApi.confirmAndIssue.mockReturnValue(problem('offer_not_renewable', 409));
+    it('AC-08: request_saved on the confirmation forgets the pending call and shows it is already saved, keeping the tokens', async () => {
+      journeyApi.confirmAndIssue.mockReturnValue(problem('request_saved', 409));
 
       await flow().enter(RID);
 
       expect(store.pending()).toBeNull();
-      expect(discardTokens).toHaveBeenCalledTimes(1);
-      expect(navigate).toHaveBeenCalledWith(['/', 'error', 'offer-not-renewable']);
+      expect(discardTokens).not.toHaveBeenCalled();
+      expect(navigate).toHaveBeenCalledWith(['/', 'error', 'request-saved']);
     });
 
     it.each([
@@ -293,12 +293,13 @@ describe('OfferFlowService', () => {
       expect(store.pending()).toBeNull();
     });
 
-    it('AC-07: offer_not_renewable goes to the not renewable case', async () => {
-      journeyApi.newOffer.mockReturnValue(problem('offer_not_renewable', 409));
+    it('AC-08: request_saved on a new code shows it is already saved, keeping the tokens', async () => {
+      journeyApi.newOffer.mockReturnValue(problem('request_saved', 409));
 
       await flow().newCode(RID);
 
-      expect(navigate).toHaveBeenCalledWith(['/', 'error', 'offer-not-renewable']);
+      expect(navigate).toHaveBeenCalledWith(['/', 'error', 'request-saved']);
+      expect(discardTokens).not.toHaveBeenCalled();
     });
 
     it('ES-02: step_not_allowed presents again the offer the service still holds, without the error screen', async () => {
@@ -466,45 +467,88 @@ describe('OfferFlowService', () => {
     });
   });
 
-  describe('He terminado (AC-15)', () => {
+  describe('Ya lo he guardado (AD-10, AC-05, AC-14)', () => {
     beforeEach(() => store.requestConfirmation(RID));
 
-    it('ends the journey, forgets the pending call, discards the tokens and goes to Inicio', async () => {
-      journeyApi.withdrawJourney.mockReturnValue(journey([], { state: 'completed', step: 'offer_obtained' }));
+    it('declares the request of the route saved, with no body, and goes to Solicitudes if any request is pending', async () => {
+      journeyApi.declareRequestSaved.mockReturnValue(of(undefined));
+      journeyApi.getJourney.mockReturnValue(
+        journey([{ id: RID, status: 'saved' }, other], { state: 'completed', step: 'offer_obtained' }),
+      );
 
-      await flow().finish();
+      expect(await flow().declareSaved(RID)).toBe(true);
 
-      expect(journeyApi.withdrawJourney).toHaveBeenCalledTimes(1);
+      expect(journeyApi.declareRequestSaved).toHaveBeenCalledWith(RID);
+      expect(navigate).toHaveBeenCalledWith(['/', 'requests']);
       expect(store.pending()).toBeNull();
-      expect(discardTokens).toHaveBeenCalledTimes(1);
-      expect(navigate).toHaveBeenCalledWith(['/']);
+      expect(discardTokens).not.toHaveBeenCalled();
     });
 
-    it('ES-05: if the withdrawal fails, discards the tokens and goes to Inicio anyway', async () => {
-      journeyApi.withdrawJourney.mockReturnValue(problem(NETWORK_ERROR, 0));
+    it('AC-09: with no request pending goes to Final', async () => {
+      journeyApi.declareRequestSaved.mockReturnValue(of(undefined));
+      journeyApi.getJourney.mockReturnValue(
+        journey(
+          [
+            { id: RID, status: 'saved' },
+            { id: 'r1', status: 'not_available', not_available_reason: 'under_review' },
+          ],
+          { state: 'completed', step: 'offer_obtained' },
+        ),
+      );
 
-      await flow().finish();
+      await flow().declareSaved(RID);
 
-      expect(discardTokens).toHaveBeenCalledTimes(1);
-      expect(navigate).toHaveBeenCalledWith(['/']);
+      expect(navigate).toHaveBeenCalledWith(['/', 'done']);
     });
 
-    it('ES-05: with a 410 leaves the navigation to the journey interceptor', async () => {
-      journeyApi.withdrawJourney.mockReturnValue(problem('journey_closed', 410));
+    it('a request in the process still counts as pending', async () => {
+      journeyApi.declareRequestSaved.mockReturnValue(of(undefined));
+      journeyApi.getJourney.mockReturnValue(
+        journey([{ id: RID, status: 'saved' }, { id: 'r1', status: 'in_offer', offer: ticketOffer() }]),
+      );
 
-      await flow().finish();
+      await flow().declareSaved(RID);
 
-      expect(store.pending()).toBeNull();
+      expect(navigate).toHaveBeenCalledWith(['/', 'requests']);
+    });
+
+    it('W5: forgets the address with the ticket and stops the countdown once it has gone on', async () => {
+      journeyApi.declareRequestSaved.mockReturnValue(of(undefined));
+      journeyApi.getJourney.mockReturnValue(journey([{ id: RID, status: 'saved' }]));
+      presenter.present({ url: `${WALLET}/t/abc`, expiresAt: Date.now() + 60_000 });
+
+      await flow().declareSaved(RID);
+
+      expect(presenter.address()).toBeNull();
+    });
+
+    it.each([
+      ['step_not_allowed', 409],
+      ['journey_closed', 410],
+    ])('AC-14, ES-08: %s is left to the journey interceptor: no navigation here, and the call is not repeated', async (type, status) => {
+      journeyApi.declareRequestSaved.mockReturnValue(problem(type, status));
+
+      expect(await flow().declareSaved(RID)).toBe(false);
+
+      expect(navigate).not.toHaveBeenCalled();
+      expect(journeyApi.getJourney).not.toHaveBeenCalled();
+    });
+
+    it('another failure leaves the holder in QR, able to press it again', async () => {
+      journeyApi.declareRequestSaved.mockReturnValue(problem(NETWORK_ERROR, 0));
+
+      expect(await flow().declareSaved(RID)).toBe(false);
+
       expect(navigate).not.toHaveBeenCalled();
     });
 
-    it('W5: forgets the address with the ticket and stops the countdown', async () => {
-      journeyApi.withdrawJourney.mockReturnValue(journey());
-      presenter.present({ url: `${WALLET}/t/abc`, expiresAt: Date.now() + 60_000 });
+    it('a failure of GET /journey after the 204 is left to the usual handling: 410 expires the session', async () => {
+      journeyApi.declareRequestSaved.mockReturnValue(of(undefined));
+      journeyApi.getJourney.mockReturnValue(problem('journey_closed', 410));
 
-      await flow().finish();
+      await flow().declareSaved(RID);
 
-      expect(presenter.address()).toBeNull();
+      expect(toSessionExpired).toHaveBeenCalledTimes(1);
     });
   });
 });

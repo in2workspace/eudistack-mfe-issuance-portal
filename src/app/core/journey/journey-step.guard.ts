@@ -4,7 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import { Journey, JourneyApi } from '../api/generated/journey';
 import { ISSUANCE_PORTAL_ACCESS_TOKEN } from '../api/issuance-portal-api.interceptor';
 import { SESSION_ACTIONS } from '../session/session-actions';
-import { DATA_ROUTE, EMAIL_PATH, ENTITLEMENT_PATH, QR_ROUTE, REQUESTS_PATH, REQUEST_ID_PARAM } from './journey-paths';
+import { DATA_ROUTE, DONE_PATH, EMAIL_PATH, ENTITLEMENT_PATH, QR_ROUTE, REQUESTS_PATH, REQUEST_ID_PARAM } from './journey-paths';
 import {
   JourneyNavigator,
   isAvailable,
@@ -18,7 +18,7 @@ import {
 /**
  * Cuándo se puede estar en cada ruta (design.md AD-8, AD-9). Correo, con las
  * solicitudes obtenidas y el correo sin verificar: el estado del correo y el
- * del código los distingue la pantalla. Solicitudes pide el correo verificado.
+ * del código los distingue la pantalla. Solicitudes y Final piden el correo verificado.
  * Datos y QR piden además que `requestId` sea una solicitud del recorrido en
  * un estado que permita la pantalla: Datos, disponible; QR, disponible
  * (generando, confirma) o con oferta (recarga o código nuevo). Cualquier otra
@@ -28,6 +28,7 @@ const ALLOWED: Record<string, (journey: Journey, requestId: string | null) => bo
   [ENTITLEMENT_PATH]: (journey) => journey.step === 'identified',
   [EMAIL_PATH]: (journey) => journey.step !== 'identified' && !isEmailVerified(journey),
   [REQUESTS_PATH]: isEmailVerified,
+  [DONE_PATH]: isEmailVerified,
   [DATA_ROUTE]: (journey, requestId) => isEmailVerified(journey) && isAvailable(requestOf(journey, requestId)),
   [QR_ROUTE]: (journey, requestId) => {
     const status = requestOf(journey, requestId)?.status;

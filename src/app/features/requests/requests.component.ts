@@ -5,7 +5,7 @@ import { Router } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { JourneyApi, JourneyRequest } from '../../core/api/generated/journey';
 import { JourneyNavigator, isJourneyClosed } from '../../core/journey/journey-navigator';
-import { dataUrl, qrUrl } from '../../core/journey/journey-paths';
+import { DONE_PATH, dataUrl, qrUrl } from '../../core/journey/journey-paths';
 
 /** Qué dice el estado de una solicitud (wireframes, Solicitudes; prd.md FR-14); cada uno tiene su texto en `requests.status.*`. */
 export type RequestStatusText =
@@ -88,6 +88,11 @@ export class RequestsComponent implements OnInit {
   /** Obtener solo en las disponibles; en las que ya tienen proceso, para seguir con su QR. */
   protected canGet(request: JourneyRequest): boolean {
     return request.status === 'available' || request.status === 'in_offer';
+  }
+
+  /** «Terminar»: va a Final. */
+  protected onFinish(): void {
+    void this.router.navigate(['/', DONE_PATH]);
   }
 
   protected onGet(request: JourneyRequest): void {

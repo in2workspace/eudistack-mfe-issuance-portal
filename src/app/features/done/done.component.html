@@ -1,0 +1,99 @@
+<div class="min-h-screen bg-gray-50">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div class="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border p-8">
+      @if (loading()) {
+        <output class="flex flex-col items-center text-center py-12">
+          <svg class="w-10 h-10 text-brand-accent animate-spin mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          <span class="text-gray-600">{{ 'done.loading' | translate }}</span>
+        </output>
+      } @else {
+        <div class="text-center">
+          @if (saved().length > 0) {
+            <h1 class="text-2xl font-bold text-gray-900 mb-2">{{ 'done.title.saved' | translate }}</h1>
+            <p class="text-gray-600">
+              {{ (saved().length === 1 ? 'done.saved.one' : 'done.saved.other') | translate: { count: saved().length } }}
+            </p>
+          } @else {
+            <h1 class="text-2xl font-bold text-gray-900 mb-2">{{ 'done.title.none' | translate }}</h1>
+          }
+        </div>
+
+        @if (saved().length > 0) {
+          <ul class="flex flex-col gap-2" data-testid="saved">
+            @for (request of saved(); track request.id) {
+              <li class="rounded-lg border border-gray-200 p-3 font-medium text-gray-900">
+                @if (request.organization) {
+                  <span>{{ request.organization }}</span>
+                }
+                @if (request.organization && request.display_identifier) {
+                  <span aria-hidden="true"> · </span>
+                }
+                @if (request.display_identifier) {
+                  <span>{{ 'requests.identifier' | translate: { identifier: request.display_identifier } }}</span>
+                }
+                @if (!request.organization && !request.display_identifier) {
+                  <span>{{ 'requests.status.saved' | translate }}</span>
+                }
+              </li>
+            }
+          </ul>
+        }
+
+        @if (problems().length > 0) {
+          <section aria-labelledby="done-problems">
+            <h2 id="done-problems" class="mb-2 text-lg font-semibold text-gray-900">{{ 'done.problems' | translate }}</h2>
+            <ul class="flex flex-col gap-2" data-testid="problems">
+              @for (request of problems(); track request.id) {
+                <li class="rounded-lg border border-gray-200 p-3">
+                  @if (request.organization || request.display_identifier) {
+                    <p class="font-medium text-gray-900">
+                      @if (request.organization) {
+                        <span>{{ request.organization }}</span>
+                      }
+                      @if (request.organization && request.display_identifier) {
+                        <span aria-hidden="true"> · </span>
+                      }
+                      @if (request.display_identifier) {
+                        <span>{{ 'requests.identifier' | translate: { identifier: request.display_identifier } }}</span>
+                      }
+                    </p>
+                  }
+                  <p class="text-sm text-red-800">{{ problemKey(request) | translate }}</p>
+                </li>
+              }
+            </ul>
+          </section>
+        }
+
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          @if (pending() > 0) {
+            <p class="text-gray-700" data-testid="pending">
+              {{ (pending() === 1 ? 'done.pending.one' : 'done.pending.other') | translate: { count: pending() } }}
+            </p>
+            <button
+              type="button"
+              (click)="onBackToRequests()"
+              class="inline-flex items-center justify-center rounded-md text-sm font-medium h-10 px-4 bg-brand-secondary hover:opacity-90 text-brand-secondary-contrast transition-colors"
+            >
+              {{ 'done.backToRequests' | translate }}
+            </button>
+          }
+        </div>
+
+        <div class="flex justify-center">
+          <button
+            type="button"
+            (click)="onExit()"
+            [disabled]="exiting()"
+            class="inline-flex items-center justify-center rounded-md text-sm font-medium h-10 px-6 border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+          >
+            {{ 'done.exit' | translate }}
+          </button>
+        </div>
+      }
+    </div>
+  </div>
+</div>

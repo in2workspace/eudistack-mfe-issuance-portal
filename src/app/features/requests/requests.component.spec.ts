@@ -193,11 +193,14 @@ describe('RequestsComponent', () => {
     });
   });
 
-  it('has no Terminar yet: Final is not part of this task', () => {
+  it('FR-17: Terminar goes to Final', () => {
     create();
 
-    expect(element().textContent).not.toContain('He terminado');
-    expect(element().textContent).not.toContain('Terminar');
+    Array.from(element().querySelectorAll('button'))
+      .find((b) => b.textContent?.trim() === 'Terminar')!
+      .click();
+
+    expect(navigate).toHaveBeenCalledWith(['/', 'done']);
   });
 
   describe('GET /journey fails', () => {

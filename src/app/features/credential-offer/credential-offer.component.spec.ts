@@ -37,7 +37,7 @@ const statusRegions = (root: HTMLElement): HTMLElement[] =>
 describe('CredentialOfferComponent', () => {
   let fixture: ComponentFixture<CredentialOfferComponent>;
   let service: CredentialOfferService;
-  let flow: { enter: jest.Mock; newCode: jest.Mock; finish: jest.Mock };
+  let flow: { enter: jest.Mock; newCode: jest.Mock; declareSaved: jest.Mock };
   let mobile: WritableSignal<boolean>;
   let openWallet: jest.Mock;
 
@@ -46,7 +46,7 @@ describe('CredentialOfferComponent', () => {
     flow = {
       enter: jest.fn().mockResolvedValue(undefined),
       newCode: jest.fn().mockResolvedValue(undefined),
-      finish: jest.fn().mockResolvedValue(undefined),
+      declareSaved: jest.fn().mockResolvedValue(true),
     };
     mobile = signal(false);
     openWallet = jest.fn();
@@ -141,43 +141,43 @@ describe('CredentialOfferComponent', () => {
     it('AC-14: opening the wallet is a text link under the countdown that opens the personal computer notice', async () => {
       present(582);
       const element = await render();
-      const link = buttonWith(element, '¿Prefieres usar el wallet en este ordenador?')!;
+      const link = buttonWith(element, '¿Tu cartera está en este dispositivo? Ábrela aquí')!;
 
       expect(link.compareDocumentPosition(element.querySelector('[role="timer"]')!)).toBe(Node.DOCUMENT_POSITION_PRECEDING);
-      click(element, '¿Prefieres usar el wallet en este ordenador?');
+      click(element, '¿Tu cartera está en este dispositivo? Ábrela aquí');
 
-      expect(dialog(element)?.textContent).toContain('¿Usar el wallet en este ordenador?');
-      expect(dialog(element)?.textContent).toContain('Usa el wallet solo en un ordenador personal.');
-      expect(dialog(element)?.textContent).toContain('Si sigues, cierra la sesión del wallet al terminar.');
-      expect(document.activeElement?.textContent?.trim()).toBe('Usar el móvil');
+      expect(dialog(element)?.textContent).toContain('¿Abrir tu cartera en este ordenador?');
+      expect(dialog(element)?.textContent).toContain('Abre tu cartera aquí solo si es tu ordenador personal.');
+      expect(dialog(element)?.textContent).toContain('Si sigues, cierra la sesión de tu cartera al terminar.');
+      expect(document.activeElement?.textContent?.trim()).toBe('Volver al código');
       expect(openWallet).not.toHaveBeenCalled();
     });
 
-    it('AC-14: «Usar el móvil», the recommended option, is the highlighted one', async () => {
+    it('AC-14: «Volver al código», the recommended option, is the highlighted one', async () => {
       present(582);
       const element = await render();
-      click(element, '¿Prefieres usar el wallet en este ordenador?');
+      click(element, '¿Tu cartera está en este dispositivo? Ábrela aquí');
 
-      expect(buttonWith(element, 'Usar el móvil')!.className).toContain('bg-brand-secondary');
-      expect(buttonWith(element, 'Continuar en este ordenador')!.className).not.toContain('bg-brand-secondary');
+      expect(buttonWith(element, 'Volver al código')!.className).toContain('bg-brand-secondary');
+      expect(buttonWith(element, 'Seguir en este ordenador')!.className).not.toContain('bg-brand-secondary');
     });
 
-    it('AC-14: «Usar el móvil» goes back to the QR without opening the wallet', async () => {
+    it('AC-14: «Volver al código» goes back to the QR without opening the wallet', async () => {
       present(582);
       const element = await render();
-      click(element, '¿Prefieres usar el wallet en este ordenador?');
+      click(element, '¿Tu cartera está en este dispositivo? Ábrela aquí');
 
-      click(element, 'Usar el móvil');
+      click(element, 'Volver al código');
 
       expect(dialog(element)).toBeNull();
       expect(openWallet).not.toHaveBeenCalled();
-      expect(document.activeElement?.textContent?.trim()).toBe('¿Prefieres usar el wallet en este ordenador?');
+      expect(document.activeElement?.textContent?.trim()).toBe('¿Tu cartera está en este dispositivo? Ábrela aquí');
     });
 
     it('AC-14: Escape goes back to the QR without opening the wallet', async () => {
       present(582);
       const element = await render();
-      click(element, '¿Prefieres usar el wallet en este ordenador?');
+      click(element, '¿Tu cartera está en este dispositivo? Ábrela aquí');
 
       document.activeElement!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
       fixture.detectChanges();
@@ -186,12 +186,12 @@ describe('CredentialOfferComponent', () => {
       expect(openWallet).not.toHaveBeenCalled();
     });
 
-    it('AC-14: «Continuar en este ordenador» opens the wallet with the QR address', async () => {
+    it('AC-14: «Seguir en este ordenador» opens the wallet with the QR address', async () => {
       present(582);
       const element = await render();
-      click(element, '¿Prefieres usar el wallet en este ordenador?');
+      click(element, '¿Tu cartera está en este dispositivo? Ábrela aquí');
 
-      click(element, 'Continuar en este ordenador');
+      click(element, 'Seguir en este ordenador');
 
       expect(openWallet).toHaveBeenCalledWith(ONBOARDING_URL);
     });
@@ -202,8 +202,8 @@ describe('CredentialOfferComponent', () => {
 
       expect(element.textContent).toContain('No se ha podido generar el código.');
       expect(element.querySelector('app-credential-offer-url-box')).not.toBeNull();
-      expect(buttonWith(element, '¿Prefieres usar el wallet en este ordenador?')).toBeUndefined();
-      click(element, 'Abrir en mi wallet');
+      expect(buttonWith(element, '¿Tu cartera está en este dispositivo? Ábrela aquí')).toBeUndefined();
+      click(element, 'Abrir en mi cartera');
 
       expect(dialog(element)).not.toBeNull();
       expect(openWallet).not.toHaveBeenCalled();
@@ -217,26 +217,26 @@ describe('CredentialOfferComponent', () => {
 
       expect(element.querySelector('img[width="280"]')).toBeNull();
       expect(element.textContent).toContain('No se ha podido generar el código.');
-      expect(buttonWith(element, 'Abrir en mi wallet')).toBeDefined();
+      expect(buttonWith(element, 'Abrir en mi cartera')).toBeDefined();
     });
   });
 
   describe('on a phone', () => {
     beforeEach(() => mobile.set(true));
 
-    it('AC-13: «Abrir en mi wallet» goes first, in the same tab, with the QR address and no notice', async () => {
+    it('AC-13: «Abrir en mi cartera» goes first, in the same tab, with the QR address and no notice', async () => {
       present(582);
 
       const element = await render();
 
       const open = element.querySelector('a[href]') as HTMLAnchorElement;
       expect(element.querySelector('h1')?.textContent).toContain('Añade tu atestación a tu wallet');
-      expect(open.textContent?.trim()).toBe('Abrir en mi wallet');
+      expect(open.textContent?.trim()).toBe('Abrir en mi cartera');
       expect(open.getAttribute('href')).toBe(ONBOARDING_URL);
       expect(open.hasAttribute('target')).toBe(false);
       expect(open.compareDocumentPosition(element.querySelector('img[width="280"]')!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
       expect(element.textContent).toContain('¿Usas otro dispositivo? Escanea este código:');
-      expect(buttonWith(element, '¿Prefieres usar el wallet en este ordenador?')).toBeUndefined();
+      expect(buttonWith(element, '¿Tu cartera está en este dispositivo? Ábrela aquí')).toBeUndefined();
     });
   });
 
@@ -251,7 +251,7 @@ describe('CredentialOfferComponent', () => {
       expect(statusRegions(element).map((s) => s.textContent).join()).toContain('El código ha caducado.');
       expect(element.querySelector('a[href]')).toBeNull();
       expect(element.querySelector('app-credential-offer-url-box')).toBeNull();
-      expect(buttonWith(element, '¿Prefieres usar el wallet en este ordenador?')).toBeUndefined();
+      expect(buttonWith(element, '¿Tu cartera está en este dispositivo? Ábrela aquí')).toBeUndefined();
       expect(element.querySelector('[role="timer"]')).toBeNull();
     });
 
@@ -274,26 +274,80 @@ describe('CredentialOfferComponent', () => {
     });
   });
 
-  describe('He terminado', () => {
-    it('AC-15: ends the journey through the flow', async () => {
+  describe('Ya lo he guardado (AD-10, FR-16)', () => {
+    it('AC-05: on a computer it is the main action, with the countdown before it and the discreet wallet link after it', async () => {
       present(582);
       const element = await render();
+      const saved = buttonWith(element, 'Ya lo he guardado')!;
+      const link = buttonWith(element, '¿Tu cartera está en este dispositivo? Ábrela aquí')!;
 
-      click(element, 'He terminado');
-
-      expect(flow.finish).toHaveBeenCalledTimes(1);
+      expect(saved.className).toContain('bg-brand-secondary');
+      expect(link.className).not.toContain('bg-brand-secondary');
+      expect(saved.compareDocumentPosition(link)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+      expect(element.querySelector('[role="timer"]')!.compareDocumentPosition(saved)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     });
 
-    it('EC-07: a second click while it is ending does nothing', async () => {
-      flow.finish.mockReturnValue(new Promise(() => undefined));
+    it('AC-12: on a phone «Abrir en mi cartera» goes first and «Ya lo he guardado» is the secondary one, after the QR', async () => {
+      mobile.set(true);
+      present(582);
+      const element = await render();
+      const open = element.querySelector('a[href]') as HTMLAnchorElement;
+      const saved = buttonWith(element, 'Ya lo he guardado')!;
+
+      expect(open.compareDocumentPosition(saved)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+      expect(element.querySelector('img[width="280"]')!.compareDocumentPosition(saved)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+      expect(saved.className).not.toContain('bg-brand-secondary');
+    });
+
+    it.each([false, true])('AC-05: asks the flow to declare the request of the route saved (phone: %s)', async (onPhone) => {
+      mobile.set(onPhone);
       present(582);
       const element = await render();
 
-      click(element, 'He terminado');
-      buttonWith(element, 'He terminado')!.click();
+      click(element, 'Ya lo he guardado');
 
-      expect(flow.finish).toHaveBeenCalledTimes(1);
-      expect(buttonWith(element, 'He terminado')!.disabled).toBe(true);
+      expect(flow.declareSaved).toHaveBeenCalledTimes(1);
+      expect(flow.declareSaved).toHaveBeenCalledWith('r2');
+    });
+
+    it('EC-07: a second click while it is being declared does nothing', async () => {
+      flow.declareSaved.mockReturnValue(new Promise(() => undefined));
+      present(582);
+      const element = await render();
+
+      click(element, 'Ya lo he guardado');
+      buttonWith(element, 'Ya lo he guardado')!.click();
+
+      expect(flow.declareSaved).toHaveBeenCalledTimes(1);
+      expect(buttonWith(element, 'Ya lo he guardado')!.disabled).toBe(true);
+    });
+
+    it('when the flow could not go on, the holder can press it again', async () => {
+      flow.declareSaved.mockResolvedValue(false);
+      present(582);
+      const element = await render();
+
+      click(element, 'Ya lo he guardado');
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(buttonWith(element, 'Ya lo he guardado')!.disabled).toBe(false);
+    });
+
+    it('is still there with the code expired: the holder may have saved it just before', async () => {
+      present(-1);
+
+      const element = await render();
+
+      expect(buttonWith(element, 'Ya lo he guardado')).toBeDefined();
+    });
+
+    it('AC-12: there is no «He terminado»', async () => {
+      present(582);
+
+      const element = await render();
+
+      expect(element.textContent).not.toContain('He terminado');
     });
 
     it('the demo actions are gone', async () => {
@@ -349,7 +403,7 @@ describe('CredentialOfferComponent', () => {
   it('NFR-3: has no accessibility violations with the personal computer notice open', async () => {
     present(582);
     const element = await render();
-    click(element, '¿Prefieres usar el wallet en este ordenador?');
+    click(element, '¿Tu cartera está en este dispositivo? Ábrela aquí');
 
     expect(await axe(element)).toHaveNoViolations();
   });

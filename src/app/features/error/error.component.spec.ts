@@ -30,6 +30,7 @@ describe('ErrorComponent', () => {
   let reloadTexts: jest.Mock;
   const config = signal<PortalConfig | null>(null);
   let withdrawJourney: jest.Mock<Observable<Journey>>;
+  let getJourney: jest.Mock<Observable<Journey>>;
   let token: string | null;
 
   function configWith(support: PortalConfigSupport): PortalConfig {
@@ -64,6 +65,7 @@ describe('ErrorComponent', () => {
     load = jest.fn();
     reloadTexts = jest.fn().mockResolvedValue(undefined);
     withdrawJourney = jest.fn().mockReturnValue(of({ state: 'withdrawn', step: 'identified' }));
+    getJourney = jest.fn().mockReturnValue(of({ state: 'completed', step: 'offer_obtained', requests: [{ id: 'r1', status: 'available' }] }));
     token = 'access-token';
     session = { restartLogin: jest.fn().mockResolvedValue(undefined), resumeLogin: jest.fn().mockResolvedValue(undefined), discardTokens: jest.fn() };
     config.set(configWith({ email: 'soporte@cgcom.example', phone: '900 000 000', schedule: 'L-V 9-18' }));
@@ -75,7 +77,7 @@ describe('ErrorComponent', () => {
         { provide: SESSION_ACTIONS, useValue: session },
         { provide: PortalConfigService, useValue: { config, load } },
         { provide: TenantLanguageService, useValue: { reloadTexts } },
-        { provide: JourneyApi, useValue: { withdrawJourney } },
+        { provide: JourneyApi, useValue: { withdrawJourney, getJourney } },
         { provide: ISSUANCE_PORTAL_ACCESS_TOKEN, useValue: () => token },
       ],
     });
@@ -146,13 +148,43 @@ describe('ErrorComponent', () => {
     expect(router.navigate).toHaveBeenCalledWith(['/']);
   });
 
-  it('AC-07: offer-not-renewable discards the tokens and goes to Inicio', async () => {
-    show('offer-not-renewable');
+  it('AC-08: request-saved with requests still pending goes on with Solicitudes, keeping the tokens', async () => {
+    show('request-saved');
 
     await clickAction();
 
-    expect(session.discardTokens).toHaveBeenCalledTimes(1);
-    expect(router.navigate).toHaveBeenCalledWith(['/']);
+    expect(router.navigate).toHaveBeenCalledWith(['/', 'requests']);
+    expect(session.discardTokens).not.toHaveBeenCalled();
+    expect(withdrawJourney).not.toHaveBeenCalled();
+  });
+
+  it('AC-08: request-saved with nothing pending offers Ir al final, which goes to Final, keeping the tokens', async () => {
+    getJourney.mockReturnValue(of({ state: 'completed', step: 'offer_obtained', requests: [{ id: 'r1', status: 'saved' }] }));
+    show('request-saved');
+
+    expect(actionButton().textContent).toContain('error.request-saved.actionEnd');
+    await clickAction();
+
+    expect(router.navigate).toHaveBeenCalledWith(['/', 'done']);
+    expect(session.discardTokens).not.toHaveBeenCalled();
+  });
+
+  it('AC-08: request-saved asks the journey only when it is the case shown, and only with a token', () => {
+    show('source-unavailable');
+    expect(getJourney).not.toHaveBeenCalled();
+
+    token = null;
+    show('request-saved');
+    expect(getJourney).not.toHaveBeenCalled();
+  });
+
+  it('AC-08: if the journey cannot be read, request-saved goes on with Solicitudes, where the guard decides', async () => {
+    getJourney.mockReturnValue(throwError(() => new ApiProblemError(NETWORK_ERROR, 0, 'Network error')));
+    show('request-saved');
+
+    await clickAction();
+
+    expect(router.navigate).toHaveBeenCalledWith(['/', 'requests']);
   });
 
   it('AC-10: not-entitled shows the tenant support contact', () => {
@@ -297,7 +329,7 @@ describe('ErrorComponent', () => {
       ['source-unavailable', 'Ahora no podemos comprobar tus datos', 'Volver a intentarlo'],
       ['issuance-failed', 'No hemos podido generar tu atestación', 'Volver a intentarlo'],
       ['onboarding-unavailable', 'No hemos podido preparar tu alta en el wallet', 'Generar un código nuevo'],
-      ['offer-not-renewable', 'Este código ya no se puede renovar', 'Volver al inicio'],
+      ['request-saved', 'Esta atestación ya está en tu cartera', 'Seguir con mis solicitudes'],
       ['session-expired', 'Tu sesión ha caducado', 'Empezar de nuevo'],
     ])('AC-03: %s shows the title «%s» and the action «%s»', (reason, title, action) => {
       useLanguage('es');
@@ -314,12 +346,10 @@ describe('ErrorComponent', () => {
       expect(textOf(show('onboarding-unavailable'), 'p')).toContain('No se ha emitido ninguna atestación');
     });
 
-    it('AC-07: offer-not-renewable says there is nothing else to do if the attestation is already saved', () => {
+    it('AC-08: request-saved says there is nothing else to do with that request', () => {
       useLanguage('es');
 
-      expect(textOf(show('offer-not-renewable'), 'p')).toContain(
-        'Si ya has guardado la atestación en tu wallet, no tienes que hacer nada más',
-      );
+      expect(textOf(show('request-saved'), 'p')).toContain('No tienes que hacer nada más con esta solicitud');
     });
 
     it('AC-10: not-entitled shows the tenant support details in the text', () => {

@@ -55,6 +55,7 @@ describe('routes', () => {
     ['requests', 'RequestsComponent'],
     ['no-requests', 'NoRequestsComponent'],
     ['request-unavailable', 'RequestUnavailableComponent'],
+    ['done', 'DoneComponent'],
   ])('AD-8: "%s" lazy-loads %s', async (path, name) => {
     const loaded = await (findRoute(path).loadComponent as () => Promise<unknown>)();
 

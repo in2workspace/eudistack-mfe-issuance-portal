@@ -18,6 +18,16 @@ export function isEmailVerified(journey: Journey): boolean {
   return journey.email_verification?.verified === true;
 }
 
+/** Le queda al titular por obtener o guardar: disponible, o confirmada y sin guardar. */
+export function isPending(request: JourneyRequest): boolean {
+  return request.status === 'available' || request.status === 'in_offer';
+}
+
+/** Alguna solicitud del recorrido está pendiente. */
+export function hasPendingRequests(journey: Journey): boolean {
+  return requestsOf(journey).some(isPending);
+}
+
 /** Las solicitudes del recorrido; ninguna hasta que Comprobación las obtiene. */
 function requestsOf(journey: Journey): JourneyRequest[] {
   return journey.requests ?? [];

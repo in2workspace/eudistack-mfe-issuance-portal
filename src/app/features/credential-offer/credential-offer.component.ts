@@ -18,10 +18,11 @@ import { CredentialOfferUrlBoxComponent } from '../../shared/components/credenti
  * caducidad que da el servicio. La oferta la pide `OfferFlowService` al
  * entrar. La ruta la protege `journeyStepGuard`.
  *
- * En el móvil, abrir el wallet es la acción principal y va antes del QR, sin
- * aviso. En el ordenador, el QR es la acción principal y abrir el wallet es
- * un enlace secundario que antes muestra el aviso de ordenador personal; sin
- * QR, pasa a ser el botón principal con el mismo aviso (prd.md FR-07).
+ * «Ya lo he guardado» es la acción principal de la pantalla (AD-10); no hay
+ * botón para terminar. En el móvil, abrir la cartera va antes del QR, sin
+ * aviso. En el ordenador, el QR es lo principal y abrir la cartera es un
+ * enlace discreto que antes muestra el aviso de ordenador personal; sin QR,
+ * pasa a ser el botón principal con el mismo aviso (prd.md FR-07).
  */
 @Component({
   selector: 'app-credential-offer',
@@ -45,7 +46,7 @@ export class CredentialOfferComponent implements OnInit, OnDestroy {
   protected readonly qrFailed = signal(false);
   protected readonly withoutQr = computed(() => this.status() === 'ready-without-qr' || this.qrFailed());
   protected readonly personalComputerNoticeOpen = signal(false);
-  protected readonly finishing = signal(false);
+  protected readonly saving = signal(false);
 
   constructor() {
     // El QR se genera para cada dirección que cabe en él, y se conserva
@@ -92,11 +93,16 @@ export class CredentialOfferComponent implements OnInit, OnDestroy {
     }
   }
 
-  onFinish(): void {
-    if (this.finishing()) {
+  /** «Ya lo he guardado» (AD-10): declara guardada la solicitud y sigue; si no ha podido, se puede volver a pulsar. */
+  onSaved(): void {
+    if (this.saving()) {
       return;
     }
-    this.finishing.set(true);
-    void this.flow.finish().finally(() => this.finishing.set(false));
+    this.saving.set(true);
+    void this.flow.declareSaved(this.requestId).then((proceeded) => {
+      if (!proceeded) {
+        this.saving.set(false);
+      }
+    });
   }
 }

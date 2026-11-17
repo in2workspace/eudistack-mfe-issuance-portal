@@ -77,7 +77,7 @@ describe('journeyStepGuard', () => {
   it('AD-8: protects Comprobación, Correo, Datos and QR of a request', () => {
     const screens = routes.find((r) => r.path === '' && r.children)?.children ?? [];
 
-    for (const path of ['entitlement', 'email', DATA, QR]) {
+    for (const path of ['entitlement', 'email', 'requests', 'done', DATA, QR]) {
       expect({ path, guards: screens.find((r) => r.path === path)?.canActivate }).toEqual({
         path,
         guards: [journeyStepGuard],
@@ -105,6 +105,18 @@ describe('journeyStepGuard', () => {
       getJourney.mockReturnValue(journey([available('r1')], { email_verification: verification(false) }));
 
       expect(await run('email')).toBe(true);
+    });
+
+    it('AC-09: Final with the email verified, whatever the requests', async () => {
+      getJourney.mockReturnValue(journey([saved('r1'), notAvailable('r2')], { state: 'completed', step: 'offer_obtained' }));
+
+      expect(await run('done')).toBe(true);
+    });
+
+    it('AC-09: Final with the email not verified goes to Correo', async () => {
+      getJourney.mockReturnValue(journey([available('r1')], { step: 'entitlement_confirmed', email_verification: undefined }));
+
+      expect(await run('done')).toBe('/email');
     });
 
     it('AC-01: Solicitudes with the email verified', async () => {

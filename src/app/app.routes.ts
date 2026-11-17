@@ -3,6 +3,7 @@ import { journeyStepGuard } from './core/journey/journey-step.guard';
 import { heldOutcomeGuard } from './core/journey/entitlement-outcome.store';
 import {
   DATA_ROUTE,
+  DONE_PATH,
   EMAIL_PATH,
   ENTITLEMENT_PATH,
   NO_REQUESTS_PATH,
@@ -67,6 +68,12 @@ export const routes: Routes = [
         // Solicitudes (design.md §3.5): el estado de cada una, que se vuelve a pedir al entrar.
         path: REQUESTS_PATH,
         loadComponent: () => import('./features/requests/requests.component').then((m) => m.RequestsComponent),
+        canActivate: [journeyStepGuard],
+      },
+      {
+        // Final (design.md §3.5, punto 5): lo guardado, lo que tiene un problema y lo que queda.
+        path: DONE_PATH,
+        loadComponent: () => import('./features/done/done.component').then((m) => m.DoneComponent),
         canActivate: [journeyStepGuard],
       },
       {

@@ -15,7 +15,7 @@ export const ERROR_REASONS = [
   'source-unavailable',
   'issuance-failed',
   'onboarding-unavailable',
-  'offer-not-renewable',
+  'request-saved',
   'session-expired',
 ] as const;
 

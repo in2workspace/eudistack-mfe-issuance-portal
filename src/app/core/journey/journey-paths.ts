@@ -7,6 +7,7 @@
 export const ENTITLEMENT_PATH = 'entitlement';
 export const EMAIL_PATH = 'email';
 export const REQUESTS_PATH = 'requests';
+export const DONE_PATH = 'done';
 export const NO_REQUESTS_PATH = 'no-requests';
 export const REQUEST_UNAVAILABLE_PATH = 'request-unavailable';
 
@@ -32,4 +33,4 @@ export function qrUrl(requestId: string): string[] {
  * `journeyStepGuard`. Inicio, Ayuda, Error y las dos pantallas sin solicitud
  * que obtener no cuentan.
  */
-export const JOURNEY_STEP_ROOTS: readonly string[] = [ENTITLEMENT_PATH, EMAIL_PATH, REQUESTS_PATH];
+export const JOURNEY_STEP_ROOTS: readonly string[] = [ENTITLEMENT_PATH, EMAIL_PATH, REQUESTS_PATH, DONE_PATH];

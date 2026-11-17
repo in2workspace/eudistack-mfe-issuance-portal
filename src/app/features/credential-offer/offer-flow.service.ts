@@ -6,7 +6,7 @@ import {
   ISSUANCE_REJECTED,
   ISSUANCE_UNAVAILABLE,
   NETWORK_ERROR,
-  OFFER_NOT_RENEWABLE,
+  REQUEST_SAVED,
   ONBOARDING_UNAVAILABLE,
   STEP_NOT_ALLOWED,
   UNEXPECTED_ERROR,
@@ -17,12 +17,13 @@ import { JourneyIssuanceStore, OfferCall } from '../../core/journey/journey-issu
 import {
   JourneyNavigator,
   isAvailable,
+  hasPendingRequests,
   isEmailVerified,
   isJourneyClosed,
   requestOf,
   stepUrl,
 } from '../../core/journey/journey-navigator';
-import { SESSION_ACTIONS } from '../../core/session/session-actions';
+import { DONE_PATH, REQUESTS_PATH } from '../../core/journey/journey-paths';
 import { ErrorReason, errorUrl } from '../error/error-reason';
 import { CredentialOfferService } from './credential-offer.service';
 import { resolveOfferAddress } from './resolve-offer-address';
@@ -60,7 +61,6 @@ export class OfferFlowService {
   private readonly presenter = inject(CredentialOfferService);
   private readonly navigator = inject(JourneyNavigator);
   private readonly router = inject(Router);
-  private readonly session = inject(SESSION_ACTIONS);
   private destroyed = false;
 
   constructor() {
@@ -110,23 +110,30 @@ export class OfferFlowService {
   }
 
   /**
-   * «He terminado» (ac.md AC-15): termina el recorrido y descarta los tokens
-   * (design.md §3.1, punto 7). Si la retirada falla, los tokens se descartan
-   * igual (ES-05). Con un 410, el interceptor ya lleva a la sesión caducada.
+   * «Ya lo he guardado» (design.md AD-10, §3.3 punto 6): declara guardada la
+   * solicitud y sigue: a Solicitudes si queda alguna pendiente, o a Final si
+   * no. El portal no comprueba que la cartera la haya guardado. Con 409
+   * `step_not_allowed` y con 410 el interceptor de EUD-287 lleva al paso o a
+   * la sesión caducada. Otro fallo deja al titular en QR, que puede volver a
+   * pulsarlo. Devuelve si ha seguido.
    */
-  async finish(): Promise<void> {
-    this.presenter.reset();
+  async declareSaved(requestId: string): Promise<boolean> {
     try {
-      await firstValueFrom(this.journeyApi.withdrawJourney());
-    } catch (error: unknown) {
-      if (isJourneyClosed(error)) {
-        this.store.clear();
-        return;
-      }
+      await firstValueFrom(this.journeyApi.declareRequestSaved(requestId));
+    } catch {
+      return false;
+    }
+    if (this.destroyed) {
+      return true;
     }
     this.store.clear();
-    this.session.discardTokens();
-    void this.router.navigate(['/']);
+    const journey = await this.readJourney();
+    if (journey === undefined || this.destroyed) {
+      return true;
+    }
+    this.presenter.reset();
+    void this.router.navigate(['/', hasPendingRequests(journey) ? REQUESTS_PATH : DONE_PATH]);
+    return true;
   }
 
   private async request(call: OfferCall, requestId: string): Promise<void> {
@@ -172,12 +179,11 @@ export class OfferFlowService {
     const reason = ISSUANCE_FAILURES[error.type];
     if (reason) {
       void this.router.navigate(errorUrl(reason));
-    } else if (error.type === OFFER_NOT_RENEWABLE) {
-      // El recorrido ha terminado en el servicio: el correo y los tokens se
-      // descartan ya (design.md §3.1, punto 7; review W4).
+    } else if (error.type === REQUEST_SAVED) {
+      // La solicitud ya está guardada en la cartera: el servicio la da por guardada y el recorrido sigue,
+      // así que los tokens no se descartan (design.md §3.2; ac.md, decisión 5).
       this.store.clear();
-      this.session.discardTokens();
-      void this.router.navigate(errorUrl('offer-not-renewable'));
+      void this.router.navigate(errorUrl('request-saved'));
     } else if (error.type === STEP_NOT_ALLOWED) {
       // El servicio ya tiene una oferta vigente (desfase de reloj en un código
       // nuevo, o una confirmación repetida con atrás y adelante): se presenta (ES-02).
