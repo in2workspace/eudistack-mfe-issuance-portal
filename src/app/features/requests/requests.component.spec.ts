@@ -89,6 +89,26 @@ describe('RequestsComponent', () => {
     expect(screens.find((r) => r.path === 'requests')?.canActivate).toEqual([journeyStepGuard]);
   });
 
+  it('title: how many requests and of which attestation, from the type name the service gives', () => {
+    create([
+      { id: 'r1', status: 'saved' },
+      { id: 'r2', status: 'available', attestation: { type_name: 'DoctorID', fields: [] } },
+      { id: 'r3', status: 'not_available', not_available_reason: 'identity_mismatch' },
+    ]);
+    const root = fixture.nativeElement as HTMLElement;
+
+    expect(root.querySelector('h1')?.textContent?.trim()).toBe('Tienes 3 solicitudes de DoctorID');
+    expect(root.querySelector('h1 + p')?.textContent?.trim()).toBe('Obtén un DoctorID por cada una.');
+  });
+
+  it('title: without any type name in the requests, a generic one with the count', () => {
+    create([{ id: 'r1', status: 'saved' }, { id: 'r2', status: 'not_available', not_available_reason: 'under_review' }]);
+    const root = fixture.nativeElement as HTMLElement;
+
+    expect(root.querySelector('h1')?.textContent?.trim()).toBe('Tienes 2 solicitudes');
+    expect(root.querySelector('h1 + p')?.textContent?.trim()).toBe('Obtén una atestación por cada una.');
+  });
+
   it('asks GET /journey every time it is entered, to show the current status of each request', () => {
     create();
     TestBed.createComponent(RequestsComponent).detectChanges();

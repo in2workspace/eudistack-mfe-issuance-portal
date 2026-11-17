@@ -173,8 +173,8 @@
   "requestUnavailable.fields.family_names": "Family names",
   "requestUnavailable.exit": "Exit",
   "requests.loading": "Loading your requests…",
-  "requests.title": "Your requests",
-  "requests.subtitle": "Choose which one you want to save in your wallet",
+  "requests.title": "You have {{count}} requests",
+  "requests.subtitle": "Get one attestation for each of them.",
   "requests.identifier": "No. {{identifier}}",
   "requests.requestedByOn": "Requested by {{by}} on {{date}}",
   "requests.requestedBy": "Requested by {{by}}",
@@ -218,5 +218,7 @@
   "issuanceInfo.duration": "It will take about 5 minutes",
   "credentialOffer.saveFailed": "It could not be recorded. Try again.",
   "stepIndicator.label": "Step {{step}} of {{total}}",
-  "verifyEmail.delayHint": "It may take a minute. Also check your junk or spam folder."
+  "verifyEmail.delayHint": "It may take a minute. Also check your junk or spam folder.",
+  "requests.titleOfType": "You have {{count}} {{type}} requests",
+  "requests.subtitleOfType": "Get one {{type}} for each of them."
 }

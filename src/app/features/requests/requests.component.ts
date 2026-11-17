@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
@@ -60,6 +60,10 @@ export class RequestsComponent implements OnInit {
 
   protected readonly requests = signal<JourneyRequest[]>([]);
   protected readonly loading = signal(true);
+  /** Nombre de la atestación, del primer `attestation.type_name` que traiga alguna solicitud; si ninguna lo trae, ninguno. */
+  protected readonly typeName = computed(
+    () => this.requests().find((request) => request.attestation?.type_name)?.attestation?.type_name ?? null,
+  );
 
   ngOnInit(): void {
     this.journeyApi
