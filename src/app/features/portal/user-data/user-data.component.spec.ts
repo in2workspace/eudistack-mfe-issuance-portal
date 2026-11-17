@@ -7,7 +7,9 @@ import { axe, toHaveNoViolations } from 'jest-axe';
 import { NEVER, Observable, of, Subject, throwError } from 'rxjs';
 import { UserDataComponent } from './user-data.component';
 import { ApiProblemError, NETWORK_ERROR } from '../../../core/api/api-problem.error';
+import { EntitlementApi } from '../../../core/api/generated/authentic-source';
 import { AttestationPreview, Journey, JourneyApi, JourneyRequest } from '../../../core/api/generated/journey';
+import { HeaderBackService } from '../../../shared/components/portal-header/header-back.service';
 import { JourneyIssuanceStore } from '../../../core/journey/journey-issuance.store';
 import { JourneyNavigator } from '../../../core/journey/journey-navigator';
 import { SESSION_ACTIONS } from '../../../core/session/session-actions';
@@ -39,6 +41,8 @@ describe('UserDataComponent', () => {
   let withdrawJourney: jest.Mock<Observable<Journey>>;
   let discardTokens: jest.Mock;
   let toSessionExpired: jest.Mock;
+  let toCurrentStep: jest.Mock;
+  let disputeRequestData: jest.Mock<Observable<void>>;
   let navigate: jest.SpyInstance;
   let store: JourneyIssuanceStore;
 
@@ -47,12 +51,15 @@ describe('UserDataComponent', () => {
     withdrawJourney = jest.fn();
     discardTokens = jest.fn();
     toSessionExpired = jest.fn().mockResolvedValue(true);
+    toCurrentStep = jest.fn().mockResolvedValue(true);
+    disputeRequestData = jest.fn();
     TestBed.configureTestingModule({
       imports: [UserDataComponent, TranslateModule.forRoot()],
       providers: [
         provideRouter([]),
         { provide: JourneyApi, useValue: { getJourney, withdrawJourney } },
-        { provide: JourneyNavigator, useValue: { toSessionExpired } },
+        { provide: JourneyNavigator, useValue: { toSessionExpired, toCurrentStep } },
+        { provide: EntitlementApi, useValue: { disputeRequestData } },
         { provide: SESSION_ACTIONS, useValue: { restartLogin: jest.fn(), discardTokens } },
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ requestId: 'r2' }) } } },
       ],
@@ -88,7 +95,10 @@ describe('UserDataComponent', () => {
     fixture.detectChanges();
   }
 
-  afterEach(() => fixture?.nativeElement.remove());
+  afterEach(() => {
+    fixture?.nativeElement.remove();
+    TestBed.inject(HeaderBackService).clear();
+  });
 
   const element = (): HTMLElement => fixture.nativeElement as HTMLElement;
   const button = (label: string): HTMLButtonElement =>
@@ -176,6 +186,168 @@ describe('UserDataComponent', () => {
       fixture.detectChanges();
 
       expect(button('Son correctos, continuar').disabled).toBe(false);
+    });
+  });
+
+  describe('Mis datos no son correctos (FR-15, AD-11)', () => {
+    const problem = (type: string, status: number): Observable<never> =>
+      throwError(() => new ApiProblemError(type, status, type));
+
+    it('AC-06: reports the request of the route with no confirmation first, and no data of the holder', () => {
+      disputeRequestData.mockReturnValue(of(undefined));
+      create();
+
+      click('Mis datos no son correctos');
+
+      expect(element().querySelector('[role="dialog"]')).toBeNull();
+      expect(disputeRequestData).toHaveBeenCalledTimes(1);
+      expect(disputeRequestData).toHaveBeenCalledWith('r2');
+    });
+
+    it('AC-06: on 204 shows the notice: corrected at the source, the request stays open, with Volver a mis solicitudes and Salir', () => {
+      disputeRequestData.mockReturnValue(of(undefined));
+      create();
+
+      click('Mis datos no son correctos');
+
+      expect(element().querySelector('h1')?.textContent).toBe('Tus datos se corrigen en su origen');
+      expect(element().textContent).toContain('Tu solicitud sigue abierta');
+      expect(element().querySelector('dl')).toBeNull();
+      expect(button('Volver a mis solicitudes')).toBeDefined();
+      expect(button('Salir')).toBeDefined();
+    });
+
+    it('AC-06: Volver a mis solicitudes goes to Solicitudes', () => {
+      disputeRequestData.mockReturnValue(of(undefined));
+      create();
+      click('Mis datos no son correctos');
+
+      click('Volver a mis solicitudes');
+
+      expect(navigate).toHaveBeenCalledWith(['/', 'requests']);
+    });
+
+    it('AC-06: Salir withdraws the journey, discards the tokens and goes to Inicio, without confirmation', () => {
+      disputeRequestData.mockReturnValue(of(undefined));
+      withdrawJourney.mockReturnValue(of({ state: 'withdrawn', step: 'email_verified' }));
+      create();
+      click('Mis datos no son correctos');
+
+      click('Salir');
+
+      expect(element().querySelector('[role="dialog"]')).toBeNull();
+      expect(withdrawJourney).toHaveBeenCalledTimes(1);
+      expect(discardTokens).toHaveBeenCalledTimes(1);
+      expect(navigate).toHaveBeenCalledWith(['/']);
+    });
+
+    it('with a single request the notice has no Volver a mis solicitudes', () => {
+      disputeRequestData.mockReturnValue(of(undefined));
+      create([{ id: 'r2', status: 'available', attestation: PREVIEW }]);
+
+      click('Mis datos no son correctos');
+
+      expect(button('Volver a mis solicitudes')).toBeUndefined();
+      expect(button('Salir')).toBeDefined();
+    });
+
+    it.each([
+      [NETWORK_ERROR, 0],
+      ['unexpected_error', 500],
+    ])('ES-03: %s says it could not be recorded and lets the holder try again', (type, status) => {
+      disputeRequestData.mockReturnValueOnce(problem(type, status)).mockReturnValueOnce(of(undefined));
+      create();
+
+      click('Mis datos no son correctos');
+
+      expect(element().textContent).toContain('No se ha podido anotar. Inténtalo de nuevo.');
+      expect(element().querySelector('dl')).not.toBeNull();
+      expect(navigate).not.toHaveBeenCalled();
+
+      click('Volver a intentarlo');
+
+      expect(disputeRequestData).toHaveBeenCalledTimes(2);
+      expect(element().querySelector('h1')?.textContent).toBe('Tus datos se corrigen en su origen');
+    });
+
+    it.each([
+      ['request_not_found', 404],
+      ['request_not_available', 409],
+    ])('ES-02: %s goes to the step the journey says', (type, status) => {
+      disputeRequestData.mockReturnValue(problem(type, status));
+      create();
+
+      click('Mis datos no son correctos');
+
+      expect(toCurrentStep).toHaveBeenCalledTimes(1);
+      expect(element().textContent).not.toContain('No se ha podido anotar');
+    });
+
+    it.each([
+      ['step_not_allowed', 409],
+      ['journey_closed', 410],
+    ])('ES-08: %s is left to the journey interceptor: no message', (type, status) => {
+      disputeRequestData.mockReturnValue(problem(type, status));
+      create();
+
+      click('Mis datos no son correctos');
+
+      expect(element().textContent).not.toContain('No se ha podido anotar');
+      expect(toCurrentStep).not.toHaveBeenCalled();
+    });
+
+    it('sends the notice only once while it is being sent', () => {
+      disputeRequestData.mockReturnValue(NEVER);
+      create();
+
+      button('Mis datos no son correctos').click();
+      button('Mis datos no son correctos').click();
+
+      expect(disputeRequestData).toHaveBeenCalledTimes(1);
+    });
+
+    it('NFR-5: the notice has no accessibility violations', async () => {
+      disputeRequestData.mockReturnValue(of(undefined));
+      create();
+      click('Mis datos no son correctos');
+
+      expect(await axe(element())).toHaveNoViolations();
+    });
+
+    it('NFR-5: the failure message has no accessibility violations', async () => {
+      disputeRequestData.mockReturnValue(problem(NETWORK_ERROR, 0));
+      create();
+      click('Mis datos no son correctos');
+
+      expect(await axe(element())).toHaveNoViolations();
+    });
+  });
+
+  describe('going back to the requests (AC-24, wireframes)', () => {
+    it('with several requests offers Volver a mis solicitudes and the header back button, both to Solicitudes', () => {
+      create();
+
+      click('Volver a mis solicitudes');
+      expect(navigate).toHaveBeenCalledWith(['/', 'requests']);
+
+      navigate.mockClear();
+      TestBed.inject(HeaderBackService).action()!();
+      expect(navigate).toHaveBeenCalledWith(['/', 'requests']);
+    });
+
+    it('with a single request offers neither', () => {
+      create([{ id: 'r2', status: 'available', attestation: PREVIEW }]);
+
+      expect(button('Volver a mis solicitudes')).toBeUndefined();
+      expect(TestBed.inject(HeaderBackService).action()).toBeNull();
+    });
+
+    it('takes the header back button away when the screen is destroyed', () => {
+      create();
+
+      fixture.destroy();
+
+      expect(TestBed.inject(HeaderBackService).action()).toBeNull();
     });
   });
 

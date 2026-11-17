@@ -1,4 +1,5 @@
 import { Injectable, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { OidcSecurityService } from 'angular-auth-oidc-client';
 import { firstValueFrom } from 'rxjs';
 import { PortalConfigService } from '../config/portal-config.service';
@@ -30,6 +31,7 @@ export class HolderAuthService {
   private readonly oidc = inject(OidcSecurityService);
   private readonly storage = inject(OidcFlowStorage);
   private readonly portalConfig = inject(PortalConfigService);
+  private readonly router = inject(Router);
 
   private readonly accessTokenState = signal<string | null>(null);
   private readonly givenNameState = signal('');
@@ -87,7 +89,8 @@ export class HolderAuthService {
     this.clearSession();
     this.storage.writeRedirectMark(Date.now());
     try {
-      this.login();
+      // La ruta actual, para volver a la misma solicitud con los tokens nuevos (AC-23, EC-06).
+      this.login(this.router.url);
     } catch {
       this.redirecting = false;
       this.discard();

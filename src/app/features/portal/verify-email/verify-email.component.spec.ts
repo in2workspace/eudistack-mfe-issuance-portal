@@ -10,6 +10,7 @@ import { ApiProblemError, NETWORK_ERROR } from '../../../core/api/api-problem.er
 import { EmailVerification, Journey, JourneyApi } from '../../../core/api/generated/journey';
 import { TenantLanguageService } from '../../../core/branding/tenant-language.service';
 import { JourneyIssuanceStore } from '../../../core/journey/journey-issuance.store';
+import { HeaderBackService } from '../../../shared/components/portal-header/header-back.service';
 import { JourneyNavigator } from '../../../core/journey/journey-navigator';
 import { SESSION_ACTIONS } from '../../../core/session/session-actions';
 
@@ -612,6 +613,28 @@ describe('VerifyEmailComponent', () => {
       expect(boxes()).toHaveLength(0);
       expect(withdrawJourney).not.toHaveBeenCalled();
       expect(sendEmailCode).not.toHaveBeenCalled();
+    });
+
+    it('the header back button exists only while the code is awaited, and goes back to the email state', () => {
+      const headerBack = TestBed.inject(HeaderBackService);
+      create();
+      expect(headerBack.action()).not.toBeNull();
+
+      headerBack.action()!();
+      fixture.detectChanges();
+
+      expect(element().querySelector('h1')?.textContent).toBe('¿Cuál es tu correo?');
+      expect(headerBack.action()).toBeNull();
+    });
+
+    it('the email state has no header back button, and leaving the screen clears it', () => {
+      const headerBack = TestBed.inject(HeaderBackService);
+      create(null);
+      expect(headerBack.action()).toBeNull();
+
+      create();
+      fixture.destroy();
+      expect(headerBack.action()).toBeNull();
     });
 
     it('sending another email sends a new code to it and shows the boxes', () => {

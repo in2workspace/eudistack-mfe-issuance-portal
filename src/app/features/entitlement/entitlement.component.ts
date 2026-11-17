@@ -76,17 +76,17 @@ export class EntitlementComponent implements OnInit {
   }
 
   /**
-   * Sin motivo y con una sola solicitud no disponible, Tus datos no coinciden.
-   * Con varias solicitudes y ninguna disponible el contrato no da pantalla
-   * propia (prd.md §3.1 solo trata la única): se muestra sin derecho.
+   * Sin motivo (hay solicitudes y ninguna disponible), Tus datos no coinciden:
+   * con la solicitud única, o con la lista de cada una y qué hacer (decisión
+   * del Tech Lead para varias solicitudes, tasks.md, tarea 5).
    */
   private notConfirmedUrl(result: EntitlementResult): string[] {
     if (result.reason === 'no_requests') {
       this.outcome.hold({ kind: 'no-requests' });
       return ['/', NO_REQUESTS_PATH];
     }
-    if (result.reason === undefined && result.requests.length === 1) {
-      this.outcome.hold({ kind: 'request-unavailable', request: result.requests[0] });
+    if (result.reason === undefined && result.requests.length > 0) {
+      this.outcome.hold({ kind: 'request-unavailable', requests: result.requests });
       return ['/', REQUEST_UNAVAILABLE_PATH];
     }
     return errorUrl('not-entitled');

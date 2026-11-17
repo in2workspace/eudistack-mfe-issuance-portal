@@ -5,7 +5,30 @@
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
       </svg>
     </div>
-    @if (notYours()) {
+    @if (several()) {
+      <h1 class="text-2xl font-bold text-gray-900">{{ 'requestUnavailable.mismatch.title' | translate }}</h1>
+      <p class="text-gray-600">{{ 'requestUnavailable.list.description' | translate }}</p>
+      <ul class="flex w-full flex-col gap-3 text-left">
+        @for (request of requests(); track request.id) {
+          <li class="rounded-lg border border-gray-200 p-4" data-testid="unavailable-request">
+            @if (request.organization || request.display_identifier) {
+              <p class="font-semibold text-gray-900">
+                @if (request.organization) {
+                  <span>{{ request.organization }}</span>
+                }
+                @if (request.organization && request.display_identifier) {
+                  <span aria-hidden="true"> · </span>
+                }
+                @if (request.display_identifier) {
+                  <span>{{ 'requests.identifier' | translate: { identifier: request.display_identifier } }}</span>
+                }
+              </p>
+            }
+            <p class="text-sm text-red-800">{{ problemKey(request) | translate }}</p>
+          </li>
+        }
+      </ul>
+    } @else if (notYours()) {
       <h1 class="text-2xl font-bold text-gray-900">{{ 'requestUnavailable.notYours.title' | translate }}</h1>
       <p class="text-gray-600">{{ 'requestUnavailable.notYours.description' | translate }}</p>
     } @else {

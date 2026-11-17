@@ -1,6 +1,6 @@
 <header class="bg-white border-b border-gray-200">
   <div class="max-w-7xl mx-auto flex items-center gap-3 px-4 py-3 sm:gap-6 sm:px-6 lg:px-8">
-    @if (backTo() !== null) {
+    @if (hasBack()) {
       <button
         type="button"
         (click)="onBack()"

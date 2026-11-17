@@ -4,6 +4,7 @@ import { Title } from '@angular/platform-browser';
 import { provideRouter, Router } from '@angular/router';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { axe, toHaveNoViolations } from 'jest-axe';
+import { HeaderBackService } from './header-back.service';
 import { PortalHeaderComponent } from './portal-header.component';
 import { BrandingService } from '../../../core/branding/branding.service';
 import { TenantLanguageService } from '../../../core/branding/tenant-language.service';
@@ -84,6 +85,22 @@ describe('PortalHeaderComponent', () => {
     await fixture.whenStable();
 
     expect(router.url).toBe('/');
+  });
+
+  it('the screen can set its own back button, which wins over the route one and goes away when cleared', async () => {
+    const back = TestBed.inject(HeaderBackService);
+    const action = jest.fn();
+    await navigate('/');
+
+    back.set(action);
+    fixture.detectChanges();
+    (element().querySelector('button') as HTMLButtonElement).click();
+
+    expect(action).toHaveBeenCalledTimes(1);
+
+    back.clear();
+    fixture.detectChanges();
+    expect(element().querySelector('button')).toBeNull();
   });
 
   it('sets the tab title to the portal name in the active language', () => {

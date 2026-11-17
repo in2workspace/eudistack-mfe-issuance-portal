@@ -14,7 +14,7 @@ describe('EntitlementOutcomeStore', () => {
     TestBed.runInInjectionContext(() => heldOutcomeGuard(kind)({} as never, {} as never));
 
   it('starts with nothing and holds only in memory, never in the browser storage', () => {
-    store.hold({ kind: 'request-unavailable', request: { id: 'r1', status: 'identifier_mismatch', renewal: false } });
+    store.hold({ kind: 'request-unavailable', requests: [{ id: 'r1', status: 'identifier_mismatch', renewal: false }] });
 
     expect(sessionStorage.length + localStorage.length).toBe(0);
     store.clear();

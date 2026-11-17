@@ -36,8 +36,8 @@ describe('RequestUnavailableComponent', () => {
 
   afterEach(() => fixture?.nativeElement.remove());
 
-  function show(request: SourceRequest): HTMLElement {
-    outcome.hold({ kind: 'request-unavailable', request });
+  function show(...requests: SourceRequest[]): HTMLElement {
+    outcome.hold({ kind: 'request-unavailable', requests });
     fixture = TestBed.createComponent(RequestUnavailableComponent);
     document.body.appendChild(fixture.nativeElement);
     fixture.detectChanges();
@@ -73,6 +73,34 @@ describe('RequestUnavailableComponent', () => {
     expect(element.querySelector('h1')?.textContent).toBe('Esta solicitud no está a tu nombre');
     expect(element.textContent).toContain('Pide a quien la solicitó que la revise');
     expect(element.querySelector('ul')).toBeNull();
+  });
+
+  it('AC-04: with several requests none available lists each one with its problem and what to do', () => {
+    const element = show(
+      { id: 'r1', status: 'identity_mismatch', renewal: false, organization: 'Colegio de Madrid', display_identifier: '28/1' },
+      { id: 'r2', status: 'identifier_mismatch', renewal: false, display_identifier: '45/2' },
+      { id: 'r3', status: 'under_review', renewal: false, organization: 'Colegio de Ávila' },
+    );
+
+    const rows = Array.from(element.querySelectorAll('[data-testid="unavailable-request"]')).map((li) => li.textContent ?? '');
+    expect(rows).toHaveLength(3);
+    expect(rows[0]).toContain('Colegio de Madrid');
+    expect(rows[0]).toContain('N.º 28/1');
+    expect(rows[0]).toContain('Pide que los actualicen.');
+    expect(rows[1]).toContain('N.º 45/2');
+    expect(rows[1]).toContain('Pide a quien la solicitó que la revise.');
+    expect(rows[2]).toContain('Pide que los corrijan en su origen.');
+    expect(element.querySelector('h1')?.textContent).toBe('Tus datos no coinciden');
+    expect(element.textContent).not.toMatch(/r[1-3]/);
+  });
+
+  it('NFR-5: the list of several requests has no accessibility violations', async () => {
+    const element = show(
+      { id: 'r1', status: 'identity_mismatch', renewal: false, organization: 'Colegio de Madrid' },
+      { id: 'r2', status: 'identifier_mismatch', renewal: false },
+    );
+
+    expect(await axe(element)).toHaveNoViolations();
   });
 
   it('FR-18: «Salir» forgets what was in memory and goes to Inicio', () => {

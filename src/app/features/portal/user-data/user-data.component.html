@@ -9,6 +9,31 @@
           </svg>
           <span class="text-gray-600">{{ 'userData.loading' | translate }}</span>
         </output>
+      } @else if (disputed()) {
+        <!-- Wireframes, Datos, aviso: los datos se corrigen en su origen; la solicitud sigue abierta (FR-15). -->
+        <div class="text-center">
+          <h1 class="text-2xl font-bold text-gray-900 mb-2">{{ 'userData.disputed.title' | translate }}</h1>
+          <p class="text-gray-600">{{ 'userData.disputed.description' | translate }}</p>
+        </div>
+        <div class="flex flex-col gap-3 sm:flex-row sm:justify-between">
+          @if (severalRequests()) {
+            <button
+              type="button"
+              (click)="onBackToRequests()"
+              class="inline-flex items-center justify-center rounded-md text-sm font-medium h-10 px-4 bg-brand-secondary hover:opacity-90 text-brand-secondary-contrast transition-colors"
+            >
+              {{ 'userData.backToRequests' | translate }}
+            </button>
+          }
+          <button
+            type="button"
+            (click)="onExit()"
+            [disabled]="withdrawing()"
+            class="inline-flex items-center justify-center rounded-md text-sm font-medium h-10 px-4 border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+          >
+            {{ 'userData.exit' | translate }}
+          </button>
+        </div>
       } @else {
         <div class="text-center">
           <h1 class="text-2xl font-bold text-gray-900 mb-2">{{ 'userData.title' | translate }}</h1>
@@ -33,6 +58,32 @@
         </section>
 
         <p class="rounded-md bg-gray-50 p-3 text-sm text-gray-600">{{ 'userData.fixAtSource' | translate }}</p>
+
+        <div aria-live="polite">
+          @if (disputeFailed()) {
+            <p class="text-sm text-red-700">{{ 'userData.disputeFailed' | translate }}</p>
+          }
+        </div>
+
+        <div class="flex flex-col gap-3 sm:flex-row sm:justify-start">
+          <button
+            type="button"
+            (click)="onDispute()"
+            [disabled]="disputing() || withdrawing()"
+            class="inline-flex items-center justify-center rounded-md text-sm font-medium h-10 px-4 border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+          >
+            {{ (disputeFailed() ? 'userData.disputeRetry' : 'userData.dispute') | translate }}
+          </button>
+          @if (severalRequests()) {
+            <button
+              type="button"
+              (click)="onBackToRequests()"
+              class="inline-flex items-center justify-center rounded-md text-sm font-medium h-10 px-4 border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              {{ 'userData.backToRequests' | translate }}
+            </button>
+          }
+        </div>
 
         <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
           <button

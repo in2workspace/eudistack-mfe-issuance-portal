@@ -1,4 +1,4 @@
-import { Component, DestroyRef, OnInit, computed, inject, signal, viewChild } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormControl, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -23,6 +23,7 @@ import { TenantLanguageService } from '../../../core/branding/tenant-language.se
 import { JourneyIssuanceStore } from '../../../core/journey/journey-issuance.store';
 import { JourneyNavigator, isJourneyClosed, stepUrl } from '../../../core/journey/journey-navigator';
 import { SESSION_ACTIONS } from '../../../core/session/session-actions';
+import { HeaderBackService } from '../../../shared/components/portal-header/header-back.service';
 import { CodeInputComponent } from '../../../shared/components/code-input/code-input.component';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { injectCountdown } from '../../../shared/countdown';
@@ -81,6 +82,7 @@ export class VerifyEmailComponent implements OnInit {
   private readonly language = inject(TenantLanguageService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly codeInput = viewChild(CodeInputComponent);
+  private readonly headerBack = inject(HeaderBackService);
 
   protected readonly stage = signal<Stage>('email');
   protected readonly verification = signal<EmailVerification | null>(null);
@@ -109,6 +111,18 @@ export class VerifyEmailComponent implements OnInit {
     nonNullable: true,
     validators: [Validators.required, trimmedEmail, (control) => this.rejectedByService(control)],
   });
+
+  constructor() {
+    // Wireframes: el botón de volver de la cabecera sale mientras se espera el código y vuelve al estado del correo.
+    effect(() => {
+      if (this.stage() === 'code') {
+        this.headerBack.set(() => this.onChangeEmail());
+      } else {
+        this.headerBack.clear();
+      }
+    });
+    this.destroyRef.onDestroy(() => this.headerBack.clear());
+  }
 
   private rejectedByService(control: AbstractControl<string>): ValidationErrors | null {
     return control.value.trim() === this.rejectedEmail() ? { rejected: true } : null;

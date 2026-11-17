@@ -154,22 +154,19 @@ describe('EntitlementComponent', () => {
       create(of({ result: 'not_confirmed', requests: [single] }));
 
       expect(navigate).toHaveBeenCalledWith(['/', 'request-unavailable'], { replaceUrl: true });
-      expect(outcome.outcome()).toEqual({ kind: 'request-unavailable', request: single });
+      expect(outcome.outcome()).toEqual({ kind: 'request-unavailable', requests: [single] });
     });
 
-    it('with no reason and several requests, none available, goes to the not entitled case: no screen of its own', () => {
-      create(
-        of({
-          result: 'not_confirmed',
-          requests: [
-            { id: 'r1', status: 'identity_mismatch', renewal: false },
-            { id: 'r2', status: 'identifier_mismatch', renewal: false },
-          ],
-        }),
-      );
+    it('AC-04: with no reason and several requests, none available, goes to Tus datos no coinciden holding all of them', () => {
+      const requests: SourceRequest[] = [
+        { id: 'r1', status: 'identity_mismatch', renewal: false },
+        { id: 'r2', status: 'identifier_mismatch', renewal: false },
+      ];
+      create(of({ result: 'not_confirmed', requests }));
 
-      expect(navigate).toHaveBeenCalledWith(['/', 'error', 'not-entitled'], { replaceUrl: true });
-      expect(outcome.outcome()).toBeNull();
+      expect(navigate).toHaveBeenCalledWith(['/', 'request-unavailable'], { replaceUrl: true });
+      expect(outcome.outcome()).toEqual({ kind: 'request-unavailable', requests });
+      expect(discardTokens).toHaveBeenCalledTimes(1);
     });
 
     it.each<[string, EntitlementResult]>([

@@ -191,5 +191,13 @@
   "requests.status.notYours": "It is not in your name. Ask whoever made it to check it.",
   "requests.status.mismatch": "Your source details do not match your certificate. Ask for them to be updated.",
   "requests.status.underReview": "You said your details are not correct. Ask for them to be corrected at their source.",
-  "requests.status.notAvailable": "It cannot be obtained right now. Ask your organisation to check it."
+  "requests.status.notAvailable": "It cannot be obtained right now. Ask your organisation to check it.",
+  "userData.dispute": "My details are not correct",
+  "userData.disputeRetry": "Try again",
+  "userData.disputeFailed": "It could not be recorded. Try again.",
+  "userData.backToRequests": "Back to my requests",
+  "userData.exit": "Exit",
+  "userData.disputed.title": "Your details are corrected at their source",
+  "userData.disputed.description": "We have recorded it. Ask whoever holds your details to correct them. Your request stays open: once they are corrected, you will be able to get it.",
+  "requestUnavailable.list.description": "You cannot get any of your requests right now. This is what happens with each one."
 }

@@ -18,6 +18,10 @@ export const ISSUANCE_UNAVAILABLE = 'issuance_unavailable';
 export const ONBOARDING_UNAVAILABLE = 'onboarding_unavailable';
 /** `type` del 409 de la confirmación o de un código nuevo: el titular ya recogió la atestación; el recorrido ha terminado. */
 export const OFFER_NOT_RENEWABLE = 'offer_not_renewable';
+/** `type` del 404 del aviso de datos no correctos: el recorrido no tiene esa solicitud. */
+export const REQUEST_NOT_FOUND = 'request_not_found';
+/** `type` del 409 del aviso de datos no correctos: la solicitud no está disponible. */
+export const REQUEST_NOT_AVAILABLE = 'request_not_available';
 /** `type` del 400 del envío del código: falta el correo. */
 export const EMAIL_REQUIRED = 'email_required';
 /** `type` del 400 del envío del código: el correo no tiene formato válido. */

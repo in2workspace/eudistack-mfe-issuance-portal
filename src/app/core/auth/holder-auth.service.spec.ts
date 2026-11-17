@@ -1,4 +1,5 @@
 import { signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { TestBed } from '@angular/core/testing';
 import { LoginResponse, OidcSecurityService } from 'angular-auth-oidc-client';
 import { Subject, of, throwError } from 'rxjs';
@@ -262,6 +263,15 @@ describe('HolderAuthService', () => {
       expect(service.isAccessTokenExpired()).toBe(false);
       await login('opaque-token');
       expect(service.isAccessTokenExpired()).toBe(false);
+    });
+
+    it('AC-23: going to the Verifier because the token could not be renewed remembers the current route, the request included', async () => {
+      await login('old-token');
+      jest.spyOn(TestBed.inject(Router), 'url', 'get').mockReturnValue('/requests/r2/data');
+
+      service.redirectToVerifier();
+
+      expect(flow.writeReturnPath).toHaveBeenCalledWith('/requests/r2/data');
     });
 
     it('goes to the Verifier once, discarding the session first, however many requests fail', async () => {

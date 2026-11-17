@@ -5,9 +5,10 @@ import { Request as SourceRequest } from '../api/generated/authentic-source';
 /**
  * Lo que Comprobación deja a la pantalla a la que lleva cuando la fuente no
  * confirma ninguna solicitud: ninguna solicitud (Sin solicitudes) o la única
- * solicitud no disponible, con sus datos (Tus datos no coinciden).
+ * solicitud no disponible o varias, ninguna disponible, con sus datos (Tus datos
+ * no coinciden).
  */
-export type EntitlementOutcome = { kind: 'no-requests' } | { kind: 'request-unavailable'; request: SourceRequest };
+export type EntitlementOutcome = { kind: 'no-requests' } | { kind: 'request-unavailable'; requests: SourceRequest[] };
 
 /**
  * Respuesta de Fuente auténtica que Comprobación guarda en memoria solo

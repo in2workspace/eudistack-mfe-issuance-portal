@@ -191,5 +191,13 @@
   "requests.status.notYours": "No está a tu nombre. Pide a quien la solicitó que la revise.",
   "requests.status.mismatch": "Tus datos de origen no coinciden con tu certificado. Pide que los actualicen.",
   "requests.status.underReview": "Has dicho que tus datos no son correctos. Pide que los corrijan en su origen.",
-  "requests.status.notAvailable": "Ahora no se puede obtener. Pide a tu organización que la revise."
+  "requests.status.notAvailable": "Ahora no se puede obtener. Pide a tu organización que la revise.",
+  "userData.dispute": "Mis datos no son correctos",
+  "userData.disputeRetry": "Volver a intentarlo",
+  "userData.disputeFailed": "No se ha podido anotar. Inténtalo de nuevo.",
+  "userData.backToRequests": "Volver a mis solicitudes",
+  "userData.exit": "Salir",
+  "userData.disputed.title": "Tus datos se corrigen en su origen",
+  "userData.disputed.description": "Lo hemos anotado. Pide a quien custodia tus datos que los corrija. Tu solicitud sigue abierta: cuando estén corregidos, podrás obtenerla.",
+  "requestUnavailable.list.description": "Ahora no puedes obtener ninguna de tus solicitudes. Esto es lo que pasa con cada una."
 }
