@@ -54,9 +54,22 @@ export class HolderAuthService {
     return this.accessTokenState();
   }
 
-  /** Lleva al titular al `authorize` del Verifier, pidiendo como esencial el nivel del tenant (AD-14). */
+  /**
+   * Lleva al titular al `authorize` del Verifier, pidiendo como esencial el nivel del tenant (AD-14). Puede
+   * resolverse con la sesión SSO del Verifier: es la ida del mismo titular a mitad del recorrido (renovación
+   * fallida, o `prompt=none` sin resolver al recargar).
+   */
   login(): void {
     this.oidc.authorize(undefined, { customParams: { claims: acrClaims(this.assuranceLevel()) } });
+  }
+
+  /**
+   * Como `login`, pero con `prompt=login`: el Verifier no reutiliza su sesión SSO y quien llega tiene que
+   * identificarse. Es la ida de Empezar y de «Volver a intentarlo»: en un equipo compartido, quien pulse
+   * Empezar después no entra con la identidad del titular anterior (EUD-23 design.md §3.1, punto 7; AC-08).
+   */
+  loginAgain(): void {
+    this.oidc.authorize(undefined, { customParams: { prompt: 'login', claims: acrClaims(this.assuranceLevel()) } });
   }
 
   /**

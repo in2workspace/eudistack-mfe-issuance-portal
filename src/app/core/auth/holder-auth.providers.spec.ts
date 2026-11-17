@@ -153,9 +153,20 @@ describe('provideHolderAuth', () => {
     expect(silent).toHaveBeenCalledTimes(1);
   });
 
-  it('AC-03: restartLogin goes to the Verifier and discardTokens forgets the token', async () => {
+  it('AC-08: Empezar and «Volver a intentarlo» go to the Verifier with prompt=login, so its SSO session is not reused', async () => {
+    const url = new URL(await authorizeUrl((auth) => auth.loginAgain()));
+
+    expect(url.searchParams.get('prompt')).toBe('login');
+    expect(url.searchParams.get('client_id')).toBe('issuance-portal-sandbox');
+    expect(JSON.parse(url.searchParams.get('claims') as string).id_token.acr).toEqual({
+      essential: true,
+      value: 'http://eidas.europa.eu/LoA/high',
+    });
+  });
+
+  it('AC-03: restartLogin goes to the Verifier asking for a new identification and discardTokens forgets the token', async () => {
     const auth = TestBed.inject(HolderAuthService);
-    const login = jest.spyOn(auth, 'login').mockImplementation(() => undefined);
+    const login = jest.spyOn(auth, 'loginAgain').mockImplementation(() => undefined);
     const discard = jest.spyOn(auth, 'discard').mockImplementation(() => undefined);
     const session = TestBed.inject(SESSION_ACTIONS);
 

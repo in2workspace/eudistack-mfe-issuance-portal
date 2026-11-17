@@ -62,6 +62,16 @@ describe('HolderAuthService', () => {
     expect(oidc.authorize).toHaveBeenCalledTimes(1);
   });
 
+  it('AC-08: login keeps the SSO of the Verifier for the same holder, loginAgain asks for prompt=login with the level of the tenant', () => {
+    portalConfig.set({ assurance_level: 'substantial' });
+    service.login();
+    service.loginAgain();
+
+    expect(oidc.authorize.mock.calls[0][1].customParams.prompt).toBeUndefined();
+    expect(oidc.authorize.mock.calls[1][1].customParams.prompt).toBe('login');
+    expect(claimsOfCall(1).id_token.acr).toEqual({ essential: true, value: 'http://eidas.europa.eu/LoA/substantial' });
+  });
+
   it('AC-29: login asks for the level of the tenant as essential: high without configuration or level, substantial when configured', () => {
     service.login();
     portalConfig.set({ assurance_level: 'high' });
