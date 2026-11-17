@@ -2,42 +2,73 @@ import { Injectable, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { ApiProblemError, JOURNEY_CLOSED } from '../api/api-problem.error';
-import { Journey, JourneyApi } from '../api/generated/journey';
+import { Journey, JourneyApi, JourneyRequest } from '../api/generated/journey';
 import { errorUrl } from '../../features/error/error-reason';
 import { SESSION_ACTIONS } from '../session/session-actions';
 import { JourneyIssuanceStore } from './journey-issuance.store';
-import { DATA_PATH, EMAIL_PATH, ENTITLEMENT_PATH, QR_PATH } from './journey-paths';
+import { EMAIL_PATH, ENTITLEMENT_PATH, REQUESTS_PATH, dataUrl, qrUrl } from './journey-paths';
 
 /**
- * El derecho está confirmado y la oferta aún no se ha obtenido: el titular
- * está en Datos, Verificar correo o QR (generando). El paso nunca retrocede
- * (ac.md de EUD-358, decisión 2): tras la primera verificación sigue en
- * `email_verified` aunque pida un código nuevo, así que lo que decide la
- * pantalla es `email_verification`, no el paso.
+ * El correo del recorrido está verificado: se pueden ver las solicitudes y
+ * pedir cualquier emisión (prd.md FR-13). Lo dice `email_verification`, no el
+ * paso: el paso nunca retrocede (ac.md de EUD-358, decisión 2) y un código
+ * nuevo deja el correo sin verificar con el paso en `email_verified`.
  */
-export function hasConfirmedEntitlement(journey: Journey): boolean {
-  return journey.step === 'entitlement_confirmed' || journey.step === 'email_verified';
+export function isEmailVerified(journey: Journey): boolean {
+  return journey.email_verification?.verified === true;
 }
 
-/** Hay un código pendiente de comprobar: Verificar correo. */
-export function hasPendingEmailCode(journey: Journey): boolean {
-  return hasConfirmedEntitlement(journey) && journey.email_verification?.verified === false;
+/** Las solicitudes del recorrido; ninguna hasta que Comprobación las obtiene. */
+function requestsOf(journey: Journey): JourneyRequest[] {
+  return journey.requests ?? [];
 }
 
-/** El correo está verificado y falta la oferta: QR (generando) confirma. */
-export function hasVerifiedEmail(journey: Journey): boolean {
-  return hasConfirmedEntitlement(journey) && journey.email_verification?.verified === true;
+/** La solicitud `requestId` del recorrido, si es de él. */
+export function requestOf(journey: Journey, requestId: string | null): JourneyRequest | undefined {
+  return requestsOf(journey).find((request) => request.id === requestId);
 }
 
-/** Ruta que corresponde al recorrido (prd.md §3.3, design.md §3.4, punto 5). */
-function screenPath(journey: Journey): string {
+/** El titular puede confirmarla: sus datos se ven y se piden (AD-8). */
+export function isAvailable(request: JourneyRequest | undefined): boolean {
+  return request?.status === 'available';
+}
+
+/**
+ * Tiene una oferta que aún sirve. La caducidad que cuenta es la de la
+ * dirección de alta si la hay y, si no, la de la oferta (design.md §3.3),
+ * como en `resolveOfferAddress`.
+ */
+export function hasCurrentOffer(request: JourneyRequest, now: number = Date.now()): boolean {
+  const offer = request.offer;
+  if (request.status !== 'in_offer' || !offer) {
+    return false;
+  }
+  const expiresAt = Date.parse(offer.onboarding_url ? (offer.onboarding_expires_at ?? '') : offer.expires_at);
+  return expiresAt > now;
+}
+
+/**
+ * Ruta que corresponde al recorrido (design.md AD-8): sin solicitudes
+ * obtenidas, Comprobación; sin correo verificado, Correo; con él, el QR de una
+ * solicitud con oferta vigente, los Datos de la única solicitud si es
+ * disponible o, si no, Solicitudes.
+ */
+function screenUrl(journey: Journey): string[] {
   if (journey.step === 'identified') {
-    return ENTITLEMENT_PATH;
+    return ['/', ENTITLEMENT_PATH];
   }
-  if (journey.step === 'offer_obtained' || hasVerifiedEmail(journey)) {
-    return QR_PATH;
+  if (!isEmailVerified(journey)) {
+    return ['/', EMAIL_PATH];
   }
-  return hasPendingEmailCode(journey) ? EMAIL_PATH : DATA_PATH;
+  const requests = requestsOf(journey);
+  const withOffer = requests.find((request) => hasCurrentOffer(request));
+  if (withOffer) {
+    return qrUrl(withOffer.id);
+  }
+  if (requests.length === 1 && isAvailable(requests[0])) {
+    return dataUrl(requests[0].id);
+  }
+  return ['/', REQUESTS_PATH];
 }
 
 /**
@@ -52,7 +83,7 @@ export function isJourneyActive(journey: Journey): boolean {
 
 /** Adónde va el titular según el recorrido: la ruta de su paso o, si ya no tiene paso, Inicio. */
 export function stepUrl(journey: Journey): string[] {
-  return isJourneyActive(journey) ? ['/', screenPath(journey)] : ['/'];
+  return isJourneyActive(journey) ? screenUrl(journey) : ['/'];
 }
 
 export function isJourneyClosed(error: unknown): boolean {

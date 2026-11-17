@@ -1,23 +1,36 @@
 openapi: 3.1.0
 info:
   title: EUDIStack — Issuance Portal Service · Authentic source module
-  version: "1"
+  version: "2"
   summary: Authentic source module of the issuance portal service, used by the issuance portal interface.
   description: |
     Part of the issuance portal service API, under the same base URL as the Journey module. Every call carries
     the holder's Access Token issued by the Verifier; the service validates it on every call and works on the
-    holder's journey in progress.
+    holder's journey in progress. No call carries holder data: the identity comes from the journey, where the
+    Journey module stored it from the Access Token.
 
-    The interface asks to verify the holder's entitlement without sending any holder data. The module takes the
-    personal identifier and its type from the holder's journey, where the Journey module stored them from
-    the Access Token and the login method: national identity number (DNI/NIE) for
-    certificate (and Cl@ve in the future), registration number for DoctorID. The module searches the authentic
-    source configured for the tenant and attestation type by that identifier type, translates its data into the
-    attestation data and stores it in the journey with the result. It returns `confirmed` (with what the Data step shows) or `not_confirmed` (with a reason).
-    With `not_confirmed`, the journey is withdrawn with reason `not_entitled`.
-    If the source does not answer within 10 seconds, it returns 503. It never returns `confirmed` without an
-    answer from the source. If the attestation type has no source configured, it returns `confirmed` with no
-    additional data.
+    `POST /entitlement` asks the authentic source configured for the tenant and attestation type for the
+    holder's requests. The module sends the source the holder's given name, family names, personal identifier
+    and its type. The source returns zero, one or several requests, each with its status and, when it is
+    available, the data the attestation will carry. The module stores the requests in the journey and returns:
+
+    - `confirmed`: at least one request is `available`.
+    - `not_confirmed`: the holder is not in the source (`not_found`), has no request (`no_requests`), or has
+      requests but none is available (no `reason`; `requests` says why). The journey is withdrawn with reason
+      `not_entitled`.
+    - 503 `authentic_source_unavailable`: the source did not answer within 10 seconds, answered with an error
+      or answered something unexpected. Never a confirmation.
+
+    If the attestation type has no source configured, it returns `confirmed` with one `available` request
+    without additional data: the attestation carries only the verified identity.
+
+    `POST /entitlement/requests/{id}/dispute` records that the holder says the data of a request is not
+    correct. The module tells the source, if the source supports it, and the request becomes `under_review`
+    in the journey: its attestation can no longer be requested in this journey.
+
+    A new `POST /entitlement` in the same journey replaces the previous result, except for the requests the
+    holder already put `under_review`, which stay so. A request keeps its `id` across checks of the same
+    journey.
   contact:
     name: EUDIStack
     url: https://eudistack.net
@@ -36,60 +49,127 @@ security:
   - idpAccessToken: []
 tags:
   - name: Entitlement
-    description: Entitlement verification against the authentic source.
+    description: The holder's requests in the authentic source.
 
 paths:
   /entitlement:
     post:
       tags: [Entitlement]
       operationId: verifyEntitlement
-      summary: Verify entitlement and obtain the attestation data
+      summary: Get the holder's requests from the authentic source
       description: Takes no body. Any body sent is ignored.
       responses:
         "200":
-          description: The source answered.
+          description: The source answered, or the attestation type has no source.
           content:
             application/json:
               schema: { $ref: "#/components/schemas/EntitlementResult" }
               examples:
-                confirmed:
+                two_requests:
+                  summary: One request available and one whose data does not match the holder's identification.
                   value:
                     result: confirmed
-                    attestation:
-                      type_name: Professional attestation
-                      fields:
-                        - { label: Name, value: María García López }
-                        - { label: Registration number, value: "282801234" }
-                        - { label: Specialty, value: Example specialty }
-                      email_required: true
-                not_confirmed:
+                    requests:
+                      - id: r1
+                        status: available
+                        renewal: false
+                        requested_by: Example Hospital North
+                        requested_at: "2026-11-03T08:00:00Z"
+                        display_identifier: "282801234"
+                        organization: Example Professional Board
+                        attestation:
+                          type_name: Professional attestation
+                          fields:
+                            - { label: Name, value: María García López }
+                            - { label: Board, value: Example Professional Board }
+                            - { label: Specialty, value: Example specialty }
+                      - id: r2
+                        status: identity_mismatch
+                        mismatched_fields: [given_name]
+                        renewal: false
+                        requested_by: Example Centre East
+                        requested_at: "2026-11-05T08:00:00Z"
+                        display_identifier: "461234567"
+                no_source:
+                  summary: The attestation type has no source configured.
+                  value:
+                    result: confirmed
+                    requests:
+                      - id: r1
+                        status: available
+                        renewal: false
+                        attestation:
+                          type_name: Identity attestation
+                          fields:
+                            - { label: Name, value: María García López }
+                single_not_available:
+                  summary: A single request, not available.
                   value:
                     result: not_confirmed
-                    reason: not_entitled
-        "401":
-          description: "`type` `unauthenticated`: missing, expired or invalid Access Token, or level of assurance below high."
-          content:
-            application/problem+json:
-              schema: { $ref: "#/components/schemas/Problem" }
+                    requests:
+                      - id: r1
+                        status: identity_mismatch
+                        mismatched_fields: [family_names]
+                        renewal: true
+                        requested_at: "2026-11-01T08:00:00Z"
+                        display_identifier: "282801234"
+                not_found:
+                  value: { result: not_confirmed, reason: not_found, requests: [] }
+                no_requests:
+                  value: { result: not_confirmed, reason: no_requests, requests: [] }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
         "409":
           description: "`type` `step_not_allowed`: the holder has no journey in progress."
           content:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Problem" }
-        "410":
-          description: "`type` `journey_closed`: the journey is no longer in progress or it expired."
-          content:
-            application/problem+json:
-              schema: { $ref: "#/components/schemas/Problem" }
+        "410": { $ref: "#/components/responses/JourneyClosed" }
         "503":
-          description: "`type` `authentic_source_unavailable`: the source did not answer or answered with an error. The holder can retry."
+          description: "`type` `authentic_source_unavailable`: the source did not answer in time, answered with an error or answered something unexpected. The holder can retry."
           headers:
             Retry-After:
-              schema: { type: integer }
+              schema: { type: integer, minimum: 0 }
               description: Seconds to wait before retrying.
           content:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Problem" }
+
+  /entitlement/requests/{id}/dispute:
+    post:
+      tags: [Entitlement]
+      operationId: disputeRequestData
+      summary: The holder says the data of a request is not correct
+      description: |
+        Takes no body. Any body sent is ignored. Only for a request that is `available` or already
+        `under_review` in the journey.
+
+        The module tells the source, with the holder's identity taken from the journey and the request, if the
+        tenant's source supports it. The request becomes `under_review` in the journey whether the source
+        supports it or not, and its attestation can no longer be requested in this journey. Repeating the call
+        for a request already `under_review` changes nothing and answers 204.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: "`id` of the request, as returned by `POST /entitlement` in this journey."
+          schema: { type: string, maxLength: 64 }
+      responses:
+        "204": { description: Recorded. The request is `under_review`. }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404":
+          description: "`type` `request_not_found`: the journey has no request with that `id`."
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "409":
+          description: |
+            `type`:
+            - `step_not_allowed` — the holder has no journey in progress, or its requests were not checked yet.
+            - `request_not_available` — the request is not `available` (for example `identity_mismatch`).
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "410": { $ref: "#/components/responses/JourneyClosed" }
 
 components:
   securitySchemes:
@@ -99,45 +179,97 @@ components:
       bearerFormat: JWT
       description: Access Token issued by the tenant's Verifier to the issuance portal, with a high level of assurance.
 
+  responses:
+    Unauthenticated:
+      description: "`type` `unauthenticated`: missing, expired or invalid Access Token, or level of assurance below high."
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    JourneyClosed:
+      description: "`type` `journey_closed`: the journey is no longer in progress or it expired."
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+
   schemas:
     EntitlementResult:
       type: object
-      required: [result]
+      required: [result, requests]
       properties:
         result:
           type: string
           enum: [confirmed, not_confirmed]
-        attestation:
-          $ref: "#/components/schemas/AttestationPreview"
+          description: "`confirmed` when at least one request is `available`."
         reason:
           type: string
-          enum: [not_found, not_entitled, identifier_mismatch]
+          enum: [not_found, no_requests]
           description: |
-            Only with `not_confirmed`. `not_found`: the holder is not in the source. `not_entitled`: the holder
-            is in the source without entitlement, for example deregistered. `identifier_mismatch`: the source
-            returned data of a person with an identifier other than the one searched.
+            Only with `not_confirmed` when no request was checked, and then `requests` is empty.
+            `not_found`: the holder is not in the source. `no_requests`: the holder is in the source without
+            any request. When the holder has requests but none is available, there is no `reason` and each
+            request says why.
+        requests:
+          type: array
+          description: The holder's requests, in the order the source gave them. Empty with `reason`.
+          items: { $ref: "#/components/schemas/Request" }
+
+    Request:
+      type: object
+      required: [id, status, renewal]
+      properties:
+        id:
+          type: string
+          maxLength: 64
+          description: Opaque. Assigned by the module and stable within the journey. Not the source's identifier.
+        status:
+          type: string
+          enum: [available, identifier_mismatch, identity_mismatch, under_review]
+          description: |
+            `available`: the source confirms it and gives its data; the attestation can be requested.
+            `identifier_mismatch`: the request's identifier does not belong to the holder in the source.
+            `identity_mismatch`: the source's data does not match the holder's identification; see
+            `mismatched_fields`.
+            `under_review`: the holder said its data is not correct in this journey.
+        mismatched_fields:
+          type: array
+          description: Only with `identity_mismatch`, when the source says which data does not match.
+          items:
+            type: string
+            enum: [identifier, given_name, family_names]
+        renewal:
+          type: boolean
+          description: True when the source says the request is a renewal. False when the source does not say.
+        requested_by:
+          type: string
+          description: Who asked for the request, as the source gives it. Absent when the source does not give it.
+        requested_at:
+          type: string
+          format: date-time
+          description: When the request was made. Absent when the source does not give it.
+        display_identifier:
+          type: string
+          description: Identifier that lets the holder recognise the request, for example a registration number. Absent when the source does not give one.
+        organization:
+          type: string
+          description: Organization the request belongs to, as the source gives it. Absent when the source does not give it.
+        attestation:
+          $ref: "#/components/schemas/AttestationPreview"
 
     AttestationPreview:
       type: object
-      description: Only with `confirmed`. What the interface shows in the Data step. Read only.
-      required: [type_name, fields, email_required]
+      description: Only with `available` and `under_review`. What the Data step shows. Read only.
+      required: [type_name, fields]
       properties:
         type_name: { type: string }
         fields:
           type: array
+          description: The holder's name first, from the identification, then the labelled data of the source. Never the personal identifier of the identification.
           items:
             type: object
             required: [label, value]
             properties:
               label: { type: string }
               value: { type: string }
-        email:
-          type: string
-          format: email
-          description: Present when the Access Token or the source provided it.
-        email_required:
-          type: boolean
-          description: True when the interface must ask the holder for an email.
 
     Problem:
       type: object

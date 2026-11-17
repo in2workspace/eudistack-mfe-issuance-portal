@@ -61,7 +61,7 @@ describe('The end of the journey discards the tokens', () => {
   });
 
   it('AC-08: a 410 found by the inactivity timer discards the tokens and shows the session expired case', async () => {
-    jest.spyOn(TestBed.inject(Router), 'url', 'get').mockReturnValue('/user-data');
+    jest.spyOn(TestBed.inject(Router), 'url', 'get').mockReturnValue('/requests/r1/data');
     getJourney.mockReturnValue(throwError(() => new ApiProblemError('journey_closed', 410, 'Journey closed')));
 
     TestBed.inject(JourneyInactivityService).touch();

@@ -148,9 +148,10 @@ describe('provideHolderAuth', () => {
     const auth = TestBed.inject(HolderAuthService);
     const silent = jest.spyOn(auth, 'loginSilently').mockImplementation(() => undefined);
 
-    await TestBed.inject(SESSION_ACTIONS).resumeLogin();
+    await TestBed.inject(SESSION_ACTIONS).resumeLogin('/requests/r1/data');
 
     expect(silent).toHaveBeenCalledTimes(1);
+    expect(silent).toHaveBeenCalledWith('/requests/r1/data');
   });
 
   it('AC-03: restartLogin goes to the Verifier and discardTokens forgets the token', async () => {

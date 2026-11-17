@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { signal, WritableSignal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import QRCode from 'qrcode';
@@ -56,6 +56,7 @@ describe('CredentialOfferComponent', () => {
         provideRouter([]),
         { provide: MobileLayout, useValue: { mobile } },
         { provide: OPEN_WALLET, useValue: openWallet },
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ requestId: 'r2' }) } } },
       ],
     });
     TestBed.overrideComponent(CredentialOfferComponent, {
@@ -103,6 +104,7 @@ describe('CredentialOfferComponent', () => {
     await render();
 
     expect(flow.enter).toHaveBeenCalledTimes(1);
+    expect(flow.enter).toHaveBeenCalledWith('r2');
   });
 
   it('QR (generando): shows the waiting notice', async () => {
@@ -268,6 +270,7 @@ describe('CredentialOfferComponent', () => {
       click(element, 'Generar un código nuevo');
 
       expect(flow.newCode).toHaveBeenCalledTimes(1);
+      expect(flow.newCode).toHaveBeenCalledWith('r2');
     });
   });
 

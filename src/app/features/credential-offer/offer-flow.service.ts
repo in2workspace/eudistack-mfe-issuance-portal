@@ -14,8 +14,14 @@ import {
 import { Journey, JourneyApi, Offer } from '../../core/api/generated/journey';
 import { PortalConfigService } from '../../core/config/portal-config.service';
 import { JourneyIssuanceStore, OfferCall } from '../../core/journey/journey-issuance.store';
-import { JourneyNavigator, isJourneyClosed, stepUrl } from '../../core/journey/journey-navigator';
-import { QR_PATH } from '../../core/journey/journey-paths';
+import {
+  JourneyNavigator,
+  isAvailable,
+  isEmailVerified,
+  isJourneyClosed,
+  requestOf,
+  stepUrl,
+} from '../../core/journey/journey-navigator';
 import { SESSION_ACTIONS } from '../../core/session/session-actions';
 import { ErrorReason, errorUrl } from '../error/error-reason';
 import { CredentialOfferService } from './credential-offer.service';
@@ -36,12 +42,13 @@ const ISSUANCE_FAILURES: Readonly<Record<string, ErrorReason>> = {
 };
 
 /**
- * Pide la oferta al servicio y la presenta en QR (EUD-286, ac.md AC-08,
- * EC-02 a EC-04, ES-01 a ES-04). La confirmación no lleva cuerpo: usa el
- * correo que el servicio ya verificó (EUD-358). Qué llamada hacer lo dice
+ * Pide la oferta de una solicitud al servicio y la presenta en QR (EUD-286,
+ * ac.md AC-08, EC-02 a EC-04, ES-01 a ES-04). La confirmación y el código
+ * nuevo solo llevan el identificador de la solicitud (EUD-359): el correo y los
+ * datos son los que el servicio ya tiene. Qué llamada hacer lo dice
  * `JourneyIssuanceStore` o, sin llamada pendiente, `GET /journey`: la
- * confirmación con el correo verificado, un código nuevo tras caducar el QR y,
- * tras un fallo, la misma que falló.
+ * confirmación de una solicitud disponible, un código nuevo tras caducar el QR
+ * y, tras un fallo, la misma que falló.
  * Se provee en la pantalla QR: si el titular ya ha salido, no navega ni
  * presenta nada.
  */
@@ -60,26 +67,32 @@ export class OfferFlowService {
     inject(DestroyRef).onDestroy(() => (this.destroyed = true));
   }
 
-  /** QR (generando) al entrar: hace la llamada pendiente o retoma lo que dice el servicio. */
-  async enter(): Promise<void> {
+  /** QR (generando) de la solicitud al entrar: hace la llamada pendiente o retoma lo que dice el servicio. */
+  async enter(requestId: string): Promise<void> {
     this.presenter.startLoading();
-    const pending = this.store.pendingCall();
-    if (pending) {
-      return this.request(pending);
+    const pending = this.store.pending();
+    if (pending?.requestId === requestId) {
+      return this.request(pending.call, requestId);
     }
     const journey = await this.readJourney();
     if (journey === undefined || this.destroyed) {
       return;
     }
-    if (journey.offer) {
+    const request = requestOf(journey, requestId);
+    if (request?.offer) {
       // Recarga con la oferta ya obtenida: se presenta la que tiene el servicio (EC-02).
-      this.present(journey.offer);
-    } else if (journey.email_verification?.verified) {
-      this.store.requestConfirmation();
-      return this.request('confirmation');
+      this.present(request.offer);
+    } else if (isAvailable(request) && isEmailVerified(journey)) {
+      this.store.requestConfirmation(requestId);
+      return this.request('confirmation', requestId);
+    } else if (request?.status === 'in_offer') {
+      // La solicitud tiene proceso pero no oferta (el alta falló): una oferta nueva del mismo proceso.
+      this.store.requestNewOffer(requestId);
+      return this.request('offers', requestId);
     } else {
-      // Sin el correo verificado no se puede confirmar (AC-09): al paso que toca, Datos o Verificar correo.
-      this.leaveForStep(journey);
+      // Sin el correo verificado o con otro estado no se puede confirmar (AC-09, EC-07): al paso que toca.
+      // Nunca es el QR de esta solicitud: con una oferta vigente se habría presentado arriba.
+      void this.router.navigate(stepUrl(journey), { replaceUrl: true });
     }
   }
 
@@ -87,13 +100,13 @@ export class OfferFlowService {
    * «Generar un código nuevo» con el QR caducado (AC-06). Solo con el QR
    * caducado: una segunda pulsación, ya generando, no pide otro (EC-07).
    */
-  async newCode(): Promise<void> {
+  async newCode(requestId: string): Promise<void> {
     if (this.presenter.status() !== 'expired') {
       return;
     }
-    this.store.requestNewOffer();
+    this.store.requestNewOffer(requestId);
     this.presenter.startLoading();
-    return this.request('offers');
+    return this.request('offers', requestId);
   }
 
   /**
@@ -116,9 +129,9 @@ export class OfferFlowService {
     void this.router.navigate(['/']);
   }
 
-  private async request(call: OfferCall): Promise<void> {
+  private async request(call: OfferCall, requestId: string): Promise<void> {
     try {
-      const offer = await firstValueFrom(this.call(call));
+      const offer = await firstValueFrom(this.call(call, requestId));
       if (this.destroyed) {
         return;
       }
@@ -126,25 +139,14 @@ export class OfferFlowService {
       this.present(offer);
     } catch (error: unknown) {
       if (!this.destroyed) {
-        await this.onFailure(call, error);
+        await this.onFailure(requestId, error);
       }
     }
   }
 
-  private call(call: OfferCall): Observable<Offer> {
-    return call === 'confirmation'
-      ? this.journeyApi.confirmAndIssue()
-      : this.journeyApi.newOffer();
-  }
-
-  /**
-   * Va a la ruta del paso. Si esa ruta es la propia QR (un recorrido sin
-   * oferta que el servicio da por completado) el router no navegaría y la
-   * pantalla se quedaría en «generando»: se va al caso de emisión.
-   */
-  private leaveForStep(journey: Journey): void {
-    const url = stepUrl(journey);
-    void this.router.navigate(url.at(-1) === QR_PATH ? errorUrl('issuance-failed') : url, { replaceUrl: true });
+  private call(call: OfferCall, requestId: string): Observable<Offer> {
+    const reference = { request_id: requestId };
+    return call === 'confirmation' ? this.journeyApi.confirmAndIssue(reference) : this.journeyApi.newOffer(reference);
   }
 
   /** Sin una dirección que funcione no hay QR: error de emisión (ES-03). */
@@ -163,7 +165,7 @@ export class OfferFlowService {
    * interceptor de EUD-287, salvo cuando su destino es la propia QR
    * (`presentCurrentOffer`), y el 401, EUD-314.
    */
-  private async onFailure(call: OfferCall, error: unknown): Promise<void> {
+  private async onFailure(requestId: string, error: unknown): Promise<void> {
     if (!(error instanceof ApiProblemError)) {
       return;
     }
@@ -179,25 +181,22 @@ export class OfferFlowService {
     } else if (error.type === STEP_NOT_ALLOWED) {
       // El servicio ya tiene una oferta vigente (desfase de reloj en un código
       // nuevo, o una confirmación repetida con atrás y adelante): se presenta (ES-02).
-      await this.presentCurrentOffer();
+      await this.presentCurrentOffer(requestId);
     }
   }
 
   /**
-   * Sin oferta, el interceptor de EUD-287 lleva a la ruta del paso. Si esa
-   * ruta es la propia QR, el router no navega y la pantalla se quedaría en
-   * «generando»: se va al caso de emisión, que deja reintentar (review W2).
+   * Sin oferta, el interceptor de EUD-287 lleva a la ruta del paso.
    */
-  private async presentCurrentOffer(): Promise<void> {
+  private async presentCurrentOffer(requestId: string): Promise<void> {
     const journey = await this.readJourney();
     if (!journey || this.destroyed) {
       return;
     }
-    if (journey.offer) {
+    const offer = requestOf(journey, requestId)?.offer;
+    if (offer) {
       this.store.offerReceived();
-      this.present(journey.offer);
-    } else if (stepUrl(journey).at(-1) === QR_PATH) {
-      void this.router.navigate(errorUrl('issuance-failed'));
+      this.present(offer);
     }
   }
 

@@ -54,8 +54,12 @@ export class HolderAuthService {
     return this.accessTokenState();
   }
 
-  /** Lleva al titular al `authorize` del Verifier, pidiendo como esencial el nivel del tenant (AD-14). */
-  login(): void {
+  /**
+   * Lleva al titular al `authorize` del Verifier, pidiendo como esencial el
+   * nivel del tenant (AD-14). `returnPath` es la ruta a la que volver (EC-06).
+   */
+  login(returnPath?: string): void {
+    this.rememberReturnPath(returnPath);
     this.oidc.authorize(undefined, { customParams: { claims: acrClaims(this.assuranceLevel()) } });
   }
 
@@ -111,8 +115,20 @@ export class HolderAuthService {
    * (design.md §3.1, punto 6). Si el Verifier no puede resolverlo solo, vuelve
    * con `login_required` o `interaction_required` y `completeLogin` lo dice.
    */
-  loginSilently(): void {
+  loginSilently(returnPath?: string): void {
+    this.rememberReturnPath(returnPath);
     this.oidc.authorize(undefined, { customParams: { prompt: 'none', claims: acrClaims(this.assuranceLevel()) } });
+  }
+
+  /** La ruta a la que volver tras la vuelta del Verifier (EC-06), si se guardó una; se lee una sola vez. */
+  takeReturnPath(): string | null {
+    return this.storage.takeReturnPath();
+  }
+
+  private rememberReturnPath(path: string | undefined): void {
+    if (path) {
+      this.storage.writeReturnPath(path);
+    }
   }
 
   /** El Access Token ya ha caducado (o caduca en unos segundos). Sin `exp` legible no se da por caducado: lo dirá el servicio con un 401. */

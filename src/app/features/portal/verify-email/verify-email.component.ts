@@ -1,10 +1,13 @@
 import { Component, DestroyRef, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { AbstractControl, FormControl, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { finalize } from 'rxjs';
 import {
   ApiProblemError,
+  EMAIL_INVALID,
+  EMAIL_REQUIRED,
   EMAIL_UNAVAILABLE,
   EXPIRED_CODE,
   INVALID_CODE,
@@ -19,7 +22,6 @@ import { EmailVerification, JourneyApi } from '../../../core/api/generated/journ
 import { TenantLanguageService } from '../../../core/branding/tenant-language.service';
 import { JourneyIssuanceStore } from '../../../core/journey/journey-issuance.store';
 import { JourneyNavigator, isJourneyClosed, stepUrl } from '../../../core/journey/journey-navigator';
-import { DATA_PATH, QR_PATH } from '../../../core/journey/journey-paths';
 import { SESSION_ACTIONS } from '../../../core/session/session-actions';
 import { CodeInputComponent } from '../../../shared/components/code-input/code-input.component';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
@@ -36,19 +38,38 @@ type Message =
   | 'tooManyRequestsLater'
   | 'noMoreCodes';
 
+/** Por qué no ha salido el código desde el estado del correo (design.md §3.2). */
+type SendProblem = 'unavailable' | 'tooManyRequests' | 'tooManyRequestsLater' | 'resendTooSoon' | 'noMoreCodes';
+
+/** Los dos estados de Correo (design.md §3.4, punto 1): el correo y el código. */
+type Stage = 'email' | 'code';
+
 /**
- * Paso Verificar correo (wireframes, Verificar correo; design.md de la
- * interfaz §3.4): muestra el correo al que el servicio envió el código, pide
- * los 6 dígitos y los comprueba al completarlos; con el correo verificado va a
- * QR (generando), que confirma. Reenviar espera a `resend_available_at`.
- * Cambiar el correo y el botón atrás vuelven a Datos. Con el límite de envíos
- * agotado, Volver al inicio retira el recorrido sin pedir confirmación. El
- * correo y la cuenta atrás salen de `GET /journey`: nada se guarda en el
- * navegador (AC-09). La ruta la protege `journeyStepGuard`.
+ * Formato de correo sin contar los espacios de los extremos, que se quitan al
+ * enviar: un correo autocompletado con un espacio al final es válido
+ * (review N3).
+ */
+function trimmedEmail(control: AbstractControl<string>): ValidationErrors | null {
+  return Validators.email({ value: control.value.trim() } as AbstractControl);
+}
+
+/**
+ * Paso Correo (wireframes, Correo; design.md de la interfaz §3.4), una sola
+ * ruta con dos estados. Estado 1, el correo: rellenado con el que conoce el
+ * servicio (`known_email`) o con el último al que se envió un código; Enviarme
+ * un código lo envía, también si venía rellenado, y pasa al estado 2. Estado 2,
+ * el código: muestra el correo al que se envió, pide los 6 dígitos y los
+ * comprueba al completarlos; con el correo verificado va al paso que dice el
+ * servicio: Solicitudes, o Datos de la única solicitud (prd.md FR-13, FR-14).
+ * Reenviar espera a `resend_available_at`. Cambiar el correo vuelve al estado
+ * 1 con el correo escrito. Con el límite de envíos agotado, Volver al inicio
+ * retira el recorrido sin pedir confirmación; Cancelar lo pide. El correo y la
+ * cuenta atrás salen de `GET /journey`: nada se guarda en el navegador
+ * (AC-09). La ruta la protege `journeyStepGuard`.
  */
 @Component({
   selector: 'app-verify-email',
-  imports: [TranslatePipe, CodeInputComponent, ConfirmDialogComponent],
+  imports: [ReactiveFormsModule, TranslatePipe, CodeInputComponent, ConfirmDialogComponent],
   templateUrl: './verify-email.component.html',
 })
 export class VerifyEmailComponent implements OnInit {
@@ -61,6 +82,7 @@ export class VerifyEmailComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly codeInput = viewChild(CodeInputComponent);
 
+  protected readonly stage = signal<Stage>('email');
   protected readonly verification = signal<EmailVerification | null>(null);
   protected readonly loading = signal(true);
   protected readonly checking = signal(false);
@@ -70,12 +92,27 @@ export class VerifyEmailComponent implements OnInit {
   private readonly feedback = signal<Exclude<Message, 'noMoreCodes'> | null>(null);
   /** El código ya no sirve (caducado o con los intentos agotados). */
   private readonly codeRejected = signal(false);
-  /** El servicio dijo `too_many_codes` al enviar. */
+  /** El servicio dijo `too_many_codes` al enviar desde el estado del código. */
   private readonly sendLimitReached = signal(false);
   /** Hasta cuándo no se puede pedir otro envío: `resend_available_at` o `Retry-After`. */
   protected readonly resend = injectCountdown();
   /** Hasta cuándo vale el código pendiente. */
   private readonly expiry = injectCountdown();
+
+  /** Por qué no ha salido el código desde el estado del correo. */
+  protected readonly sendProblem = signal<SendProblem | null>(null);
+  /** Cuenta atrás del `Retry-After` de un envío rechazado desde el estado del correo. */
+  protected readonly retry = injectCountdown();
+  /** El correo que el servicio rechazó (400) sigue sin ser válido hasta que el titular lo cambie (ac.md ES-01). */
+  private readonly rejectedEmail = signal<string | null>(null);
+  protected readonly email = new FormControl('', {
+    nonNullable: true,
+    validators: [Validators.required, trimmedEmail, (control) => this.rejectedByService(control)],
+  });
+
+  private rejectedByService(control: AbstractControl<string>): ValidationErrors | null {
+    return control.value.trim() === this.rejectedEmail() ? { rejected: true } : null;
+  }
 
   /** Sin envíos que quedar y sin un código que valga: el titular empieza de nuevo (AC-05). */
   protected readonly noMoreCodes = computed(() => {
@@ -104,14 +141,19 @@ export class VerifyEmailComponent implements OnInit {
       .subscribe({
         next: (journey) => {
           const verification = journey.email_verification;
-          if (!verification || verification.verified) {
+          if (verification?.verified) {
             // La guarda ya lo ha comprobado: solo una carrera con otra pestaña llega aquí.
             void this.router.navigate(stepUrl(journey));
             return;
           }
-          this.apply(verification);
-          if (this.expiry.seconds() === 0 && verification.sends_left > 0) {
-            this.feedback.set('expired');
+          if (verification) {
+            this.apply(verification);
+            this.stage.set('code');
+            if (this.expiry.seconds() === 0 && verification.sends_left > 0) {
+              this.feedback.set('expired');
+            }
+          } else {
+            this.email.setValue(journey.known_email ?? '');
           }
           this.loading.set(false);
         },
@@ -128,6 +170,86 @@ export class VerifyEmailComponent implements OnInit {
     this.codeRejected.set(false);
   }
 
+  /** Estado 1, Enviarme un código: envía el código al correo y pasa al estado 2. */
+  protected onSendCode(): void {
+    if (this.email.invalid || this.sending() || this.retry.seconds() > 0 || this.sendProblem() === 'noMoreCodes') {
+      return;
+    }
+    this.sending.set(true);
+    this.sendProblem.set(null);
+    this.journeyApi
+      .sendEmailCode({ email: this.email.value.trim() }, this.language.current() || undefined)
+      .pipe(finalize(() => this.sending.set(false)))
+      .subscribe({
+        next: (sent) => this.showCodeStage(sent),
+        error: (error: unknown) => this.onEmailSendError(error),
+      });
+  }
+
+  private showCodeStage(verification: EmailVerification): void {
+    this.apply(verification);
+    this.feedback.set(null);
+    this.sendLimitReached.set(false);
+    this.stage.set('code');
+  }
+
+  /**
+   * `resend_too_soon` y `too_many_codes` no son fallos si ya hay un código
+   * pendiente para este mismo correo: el estado del código lo dice. Si el
+   * correo es otro, el titular se queda en el estado del correo con la espera
+   * o con Volver al inicio. `step_not_allowed` y `journey_closed` los resuelve
+   * el interceptor de EUD-287.
+   */
+  private onEmailSendError(error: unknown): void {
+    const problem = error instanceof ApiProblemError ? error : undefined;
+    switch (problem?.type) {
+      case RESEND_TOO_SOON:
+      case TOO_MANY_CODES:
+        if (this.hasPendingCodeForTypedEmail()) {
+          this.stage.set('code');
+          return;
+        }
+        this.showCannotSendYet(problem.type, problem.retryAfterSeconds);
+        return;
+      case EMAIL_REQUIRED:
+      case EMAIL_INVALID:
+        this.rejectedEmail.set(this.email.value.trim());
+        this.email.updateValueAndValidity();
+        this.email.markAsTouched();
+        return;
+      case TOO_MANY_REQUESTS:
+        if (problem.retryAfterSeconds === undefined) {
+          this.sendProblem.set('tooManyRequestsLater');
+        } else {
+          this.retry.startFor(problem.retryAfterSeconds);
+          this.sendProblem.set('tooManyRequests');
+        }
+        return;
+      case STEP_NOT_ALLOWED:
+      case JOURNEY_CLOSED:
+        return;
+      case EMAIL_UNAVAILABLE:
+      default:
+        this.sendProblem.set('unavailable');
+    }
+  }
+
+  private hasPendingCodeForTypedEmail(): boolean {
+    const verification = this.verification();
+    return verification !== null && !verification.verified && verification.email === this.email.value.trim();
+  }
+
+  private showCannotSendYet(type: string, retryAfterSeconds: number | undefined): void {
+    if (type === TOO_MANY_CODES) {
+      this.sendProblem.set('noMoreCodes');
+    } else if (retryAfterSeconds === undefined) {
+      this.sendProblem.set('tooManyRequestsLater');
+    } else {
+      this.retry.startFor(retryAfterSeconds);
+      this.sendProblem.set('resendTooSoon');
+    }
+  }
+
   /** Los 6 dígitos están puestos (escritos, pegados o autocompletados): se comprueba el código. */
   protected onCode(code: string): void {
     if (this.checking()) {
@@ -136,8 +258,8 @@ export class VerifyEmailComponent implements OnInit {
     this.checking.set(true);
     this.feedback.set(null);
     this.journeyApi.checkEmailCode({ code }).subscribe({
-      // Si la guarda de QR no deja pasar, el titular sigue aquí y puede volver a intentarlo.
-      next: () => void this.router.navigate(['/', QR_PATH]).finally(() => this.checking.set(false)),
+      // Con el correo verificado el paso lo dice el recorrido (AD-8); si la guarda no deja pasar, el titular sigue aquí.
+      next: (journey) => void this.router.navigate(stepUrl(journey)).finally(() => this.checking.set(false)),
       error: (error: unknown) => {
         this.checking.set(false);
         this.onCheckError(error);
@@ -177,12 +299,12 @@ export class VerifyEmailComponent implements OnInit {
           this.feedback.set('resent');
           this.codeInput()?.clear();
         },
-        error: (error: unknown) => this.onSendError(error),
+        error: (error: unknown) => this.onResendError(error),
       });
   }
 
   /** `step_not_allowed` y `journey_closed` los resuelve el interceptor de EUD-287. */
-  private onSendError(error: unknown): void {
+  private onResendError(error: unknown): void {
     const problem = error instanceof ApiProblemError ? error : undefined;
     switch (problem?.type) {
       case STEP_NOT_ALLOWED:
@@ -211,9 +333,11 @@ export class VerifyEmailComponent implements OnInit {
     }
   }
 
-  /** Cambiar el correo: Datos, con el correo escrito (AC-07). */
+  /** Cambiar el correo: vuelve al estado 1 con el correo al que se envió el código (AC-07). */
   protected onChangeEmail(): void {
-    void this.router.navigate(['/', DATA_PATH]);
+    this.email.setValue(this.verification()?.email ?? '');
+    this.sendProblem.set(null);
+    this.stage.set('email');
   }
 
   protected onCancel(): void {

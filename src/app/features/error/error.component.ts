@@ -6,7 +6,7 @@ import { combineLatest, firstValueFrom, map } from 'rxjs';
 import { TenantLanguageService } from '../../core/branding/tenant-language.service';
 import { PortalConfigService } from '../../core/config/portal-config.service';
 import { hasSupportDetails } from '../../core/config/support-details';
-import { ENTITLEMENT_PATH, QR_PATH } from '../../core/journey/journey-paths';
+import { ENTITLEMENT_PATH, REQUESTS_PATH, qrUrl } from '../../core/journey/journey-paths';
 import { JourneyApi } from '../../core/api/generated/journey';
 import { ISSUANCE_PORTAL_ACCESS_TOKEN } from '../../core/api/issuance-portal-api.interceptor';
 import { JourneyIssuanceStore } from '../../core/journey/journey-issuance.store';
@@ -114,8 +114,12 @@ export class ErrorComponent {
         return () => this.router.navigate(['/', ENTITLEMENT_PATH]);
       case 'issuance-failed':
       case 'onboarding-unavailable':
-        // QR (generando) repite la llamada que falló con los mismos datos (EUD-286).
-        return () => this.router.navigate(['/', QR_PATH]);
+        // QR (generando) repite la llamada que falló con los mismos datos, para la misma
+        // solicitud (EUD-286). Sin ella en memoria (la página se recargó), el paso que toque.
+        return () => {
+          const pending = this.issuance.pending();
+          return this.router.navigate(pending ? qrUrl(pending.requestId) : ['/', REQUESTS_PATH]);
+        };
       case 'offer-not-renewable':
       case 'not-entitled':
         // El recorrido ya ha terminado o lo ha retirado el servicio (design.md §3.1, punto 7).

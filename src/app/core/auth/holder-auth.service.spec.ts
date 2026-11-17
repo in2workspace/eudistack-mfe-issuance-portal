@@ -16,7 +16,7 @@ describe('HolderAuthService', () => {
     forceRefreshSession: jest.Mock;
     preloadAuthWellKnownDocument: jest.Mock;
   };
-  let flow: { clearFlow: jest.Mock; clear: jest.Mock; readRedirectMark: jest.Mock; writeRedirectMark: jest.Mock; clearRedirectMark: jest.Mock };
+  let flow: { clearFlow: jest.Mock; clear: jest.Mock; readRedirectMark: jest.Mock; writeRedirectMark: jest.Mock; clearRedirectMark: jest.Mock; writeReturnPath: jest.Mock; takeReturnPath: jest.Mock };
   let mark: number | null;
   const portalConfig = signal<Partial<PortalConfig> | null>(null);
   let service: HolderAuthService;
@@ -38,6 +38,8 @@ describe('HolderAuthService', () => {
     flow = {
       clearFlow: jest.fn(),
       clear: jest.fn(),
+      writeReturnPath: jest.fn(),
+      takeReturnPath: jest.fn(() => '/requests/r1/data'),
       readRedirectMark: jest.fn(() => mark),
       writeRedirectMark: jest.fn((at: number) => (mark = at)),
       clearRedirectMark: jest.fn(() => (mark = null)),
@@ -169,6 +171,25 @@ describe('HolderAuthService', () => {
     expect(oidc.authorize).toHaveBeenCalledWith(undefined, {
       customParams: { prompt: 'none', claims: JSON.stringify({ id_token: { acr: { essential: true, value: 'http://eidas.europa.eu/LoA/substantial' } } }) },
     });
+  });
+
+  it('EC-06: the silent login remembers the route to come back to, and the interactive one too', () => {
+    service.loginSilently('/requests/r1/data');
+    service.login('/requests/r2/offer');
+
+    expect(flow.writeReturnPath).toHaveBeenNthCalledWith(1, '/requests/r1/data');
+    expect(flow.writeReturnPath).toHaveBeenNthCalledWith(2, '/requests/r2/offer');
+  });
+
+  it('EC-06: without a route to come back to nothing is remembered', () => {
+    service.loginSilently();
+    service.login();
+
+    expect(flow.writeReturnPath).not.toHaveBeenCalled();
+  });
+
+  it('EC-06: takeReturnPath gives the route the storage kept', () => {
+    expect(service.takeReturnPath()).toBe('/requests/r1/data');
   });
 
   describe('renewal (AC-06, EC-06)', () => {

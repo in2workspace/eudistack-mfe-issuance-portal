@@ -94,8 +94,6 @@ describe('ErrorComponent', () => {
 
   it.each<[ErrorReason, unknown[]]>([
     ['source-unavailable', ['/', 'entitlement']],
-    ['issuance-failed', ['/', 'offer']],
-    ['onboarding-unavailable', ['/', 'offer']],
     ['session-expired', ['/']],
   ])('AC-03: the action of %s goes to %j', async (reason, target) => {
     show(reason);
@@ -105,6 +103,30 @@ describe('ErrorComponent', () => {
     expect(router.navigate).toHaveBeenCalledWith(target);
     expect(session.discardTokens).not.toHaveBeenCalled();
   });
+
+  it.each<ErrorReason>(['issuance-failed', 'onboarding-unavailable'])(
+    'AC-03, EUD-359: the action of %s goes to the QR of the request whose call failed',
+    async (reason) => {
+      TestBed.inject(JourneyIssuanceStore).requestConfirmation('r2');
+      show(reason);
+
+      await clickAction();
+
+      expect(router.navigate).toHaveBeenCalledWith(['/', 'requests', 'r2', 'offer']);
+      expect(session.discardTokens).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each<ErrorReason>(['issuance-failed', 'onboarding-unavailable'])(
+    'EUD-359: the action of %s with nothing in memory (the page was reloaded) goes to the step the journey says',
+    async (reason) => {
+      show(reason);
+
+      await clickAction();
+
+      expect(router.navigate).toHaveBeenCalledWith(['/', 'requests']);
+    },
+  );
 
   it('AC-04: identification-failed takes the holder back to the Verifier login', async () => {
     show('identification-failed');
@@ -359,14 +381,14 @@ describe('ErrorComponent', () => {
 
     it('withdraws the journey, discards the tokens, forgets the pending call and goes to Inicio, without confirmation', async () => {
       const store = TestBed.inject(JourneyIssuanceStore);
-      store.requestConfirmation();
+      store.requestConfirmation('r1');
       const element = show('source-unavailable');
 
       await goHome(element);
 
       expect(withdrawJourney).toHaveBeenCalledTimes(1);
       expect(session.discardTokens).toHaveBeenCalledTimes(1);
-      expect(store.pendingCall()).toBeNull();
+      expect(store.pending()).toBeNull();
       expect(router.navigate).toHaveBeenCalledWith(['/']);
       expect(element.querySelector('[role="dialog"]')).toBeNull();
     });
@@ -384,11 +406,11 @@ describe('ErrorComponent', () => {
     it('if the withdrawal fails, discards the tokens and goes to Inicio anyway', async () => {
       withdrawJourney.mockReturnValue(failsLikeHttp(new ApiProblemError(NETWORK_ERROR, 0, 'Network error')));
       const store = TestBed.inject(JourneyIssuanceStore);
-      store.requestConfirmation();
+      store.requestConfirmation('r1');
 
       await goHome(show('issuance-failed'));
 
-      expect(store.pendingCall()).toBeNull();
+      expect(store.pending()).toBeNull();
       expect(session.discardTokens).toHaveBeenCalledTimes(1);
       expect(router.navigate).toHaveBeenCalledWith(['/']);
     });
@@ -396,11 +418,11 @@ describe('ErrorComponent', () => {
     it('with a 410 leaves the session expired case to the journey interceptor', async () => {
       withdrawJourney.mockReturnValue(failsLikeHttp(new ApiProblemError('journey_closed', 410, 'Journey closed')));
       const store = TestBed.inject(JourneyIssuanceStore);
-      store.requestConfirmation();
+      store.requestConfirmation('r1');
 
       await goHome(show('onboarding-unavailable'));
 
-      expect(store.pendingCall()).toBeNull();
+      expect(store.pending()).toBeNull();
       expect(router.navigate).not.toHaveBeenCalled();
     });
 

@@ -39,7 +39,7 @@ export function provideHolderAuth(): EnvironmentProviders {
         const auth = inject(HolderAuthService);
         return {
           restartLogin: async () => auth.login(),
-          resumeLogin: async () => auth.loginSilently(),
+          resumeLogin: async (returnTo?: string) => auth.loginSilently(returnTo),
           discardTokens: () => auth.discard(),
         };
       },

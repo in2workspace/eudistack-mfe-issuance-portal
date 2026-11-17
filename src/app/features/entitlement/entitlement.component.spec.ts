@@ -67,27 +67,27 @@ describe('EntitlementComponent', () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
-  it('AC-16: with result confirmed goes to Datos without keeping Comprobación in the history', () => {
-    create(of({ result: 'confirmed', attestation: { type_name: 'DoctorID', fields: [], email_required: true } }));
+  it('AC-16: with result confirmed goes to Correo without keeping Comprobación in the history', () => {
+    create(of({ result: 'confirmed', requests: [{ id: 'r1', status: 'available', renewal: false }] }));
 
-    expect(navigate).toHaveBeenCalledWith(['/', 'user-data'], { replaceUrl: true });
+    expect(navigate).toHaveBeenCalledWith(['/', 'email'], { replaceUrl: true });
   });
 
-  it('AC-10: with result not_confirmed goes to the not entitled case, whatever the reason', () => {
-    create(of({ result: 'not_confirmed', reason: 'identifier_mismatch' }));
+  it('AC-10: with result not_confirmed goes to the not entitled case', () => {
+    create(of({ result: 'not_confirmed', reason: 'not_found', requests: [] }));
 
     expect(navigate).toHaveBeenCalledWith(['/', 'error', 'not-entitled'], { replaceUrl: true });
   });
 
   it('W4: with result not_confirmed discards the tokens before leaving, the journey is over', () => {
-    create(of({ result: 'not_confirmed', reason: 'not_entitled' }));
+    create(of({ result: 'not_confirmed', reason: 'not_found', requests: [] }));
 
     expect(discardTokens).toHaveBeenCalledTimes(1);
     expect(discardTokens.mock.invocationCallOrder[0]).toBeLessThan(navigate.mock.invocationCallOrder[0]);
   });
 
   it('keeps the tokens when the entitlement is confirmed', () => {
-    create(of({ result: 'confirmed' }));
+    create(of({ result: 'confirmed', requests: [{ id: 'r1', status: 'available', renewal: false }] }));
 
     expect(discardTokens).not.toHaveBeenCalled();
   });
@@ -126,7 +126,7 @@ describe('EntitlementComponent', () => {
     create(response);
 
     fixture.destroy();
-    response.next({ result: 'confirmed' });
+    response.next({ result: 'confirmed', requests: [{ id: 'r1', status: 'available', renewal: false }] });
 
     expect(navigate).not.toHaveBeenCalled();
   });

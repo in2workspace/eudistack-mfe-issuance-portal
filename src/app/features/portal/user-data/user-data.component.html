@@ -32,80 +32,26 @@
           }
         </section>
 
-        <form (submit)="$event.preventDefault(); onContinue()" class="flex flex-col gap-6" novalidate>
-          <!-- FR-05: siempre visible, rellenado si se conoce; también el correo del wallet. -->
-          <div>
-            <label for="holder-email" class="block text-sm font-medium text-gray-700 mb-1">{{ 'userData.email.label' | translate }}</label>
-            <input
-              id="holder-email"
-              type="email"
-              autocomplete="email"
-              [formControl]="email"
-              [attr.aria-invalid]="email.touched && email.invalid"
-              [attr.aria-describedby]="email.touched && email.invalid ? 'holder-email-hint holder-email-error' : 'holder-email-hint'"
-              class="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-accent"
-            />
-            <p id="holder-email-hint" class="mt-1 text-sm text-gray-500">{{ 'userData.email.hint' | translate }}</p>
-            @if (email.touched && email.invalid) {
-              <p id="holder-email-error" class="mt-1 text-sm text-red-700">{{ 'userData.email.invalid' | translate }}</p>
-            }
-          </div>
+        <p class="rounded-md bg-gray-50 p-3 text-sm text-gray-600">{{ 'userData.fixAtSource' | translate }}</p>
 
-          <p class="rounded-md bg-gray-50 p-3 text-sm text-gray-600">{{ 'userData.fixAtSource' | translate }}</p>
-
-          <!-- El código no ha podido enviarse (design.md §3.2): se dice aquí y Continuar vuelve a intentarlo. -->
-          <div aria-live="polite">
-            @switch (sendProblem()) {
-              @case ('unavailable') {
-                <p class="text-sm text-red-700">{{ 'userData.sendError.unavailable' | translate }}</p>
-              }
-              @case ('tooManyRequestsLater') {
-                <p class="text-sm text-red-700">{{ 'userData.sendError.tooManyRequestsLater' | translate }}</p>
-              }
-              @case ('noMoreCodes') {
-                <p class="text-sm text-red-700">{{ 'userData.sendError.noMoreCodes' | translate }}</p>
-              }
-              @case ('resendTooSoon') {
-                @if (retry.seconds() > 0) {
-                  <p class="text-sm text-red-700">{{ 'userData.sendError.resendTooSoon' | translate: { countdown: retry.text() } }}</p>
-                }
-              }
-              @case ('tooManyRequests') {
-                @if (retry.seconds() > 0) {
-                  <p class="text-sm text-red-700">{{ 'userData.sendError.tooManyRequests' | translate: { countdown: retry.text() } }}</p>
-                }
-              }
-            }
-          </div>
-
-          <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
-            <button
-              type="button"
-              (click)="onCancel()"
-              [disabled]="withdrawing()"
-              class="inline-flex items-center justify-center rounded-md text-sm font-medium h-10 px-4 border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
-            >
-              {{ 'userData.cancel' | translate }}
-            </button>
-            @if (sendProblem() === 'noMoreCodes') {
-              <button
-                type="button"
-                (click)="onWithdraw()"
-                [disabled]="withdrawing()"
-                class="inline-flex items-center justify-center rounded-md text-sm font-medium h-10 px-4 bg-brand-secondary hover:opacity-90 text-brand-secondary-contrast transition-colors disabled:opacity-50"
-              >
-                {{ 'userData.home' | translate }}
-              </button>
-            }
-            <button
-              type="submit"
-              [disabled]="email.invalid || withdrawing() || continuing() || retry.seconds() > 0 || sendProblem() === 'noMoreCodes'"
-              class="inline-flex items-center justify-center rounded-md text-sm font-medium h-10 px-4 bg-brand-secondary hover:opacity-90 text-brand-secondary-contrast transition-colors disabled:opacity-50"
-            >
-              {{ 'userData.continue' | translate }}
-            </button>
-          </div>
-        </form>
+        <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
+          <button
+            type="button"
+            (click)="onCancel()"
+            [disabled]="withdrawing()"
+            class="inline-flex items-center justify-center rounded-md text-sm font-medium h-10 px-4 border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+          >
+            {{ 'userData.cancel' | translate }}
+          </button>
+          <button
+            type="button"
+            (click)="onContinue()"
+            [disabled]="withdrawing() || continuing()"
+            class="inline-flex items-center justify-center rounded-md text-sm font-medium h-10 px-4 bg-brand-secondary hover:opacity-90 text-brand-secondary-contrast transition-colors disabled:opacity-50"
+          >
+            {{ 'userData.continue' | translate }}
+          </button>
+        </div>
       }
     </div>
   </div>

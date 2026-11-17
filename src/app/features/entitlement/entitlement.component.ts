@@ -9,7 +9,7 @@ import {
   UNEXPECTED_ERROR,
 } from '../../core/api/api-problem.error';
 import { EntitlementApi, EntitlementResult } from '../../core/api/generated/authentic-source';
-import { DATA_PATH } from '../../core/journey/journey-paths';
+import { EMAIL_PATH } from '../../core/journey/journey-paths';
 import { SESSION_ACTIONS } from '../../core/session/session-actions';
 import { errorUrl } from '../error/error-reason';
 
@@ -25,7 +25,7 @@ const RETRYABLE_FAILURES: ReadonlySet<string> = new Set([AUTHENTIC_SOURCE_UNAVAI
 /**
  * Paso Comprobación (wireframes, Comprobación): mientras el módulo de fuente
  * auténtica comprueba el derecho, un indicador de espera; después pasa solo a
- * Datos o a la pantalla de error. La ruta la protege `journeyStepGuard`.
+ * Correo o a la pantalla de error. La ruta la protege `journeyStepGuard`.
  */
 @Component({
   selector: 'app-entitlement',
@@ -50,7 +50,7 @@ export class EntitlementComponent implements OnInit {
 
   private onResult(result: EntitlementResult): void {
     if (result.result === 'confirmed') {
-      this.leaveTo(['/', DATA_PATH]);
+      this.leaveTo(['/', EMAIL_PATH]);
     } else {
       // El servicio ya ha retirado el recorrido: los tokens se descartan ya,
       // no solo al pulsar «Volver al inicio» (design.md §3.1, punto 7; review W4).

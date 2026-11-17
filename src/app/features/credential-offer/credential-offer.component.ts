@@ -1,10 +1,12 @@
 import { Component, OnDestroy, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
+import { ActivatedRoute } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import QRCode from 'qrcode';
 import { CredentialOfferService, MAX_QR_PAYLOAD_CHARS } from './credential-offer.service';
 import { OfferFlowService } from './offer-flow.service';
 import { formatCountdown } from '../../shared/format-countdown';
+import { REQUEST_ID_PARAM } from '../../core/journey/journey-paths';
 import { MobileLayout, OPEN_WALLET } from '../../core/layout/mobile-layout';
 import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/confirm-dialog.component';
 import { CredentialOfferUrlBoxComponent } from '../../shared/components/credential-offer-url-box/credential-offer-url-box.component';
@@ -31,6 +33,8 @@ export class CredentialOfferComponent implements OnInit, OnDestroy {
   private readonly service = inject(CredentialOfferService);
   private readonly flow = inject(OfferFlowService);
   private readonly openWallet = inject(OPEN_WALLET);
+  /** La solicitud de la ruta (design.md AD-9). */
+  private readonly requestId = inject(ActivatedRoute).snapshot.paramMap.get(REQUEST_ID_PARAM) ?? '';
 
   protected readonly mobile = inject(MobileLayout).mobile;
   protected readonly status = this.service.status;
@@ -60,7 +64,7 @@ export class CredentialOfferComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    void this.flow.enter();
+    void this.flow.enter(this.requestId);
   }
 
   ngOnDestroy(): void {
@@ -68,7 +72,7 @@ export class CredentialOfferComponent implements OnInit, OnDestroy {
   }
 
   onNewCode(): void {
-    void this.flow.newCode();
+    void this.flow.newCode(this.requestId);
   }
 
   /** En el ordenador, abrir el wallet pasa antes por el aviso de ordenador personal (ac.md AC-14). */
