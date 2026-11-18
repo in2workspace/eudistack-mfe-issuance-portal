@@ -1,7 +1,7 @@
 <div class="min-h-screen bg-gray-50">
   <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
     <div class="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border p-8">
-      <app-step-indicator [step]="1" />
+      <app-step-indicator [step]="1" [cancelable]="!loading()" [cancelDisabled]="withdrawing()" (cancel)="onCancel()" />
       @if (loading()) {
         <output class="flex flex-col items-center text-center py-12">
           <svg class="w-10 h-10 text-brand-accent animate-spin mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -14,7 +14,10 @@
         <!-- Wireframes, Correo, estado 1: el correo al que se enviará el código (FR-05). -->
         <div class="text-center">
           <h1 class="text-2xl font-bold text-gray-900 mb-2">{{ 'verifyEmail.email.title' | translate }}</h1>
-          <p class="text-gray-600">{{ 'verifyEmail.email.subtitle' | translate }}</p>
+          <p class="text-gray-600">
+            {{ 'verifyEmail.email.subtitle' | translate }}
+            <span id="holder-email-hint">{{ 'verifyEmail.email.hint' | translate }}</span>
+          </p>
         </div>
 
         <form (submit)="$event.preventDefault(); onSendCode()" class="flex flex-col gap-6" novalidate>
@@ -29,7 +32,6 @@
               [attr.aria-describedby]="email.touched && email.invalid ? 'holder-email-hint holder-email-error' : 'holder-email-hint'"
               class="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-accent"
             />
-            <p id="holder-email-hint" class="mt-1 text-sm text-gray-500">{{ 'verifyEmail.email.hint' | translate }}</p>
             @if (email.touched && email.invalid) {
               <p id="holder-email-error" class="mt-1 text-sm text-red-700">{{ 'verifyEmail.email.invalid' | translate }}</p>
             }
@@ -60,15 +62,7 @@
             }
           </div>
 
-          <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
-            <button
-              type="button"
-              (click)="onCancel()"
-              [disabled]="withdrawing()"
-              class="inline-flex items-center justify-center rounded-md text-sm font-medium h-10 px-4 border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
-            >
-              {{ 'verifyEmail.cancel' | translate }}
-            </button>
+          <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
             @if (sendProblem() === 'noMoreCodes') {
               <button
                 type="button"
@@ -82,9 +76,19 @@
             <button
               type="submit"
               [disabled]="email.invalid || withdrawing() || sending() || retry.seconds() > 0 || sendProblem() === 'noMoreCodes'"
-              class="inline-flex items-center justify-center rounded-md text-sm font-medium h-10 px-4 bg-brand-secondary hover:opacity-90 text-brand-secondary-contrast transition-colors disabled:opacity-50"
+              [attr.aria-busy]="sending()"
+              data-testid="send-code"
+              class="inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium h-10 px-4 bg-brand-secondary hover:opacity-90 text-brand-secondary-contrast transition-colors disabled:opacity-50"
             >
-              {{ 'verifyEmail.email.send' | translate }}
+              @if (sending()) {
+                <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                </svg>
+                {{ 'verifyEmail.email.sending' | translate }}
+              } @else {
+                {{ 'verifyEmail.email.send' | translate }}
+              }
             </button>
           </div>
         </form>
@@ -104,6 +108,8 @@
           }
         </div>
 
+        <!-- Casillas, mensajes y aviso de que puede tardar, juntos (decisión de la Tech Lead, 2026-11-18). -->
+        <div class="flex flex-col gap-3">
         @if (!noMoreCodes()) {
           <app-code-input
             [label]="'verifyEmail.code.label' | translate"
@@ -114,8 +120,8 @@
           />
         }
 
-        <!-- Región aria-live="polite" siempre presente: los mensajes se anuncian al aparecer. -->
-        <div id="verify-email-message" aria-live="polite" class="min-h-6 text-center text-sm">
+        <!-- Región aria-live="polite" siempre presente: los mensajes se anuncian al aparecer; vacía no ocupa altura. -->
+        <div id="verify-email-message" aria-live="polite" class="text-center text-sm">
           @if (message(); as key) {
             <p [class]="messageIsError() ? 'text-red-700' : 'text-gray-600'">
               {{ 'verifyEmail.message.' + key | translate: { countdown: resend.text() } }}
@@ -124,6 +130,7 @@
         </div>
 
         <p class="text-center text-xs text-gray-500" data-testid="delay-hint">{{ 'verifyEmail.delayHint' | translate }}</p>
+        </div>
 
         @if (!noMoreCodes()) {
           <div class="flex flex-col items-center gap-2 text-sm text-gray-600 sm:flex-row sm:justify-center">
@@ -143,16 +150,8 @@
           </div>
         }
 
-        <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
-          <button
-            type="button"
-            (click)="onCancel()"
-            [disabled]="withdrawing()"
-            class="inline-flex items-center justify-center rounded-md text-sm font-medium h-10 px-4 border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
-          >
-            {{ 'verifyEmail.cancel' | translate }}
-          </button>
-          @if (noMoreCodes()) {
+        @if (noMoreCodes()) {
+          <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
             <button
               type="button"
               (click)="onWithdraw()"
@@ -161,8 +160,8 @@
             >
               {{ 'verifyEmail.home' | translate }}
             </button>
-          }
-        </div>
+          </div>
+        }
       }
     </div>
   </div>

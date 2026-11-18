@@ -1,7 +1,7 @@
 <div class="min-h-screen bg-gray-50">
   <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
     <div class="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border p-8">
-      <app-step-indicator [step]="2" />
+      <app-step-indicator [step]="2" [cancelable]="!loading() && !disputed()" [cancelDisabled]="withdrawing()" (cancel)="onCancel()" />
       @if (loading()) {
         <output class="flex flex-col items-center text-center py-12">
           <svg class="w-10 h-10 text-brand-accent animate-spin mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -38,7 +38,7 @@
       } @else {
         <div class="text-center">
           <h1 class="text-2xl font-bold text-gray-900 mb-2">{{ 'userData.title' | translate }}</h1>
-          <p class="text-gray-600">{{ 'userData.subtitle' | translate }}</p>
+          <p class="text-gray-600">{{ 'userData.subtitle' | translate }} {{ 'userData.fixAtSource' | translate }}</p>
         </div>
 
         <!-- Wireframes, Datos: solo lectura, exactamente lo que llevará la atestación (FR-04). -->
@@ -58,50 +58,30 @@
           }
         </section>
 
-        <p class="rounded-md bg-gray-50 p-3 text-sm text-gray-600">{{ 'userData.fixAtSource' | translate }}</p>
-
         <div aria-live="polite">
           @if (disputeFailed()) {
             <p class="text-sm text-red-700">{{ 'userData.disputeFailed' | translate }}</p>
           }
         </div>
 
-        <div class="flex flex-col gap-3 sm:flex-row sm:justify-start">
-          <button
-            type="button"
-            (click)="onDispute()"
-            [disabled]="disputing() || withdrawing()"
-            class="inline-flex items-center justify-center rounded-md text-sm font-medium h-10 px-4 border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
-          >
-            {{ (disputeFailed() ? 'userData.disputeRetry' : 'userData.dispute') | translate }}
-          </button>
-          @if (severalRequests()) {
-            <button
-              type="button"
-              (click)="onBackToRequests()"
-              class="inline-flex items-center justify-center rounded-md text-sm font-medium h-10 px-4 border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
-            >
-              {{ 'userData.backToRequests' | translate }}
-            </button>
-          }
-        </div>
-
-        <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
-          <button
-            type="button"
-            (click)="onCancel()"
-            [disabled]="withdrawing()"
-            class="inline-flex items-center justify-center rounded-md text-sm font-medium h-10 px-4 border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
-          >
-            {{ 'userData.cancel' | translate }}
-          </button>
+        <!-- «Son correctos, continuar» a todo el ancho y, debajo, «Mis datos no son correctos» como enlace centrado.
+             Volver a Solicitudes es la flecha junto a «Paso 2 de 3» (decisión de la Tech Lead, 2026-11-18). -->
+        <div class="flex flex-col items-center gap-3">
           <button
             type="button"
             (click)="onContinue()"
             [disabled]="withdrawing() || continuing()"
-            class="inline-flex items-center justify-center rounded-md text-sm font-medium h-10 px-4 bg-brand-secondary hover:opacity-90 text-brand-secondary-contrast transition-colors disabled:opacity-50"
+            class="w-full inline-flex items-center justify-center rounded-md text-base font-medium h-12 px-6 bg-brand-secondary hover:opacity-90 text-brand-secondary-contrast transition-colors disabled:opacity-50"
           >
             {{ 'userData.continue' | translate }}
+          </button>
+          <button
+            type="button"
+            (click)="onDispute()"
+            [disabled]="disputing() || withdrawing()"
+            class="text-sm font-medium text-gray-700 underline underline-offset-2 hover:opacity-80 disabled:opacity-50"
+          >
+            {{ (disputeFailed() ? 'userData.disputeRetry' : 'userData.dispute') | translate }}
           </button>
         </div>
       }

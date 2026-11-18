@@ -9,7 +9,6 @@ import { formatCountdown } from '../../shared/format-countdown';
 import { REQUEST_ID_PARAM } from '../../core/journey/journey-paths';
 import { MobileLayout, OPEN_WALLET } from '../../core/layout/mobile-layout';
 import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/confirm-dialog.component';
-import { CredentialOfferUrlBoxComponent } from '../../shared/components/credential-offer-url-box/credential-offer-url-box.component';
 import { StepIndicatorComponent } from '../../shared/components/step-indicator/step-indicator.component';
 
 /**
@@ -27,7 +26,7 @@ import { StepIndicatorComponent } from '../../shared/components/step-indicator/s
  */
 @Component({
   selector: 'app-credential-offer',
-  imports: [NgTemplateOutlet, TranslateModule, CredentialOfferUrlBoxComponent, ConfirmDialogComponent, StepIndicatorComponent],
+  imports: [NgTemplateOutlet, TranslateModule, ConfirmDialogComponent, StepIndicatorComponent],
   providers: [OfferFlowService],
   templateUrl: './credential-offer.component.html',
 })

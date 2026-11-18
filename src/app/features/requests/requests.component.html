@@ -50,7 +50,7 @@
                       {{ 'requests.requestedOn' | translate: { date: (request.requested_at | date: 'dd/MM/yyyy') } }}
                     </p>
                   }
-                  <p class="text-sm font-medium" [class.text-gray-900]="!isProblem(request)" [class.text-red-800]="isProblem(request)">
+                  <p class="text-sm font-medium" [class.text-gray-900]="!isProblem(request) && statusText(request) !== 'saved'" [class.text-green-700]="statusText(request) === 'saved'" [class.text-red-800]="isProblem(request)">
                     {{ 'requests.status.' + statusText(request) | translate }}
                   </p>
                 </div>

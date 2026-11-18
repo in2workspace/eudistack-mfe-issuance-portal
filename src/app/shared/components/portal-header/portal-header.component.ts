@@ -6,7 +6,6 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { filter, map } from 'rxjs';
 import { BrandingService } from '../../../core/branding/branding.service';
 import { TenantLanguageService } from '../../../core/branding/tenant-language.service';
-import { HeaderBackService } from './header-back.service';
 
 /** Destino del botón de volver de la ruta activa (`data.back`), o `null` si no lo lleva. */
 function backOf(root: ActivatedRouteSnapshot): string | null {
@@ -35,8 +34,6 @@ export class PortalHeaderComponent {
   protected readonly branding = inject(BrandingService);
   protected readonly language = inject(TenantLanguageService);
 
-  private readonly screenBack = inject(HeaderBackService);
-
   private readonly routeBack = toSignal(
     this.router.events.pipe(
       filter((event) => event instanceof NavigationEnd),
@@ -45,8 +42,8 @@ export class PortalHeaderComponent {
     { initialValue: null },
   );
 
-  /** Hay botón de volver: el de la pantalla, o el de la ruta. */
-  protected readonly hasBack = computed(() => this.screenBack.action() !== null || this.routeBack() !== null);
+  /** Hay botón de volver: el de la ruta (Ayuda). El de los pasos va junto a «Paso X de 3» (StepBackService). */
+  protected readonly hasBack = computed(() => this.routeBack() !== null);
 
   constructor() {
     const title = inject(Title);
@@ -57,11 +54,6 @@ export class PortalHeaderComponent {
   }
 
   onBack(): void {
-    const action = this.screenBack.action();
-    if (action) {
-      action();
-      return;
-    }
     const back = this.routeBack();
     if (back !== null) {
       void this.router.navigateByUrl(`/${back}`);

@@ -23,7 +23,7 @@ import { TenantLanguageService } from '../../../core/branding/tenant-language.se
 import { JourneyIssuanceStore } from '../../../core/journey/journey-issuance.store';
 import { JourneyNavigator, isJourneyClosed, stepUrl } from '../../../core/journey/journey-navigator';
 import { SESSION_ACTIONS } from '../../../core/session/session-actions';
-import { HeaderBackService } from '../../../shared/components/portal-header/header-back.service';
+import { StepBackService } from '../../../shared/components/step-indicator/step-back.service';
 import { CodeInputComponent } from '../../../shared/components/code-input/code-input.component';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { injectCountdown } from '../../../shared/countdown';
@@ -83,7 +83,7 @@ export class VerifyEmailComponent implements OnInit {
   private readonly language = inject(TenantLanguageService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly codeInput = viewChild(CodeInputComponent);
-  private readonly headerBack = inject(HeaderBackService);
+  private readonly headerBack = inject(StepBackService);
 
   protected readonly stage = signal<Stage>('email');
   protected readonly verification = signal<EmailVerification | null>(null);

@@ -10,7 +10,7 @@ import { ApiProblemError, NETWORK_ERROR } from '../../../core/api/api-problem.er
 import { EmailVerification, Journey, JourneyApi } from '../../../core/api/generated/journey';
 import { TenantLanguageService } from '../../../core/branding/tenant-language.service';
 import { JourneyIssuanceStore } from '../../../core/journey/journey-issuance.store';
-import { HeaderBackService } from '../../../shared/components/portal-header/header-back.service';
+import { StepBackService } from '../../../shared/components/step-indicator/step-back.service';
 import { JourneyNavigator } from '../../../core/journey/journey-navigator';
 import { SESSION_ACTIONS } from '../../../core/session/session-actions';
 
@@ -114,7 +114,8 @@ describe('VerifyEmailComponent', () => {
   const boxes = (): HTMLInputElement[] => Array.from(element().querySelectorAll('input:not(#holder-email)'));
   const boxValues = (): string => boxes().map((box) => box.value).join('');
   const button = (label: string): HTMLButtonElement | undefined =>
-    Array.from(element().querySelectorAll('button')).find((b) => b.textContent?.trim() === label);
+    // By accessible name: its text, or its aria-label when it only shows an icon (the X of Cancelar).
+    Array.from(element().querySelectorAll('button')).find((b) => (b.textContent?.trim() || b.getAttribute('aria-label')) === label);
   const emailInput = (): HTMLInputElement => element().querySelector('#holder-email')!;
   const message = (): string => element().querySelector('#verify-email-message')?.textContent?.trim() ?? '';
   const focusedBox = (): number => boxes().indexOf(document.activeElement as HTMLInputElement);
@@ -637,7 +638,7 @@ describe('VerifyEmailComponent', () => {
     });
 
     it('the header back button exists only while the code is awaited, and goes back to the email state', () => {
-      const headerBack = TestBed.inject(HeaderBackService);
+      const headerBack = TestBed.inject(StepBackService);
       create();
       expect(headerBack.action()).not.toBeNull();
 
@@ -649,7 +650,7 @@ describe('VerifyEmailComponent', () => {
     });
 
     it('the email state has no header back button, and leaving the screen clears it', () => {
-      const headerBack = TestBed.inject(HeaderBackService);
+      const headerBack = TestBed.inject(StepBackService);
       create(null);
       expect(headerBack.action()).toBeNull();
 
@@ -736,6 +737,25 @@ describe('VerifyEmailComponent', () => {
       button('Enviarme un código')!.click();
 
       expect(sendEmailCode).toHaveBeenCalledTimes(1);
+    });
+
+    it('while the code is being sent, the button says so and is busy', () => {
+      const sent = new Subject<EmailVerification>();
+      sendEmailCode.mockReturnValue(sent);
+      create(null, 'entitlement_confirmed', 'maria@example.org');
+
+      click('Enviarme un código');
+
+      const sending = button('Enviando…');
+      expect(sending).toBeDefined();
+      expect(sending!.disabled).toBe(true);
+      expect(sending!.getAttribute('aria-busy')).toBe('true');
+
+      sent.next(verification());
+      sent.complete();
+      fixture.detectChanges();
+
+      expect(button('Enviando…')).toBeUndefined();
     });
 
     it.each(['email_required', 'email_invalid'])(

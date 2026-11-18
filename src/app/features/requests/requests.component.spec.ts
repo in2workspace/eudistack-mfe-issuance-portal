@@ -170,6 +170,13 @@ describe('RequestsComponent', () => {
       expect(rows()[index].textContent).toContain(expected);
     });
 
+    it('says «Guardada en tu cartera» in green, and only that status', () => {
+      create();
+
+      const green = Array.from(element().querySelectorAll('.text-green-700')).map((e) => e.textContent?.trim());
+      expect(green).toEqual(['Guardada en tu cartera']);
+    });
+
     it('statusTextOf covers every status of the contract', () => {
       expect(statusTextOf({ id: 'a', status: 'not_available' })).toBe('notAvailable');
       expect(statusTextOf({ id: 'a', status: 'available' })).toBe('pending');

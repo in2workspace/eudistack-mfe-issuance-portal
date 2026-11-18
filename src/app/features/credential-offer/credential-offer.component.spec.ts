@@ -134,7 +134,7 @@ describe('CredentialOfferComponent', () => {
   });
 
   describe('on a computer', () => {
-    it('AC-02, AC-14: the QR is the main action and carries the same address as the copy box', async () => {
+    it('AC-02, AC-14: the QR is the main action and there is no link to copy', async () => {
       present(582);
 
       const element = await render();
@@ -148,7 +148,8 @@ describe('CredentialOfferComponent', () => {
       ]);
       expect(QRCode.toDataURL).toHaveBeenCalledWith(ONBOARDING_URL, expect.anything());
       expect(element.querySelector('img[width="280"]')).not.toBeNull();
-      expect((element.querySelector('app-credential-offer-url-box input') as HTMLInputElement).value).toBe(ONBOARDING_URL);
+      expect(element.querySelector('app-credential-offer-url-box')).toBeNull();
+      expect(element.querySelector('input[readonly]')).toBeNull();
       expect(element.querySelector('a[href]')).toBeNull();
     });
 
@@ -223,7 +224,7 @@ describe('CredentialOfferComponent', () => {
       const element = await render();
 
       expect(element.textContent).toContain('No se ha podido generar el código.');
-      expect(element.querySelector('app-credential-offer-url-box')).not.toBeNull();
+      expect(element.querySelector('app-credential-offer-url-box')).toBeNull();
       expect(buttonWith(element, '¿Tu cartera está en este dispositivo? Ábrela aquí')).toBeUndefined();
       click(element, 'Abrir en mi cartera');
 
@@ -433,7 +434,7 @@ describe('CredentialOfferComponent', () => {
 
     const element = await render();
 
-    expect(element.querySelector('a[aria-label], button[aria-label]:not(app-credential-offer-url-box button)')).toBeNull();
+    expect(element.querySelector('a[aria-label], button[aria-label]')).toBeNull();
   });
 
   it.each(['es', 'en'])('NFR-2: has every QR text in %s', (lang) => {

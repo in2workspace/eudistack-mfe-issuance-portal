@@ -9,7 +9,7 @@ import { UserDataComponent } from './user-data.component';
 import { ApiProblemError, NETWORK_ERROR } from '../../../core/api/api-problem.error';
 import { EntitlementApi } from '../../../core/api/generated/authentic-source';
 import { AttestationPreview, Journey, JourneyApi, JourneyRequest } from '../../../core/api/generated/journey';
-import { HeaderBackService } from '../../../shared/components/portal-header/header-back.service';
+import { StepBackService } from '../../../shared/components/step-indicator/step-back.service';
 import { JourneyIssuanceStore } from '../../../core/journey/journey-issuance.store';
 import { JourneyNavigator } from '../../../core/journey/journey-navigator';
 import { SESSION_ACTIONS } from '../../../core/session/session-actions';
@@ -97,12 +97,13 @@ describe('UserDataComponent', () => {
 
   afterEach(() => {
     fixture?.nativeElement.remove();
-    TestBed.inject(HeaderBackService).clear();
+    TestBed.inject(StepBackService).clear();
   });
 
   const element = (): HTMLElement => fixture.nativeElement as HTMLElement;
   const button = (label: string): HTMLButtonElement =>
-    Array.from(element().querySelectorAll('button')).find((b) => b.textContent?.trim() === label)!;
+    // By accessible name: its text, or its aria-label when it only shows an icon (the X of Cancelar).
+    Array.from(element().querySelectorAll('button')).find((b) => (b.textContent?.trim() || b.getAttribute('aria-label')) === label)!;
 
   function click(label: string): void {
     button(label).click();
@@ -330,22 +331,28 @@ describe('UserDataComponent', () => {
   });
 
   describe('going back to the requests (AC-24, wireframes)', () => {
-    it('with several requests offers Volver a mis solicitudes and the header back button, both to Solicitudes', () => {
+    it('with several requests the way back is only the arrow next to the step, to Solicitudes', () => {
       create();
 
-      click('Volver a mis solicitudes');
+      expect(button('Volver a mis solicitudes')).toBeUndefined();
+      TestBed.inject(StepBackService).action()!();
       expect(navigate).toHaveBeenCalledWith(['/', 'requests']);
+    });
 
-      navigate.mockClear();
-      TestBed.inject(HeaderBackService).action()!();
-      expect(navigate).toHaveBeenCalledWith(['/', 'requests']);
+    it('«Son correctos, continuar» comes first, with «Mis datos no son correctos» as a link below it', () => {
+      create();
+
+      const labels = Array.from(element().querySelectorAll('button')).map((b) => b.textContent?.trim());
+      const continueAt = labels.indexOf('Son correctos, continuar');
+      expect(continueAt).toBeGreaterThanOrEqual(0);
+      expect(labels.indexOf('Mis datos no son correctos')).toBe(continueAt + 1);
     });
 
     it('with a single request offers neither', () => {
       create([{ id: 'r2', status: 'available', attestation: PREVIEW }]);
 
       expect(button('Volver a mis solicitudes')).toBeUndefined();
-      expect(TestBed.inject(HeaderBackService).action()).toBeNull();
+      expect(TestBed.inject(StepBackService).action()).toBeNull();
     });
 
     it('takes the header back button away when the screen is destroyed', () => {
@@ -353,7 +360,7 @@ describe('UserDataComponent', () => {
 
       fixture.destroy();
 
-      expect(TestBed.inject(HeaderBackService).action()).toBeNull();
+      expect(TestBed.inject(StepBackService).action()).toBeNull();
     });
   });
 

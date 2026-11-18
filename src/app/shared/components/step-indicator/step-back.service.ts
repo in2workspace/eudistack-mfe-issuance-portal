@@ -1,13 +1,12 @@
 import { Injectable, signal } from '@angular/core';
 
 /**
- * Botón de volver de la cabecera cuando su destino depende de la pantalla y no
- * de la ruta (wireframes: Correo mientras se espera el código, Datos con
- * varias solicitudes). La pantalla lo pone al mostrarse y lo quita al
- * destruirse; si hay uno, manda sobre `data.back` de la ruta.
+ * Flecha de volver junto a «Paso X de 3» (wireframes: Correo mientras se
+ * espera el código, Datos con varias solicitudes). Su destino depende de la
+ * pantalla, así que la pantalla la pone al mostrarse y la quita al destruirse.
  */
 @Injectable({ providedIn: 'root' })
-export class HeaderBackService {
+export class StepBackService {
   private readonly _action = signal<(() => void) | null>(null);
 
   readonly action = this._action.asReadonly();

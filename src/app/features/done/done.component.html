@@ -35,7 +35,7 @@
                   <span>{{ 'requests.identifier' | translate: { identifier: request.display_identifier } }}</span>
                 }
                 @if (!request.organization && !request.display_identifier) {
-                  <span>{{ 'requests.status.saved' | translate }}</span>
+                  <span class="text-green-700">{{ 'requests.status.saved' | translate }}</span>
                 }
               </li>
             }
@@ -68,7 +68,9 @@
           </section>
         }
 
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <!-- Pendientes y acciones en un bloque centrado: la principal arriba y Salir debajo, del mismo ancho
+             (decisión de la Tech Lead, 2026-11-18). -->
+        <div class="mx-auto flex w-full max-w-xs flex-col items-stretch gap-3 text-center">
           @if (pending() > 0) {
             <p class="text-gray-700" data-testid="pending">
               {{ (pending() === 1 ? 'done.pending.one' : 'done.pending.other') | translate: { count: pending() } }}
@@ -81,9 +83,6 @@
               {{ 'done.backToRequests' | translate }}
             </button>
           }
-        </div>
-
-        <div class="flex justify-center">
           <button
             type="button"
             (click)="onExit()"

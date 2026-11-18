@@ -9,7 +9,7 @@ import { AttestationPreview, Journey, JourneyApi } from '../../../core/api/gener
 import { JourneyIssuanceStore } from '../../../core/journey/journey-issuance.store';
 import { JourneyNavigator, isAvailable, isJourneyClosed, requestOf, stepUrl } from '../../../core/journey/journey-navigator';
 import { REQUESTS_PATH, REQUEST_ID_PARAM, qrUrl } from '../../../core/journey/journey-paths';
-import { HeaderBackService } from '../../../shared/components/portal-header/header-back.service';
+import { StepBackService } from '../../../shared/components/step-indicator/step-back.service';
 import { SESSION_ACTIONS } from '../../../core/session/session-actions';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { StepIndicatorComponent } from '../../../shared/components/step-indicator/step-indicator.component';
@@ -35,7 +35,7 @@ export class UserDataComponent implements OnInit {
   private readonly session = inject(SESSION_ACTIONS);
   private readonly store = inject(JourneyIssuanceStore);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly headerBack = inject(HeaderBackService);
+  private readonly headerBack = inject(StepBackService);
   /** La solicitud de la ruta (design.md AD-9). */
   private readonly requestId = inject(ActivatedRoute).snapshot.paramMap.get(REQUEST_ID_PARAM) ?? '';
 

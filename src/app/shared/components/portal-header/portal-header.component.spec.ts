@@ -4,7 +4,7 @@ import { Title } from '@angular/platform-browser';
 import { provideRouter, Router } from '@angular/router';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { axe, toHaveNoViolations } from 'jest-axe';
-import { HeaderBackService } from './header-back.service';
+import { StepBackService } from '../step-indicator/step-back.service';
 import { PortalHeaderComponent } from './portal-header.component';
 import { BrandingService } from '../../../core/branding/branding.service';
 import { TenantLanguageService } from '../../../core/branding/tenant-language.service';
@@ -87,19 +87,12 @@ describe('PortalHeaderComponent', () => {
     expect(router.url).toBe('/');
   });
 
-  it('the screen can set its own back button, which wins over the route one and goes away when cleared', async () => {
-    const back = TestBed.inject(HeaderBackService);
-    const action = jest.fn();
+  it('the back arrow of a step is not in the header: it goes next to «Paso X de 3»', async () => {
     await navigate('/');
 
-    back.set(action);
+    TestBed.inject(StepBackService).set(jest.fn());
     fixture.detectChanges();
-    (element().querySelector('button') as HTMLButtonElement).click();
 
-    expect(action).toHaveBeenCalledTimes(1);
-
-    back.clear();
-    fixture.detectChanges();
     expect(element().querySelector('button')).toBeNull();
   });
 
