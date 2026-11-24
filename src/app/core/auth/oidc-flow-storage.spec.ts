@@ -33,7 +33,7 @@ describe('OidcFlowStorage', () => {
       'authStateControl',
       'codeVerifier',
     ]);
-    expect(localStorage.length).toBe(0);
+    expect(localStorage).toHaveLength(0);
     expect(sessionStorage.length).toBe(1);
   });
 
@@ -70,7 +70,7 @@ describe('OidcFlowStorage', () => {
     storage.writeRedirectMark(1_700_000_000_000);
 
     expect(sessionStorage.getItem(REDIRECT_MARK_KEY)).toBe('1700000000000');
-    expect(localStorage.length).toBe(0);
+    expect(localStorage).toHaveLength(0);
     expect(storage.readRedirectMark()).toBe(1_700_000_000_000);
 
     storage.clearRedirectMark();
@@ -89,7 +89,7 @@ describe('OidcFlowStorage', () => {
     storage.writeReturnPath('/requests/r1/data');
 
     expect(sessionStorage.getItem(RETURN_PATH_KEY)).toBe('/requests/r1/data');
-    expect(localStorage.length).toBe(0);
+    expect(localStorage).toHaveLength(0);
     expect(storage.takeReturnPath()).toBe('/requests/r1/data');
     expect(storage.takeReturnPath()).toBeNull();
 

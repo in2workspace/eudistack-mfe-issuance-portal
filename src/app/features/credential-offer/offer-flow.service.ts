@@ -12,7 +12,7 @@ import {
   STEP_NOT_ALLOWED,
   UNEXPECTED_ERROR,
 } from '../../core/api/api-problem.error';
-import { Journey, JourneyApi, Offer } from '../../core/api/generated/journey';
+import { JourneyApi, Offer } from '../../core/api/generated/journey';
 import { PortalConfigService } from '../../core/config/portal-config.service';
 import { JourneyIssuanceStore, OfferCall } from '../../core/journey/journey-issuance.store';
 import {

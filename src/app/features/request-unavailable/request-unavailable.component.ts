@@ -15,6 +15,14 @@ import { EntitlementOutcomeStore } from '../../core/journey/entitlement-outcome.
  * descartados por Comprobación. Solo se muestra con lo que Comprobación dejó
  * en memoria (`heldOutcomeGuard`).
  */
+/** El texto de Solicitudes que corresponde al problema de una solicitud no disponible. */
+function problemOf(status: SourceRequest['status']): 'notYours' | 'underReview' | 'mismatch' {
+  if (status === 'identifier_mismatch') {
+    return 'notYours';
+  }
+  return status === 'under_review' ? 'underReview' : 'mismatch';
+}
+
 @Component({
   selector: 'app-request-unavailable',
   imports: [TranslatePipe],
@@ -42,7 +50,7 @@ export class RequestUnavailableComponent {
 
   /** Qué dice el estado de una solicitud de la lista, con las claves de Solicitudes. */
   protected problemKey(request: SourceRequest): string {
-    return `requests.status.${request.status === 'identifier_mismatch' ? 'notYours' : request.status === 'under_review' ? 'underReview' : 'mismatch'}`;
+    return `requests.status.${problemOf(request.status)}`;
   }
 
   /** «Salir»: olvida lo que había en memoria y va a Inicio. */

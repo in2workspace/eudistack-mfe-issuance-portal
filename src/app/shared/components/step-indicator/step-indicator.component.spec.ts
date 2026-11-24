@@ -9,7 +9,7 @@ expect.extend(toHaveNoViolations);
 
 @Component({
   imports: [StepIndicatorComponent],
-  template: `<app-step-indicator [step]="2" [cancelable]="cancelable()" [cancelDisabled]="busy()" (cancel)="cancelled = cancelled + 1" />`,
+  template: `<app-step-indicator [step]="2" [cancelable]="cancelable()" [cancelDisabled]="busy()" (cancelRequested)="cancelled = cancelled + 1" />`,
 })
 class HostComponent {
   readonly cancelable = signal(false);

@@ -33,7 +33,7 @@ import { StepBackService } from './step-back.service';
       @if (cancelable()) {
         <button
           type="button"
-          (click)="cancel.emit()"
+          (click)="cancelRequested.emit()"
           [disabled]="cancelDisabled()"
           [attr.aria-label]="'stepIndicator.cancel' | translate"
           data-testid="step-cancel"
@@ -52,8 +52,9 @@ export class StepIndicatorComponent {
 
   readonly step = input.required<number>();
   readonly total = input(3);
-  /** Shows Cancelar as an X; the screen asks for confirmation on `cancel`. */
+  /** Shows Cancelar as an X; the screen asks for confirmation on `cancelRequested`. */
   readonly cancelable = input(false);
   readonly cancelDisabled = input(false);
-  readonly cancel = output<void>();
+  /** Not named `cancel`: an output must not shadow a standard DOM event. */
+  readonly cancelRequested = output<void>();
 }

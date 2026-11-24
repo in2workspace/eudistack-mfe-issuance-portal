@@ -1,7 +1,7 @@
 <div class="min-h-screen bg-gray-50">
   <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
     <div class="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border p-8">
-      <app-step-indicator [step]="2" [cancelable]="!loading() && !disputed()" [cancelDisabled]="withdrawing()" (cancel)="onCancel()" />
+      <app-step-indicator [step]="2" [cancelable]="!loading() && !disputed()" [cancelDisabled]="withdrawing()" (cancelRequested)="onCancel()" />
       @if (loading()) {
         <output class="flex flex-col items-center text-center py-12">
           <svg class="w-10 h-10 text-brand-accent animate-spin mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -64,7 +64,7 @@
           }
         </div>
 
-        <!-- «Son correctos, continuar» a todo el ancho y, debajo, «Mis datos no son correctos» como enlace centrado.
+        <!-- «Son correctos, continuar» ocupa el ancho completo y, debajo, «Mis datos no son correctos» como enlace centrado.
              Volver a Solicitudes es la flecha junto a «Paso 2 de 3» (decisión de la Tech Lead, 2026-11-18). -->
         <div class="flex flex-col items-center gap-3">
           <button
