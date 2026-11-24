@@ -11,7 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 
 - **EUD-359 — varias solicitudes por sesión, datos no correctos y «Ya lo he guardado»**:
-  - Contratos del servicio al día: Recorrido 4 y Fuente auténtica 2.
+  - Contratos del servicio al día: Recorrido 5 y Fuente auténtica 2.
   - Comprobación saluda al titular por su nombre, con «¿No eres…?» para volver a entrar. Pantallas Sin solicitudes y Tus datos no coinciden (una solicitud con los datos que difieren, o varias con su problema y qué hacer).
   - Correo antes de las solicitudes, una sola vez por sesión, en `/email`, rellenado con el correo conocido.
   - Lista de solicitudes (`/requests`) con organización, identificador, quién la pidió y cuándo, estado en palabras y «Obtener»; «Terminar» lleva a Final.
@@ -21,6 +21,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - Una oferta que ya no se puede renovar (409 `request_saved`) deja la solicitud como guardada y el recorrido sigue.
   - Pantalla Final (`/done`) con las guardadas, las que tienen un problema y las pendientes.
   - Prueba que impide «wallet» y «móvil» en los textos en castellano.
+  - «Paso X de 3» en Correo, Datos y QR, con la flecha de volver (Correo con el código enviado y Datos con varias solicitudes) y Cancelar como una X en la misma fila.
+  - Correo: «Enviando…» con un indicador mientras se envía el código, el aviso de que puede tardar un minuto o estar en «Correo no deseado», y «Será también el correo de tu cartera» junto al subtítulo.
+  - Solicitudes y QR con el nombre de la atestación: «Tienes N solicitudes de DoctorID» y «Guarda tu DoctorID en tu cartera» con los tres pasos. «Guardada en tu cartera» en verde.
 
 - **EUD-314 — inicio de sesión con el Verifier**:
   - Cliente OIDC público del Verifier del tenant con `angular-auth-oidc-client` 19: `client_id` `issuance-portal-<tenant>`, PKCE S256, `claims` con el `acr` del nivel del tenant como esencial y scope `openid profile email personal_administrative_number`.
@@ -62,7 +65,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- **EUD-359**: los textos en castellano dicen «cartera» y «el dispositivo donde tienes o quieres tener tu cartera», nunca «wallet» ni «móvil». Inicio añade cuánto tarda y qué tener a mano. Datos ya no pide el correo y su botón dice «Son correctos, continuar». Botones de atrás de la cabecera en Correo y en Datos.
+- **EUD-359**: los textos en castellano dicen «cartera» y «el dispositivo donde tienes o quieres tener tu cartera», nunca «wallet» ni «móvil». Inicio añade cuánto tarda y qué tener a mano. Datos ya no pide el correo; «Son correctos, continuar» ocupa todo el ancho y «Mis datos no son correctos» es un enlace centrado debajo. Final agrupa lo pendiente y sus acciones en un bloque centrado. En el ordenador, la cartera se abre en una pestaña nueva (`noopener`, `noreferrer`), para que el portal siga abierto.
 
 - **EUD-314**: `SESSION_ACTIONS` ya inicia el login y descarta los tokens de verdad en todos los finales del recorrido. La guarda de pasos ya no manda a Inicio sin token o con un 401.
 - **EUD-314**: la guarda de parámetros conserva `code` y `state` en la ruta `callback`; en las demás sigue borrando `u`, `code` e `identified`.
@@ -82,7 +85,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Removed
 
-- **EUD-359**: rutas `user-data`, `verify-email` y `offer`, el botón «He terminado» y el error terminal de oferta no renovable.
+- **EUD-359**: rutas `user-data`, `verify-email` y `offer`, el botón «He terminado», el error terminal de oferta no renovable, los botones de atrás de la cabecera en Correo y Datos (los sustituye la flecha junto al paso), el botón Cancelar de abajo (ahora una X) y el enlace para copiar la dirección del QR con su componente `credential-offer-url-box` (prd 1.9.0, FR-07).
 
 - **EUD-286**: la ventana fija de 10 minutos de la oferta (`obtainedAt`, `CREDENTIAL_OFFER_PRESENTATION_TTL_MS`), el aviso de no disponible de QR y sus textos `credentialOffer.unavailable.*`, los botones Cancelar y «Marcar como completado» de QR, el `target="_blank"` del enlace al wallet y los `aria-label` que no contenían el texto visible.
 

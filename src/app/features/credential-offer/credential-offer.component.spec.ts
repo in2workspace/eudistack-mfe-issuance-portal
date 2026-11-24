@@ -286,7 +286,7 @@ describe('CredentialOfferComponent', () => {
       expect(buttonWith(element, 'Generar un código nuevo')).toBeUndefined();
     });
 
-    it('AC-06: «Generar un código nuevo» asks the flow for a new code', async () => {
+    it('EUD-286 AC-06, EUD-359 AC-07: «Generar un código nuevo» asks the flow for a new code', async () => {
       present(-1);
       const element = await render();
 
