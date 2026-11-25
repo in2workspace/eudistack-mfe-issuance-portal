@@ -1,22 +1,30 @@
-import { DestroyRef, Injectable, inject } from '@angular/core';
+import { DestroyRef, Injectable, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, firstValueFrom } from 'rxjs';
 import {
   ApiProblemError,
   ISSUANCE_REJECTED,
   ISSUANCE_UNAVAILABLE,
+  JOURNEY_CLOSED,
   NETWORK_ERROR,
-  OFFER_NOT_RENEWABLE,
+  REQUEST_SAVED,
   ONBOARDING_UNAVAILABLE,
   STEP_NOT_ALLOWED,
   UNEXPECTED_ERROR,
 } from '../../core/api/api-problem.error';
-import { Journey, JourneyApi, Offer } from '../../core/api/generated/journey';
+import { JourneyApi, Offer } from '../../core/api/generated/journey';
 import { PortalConfigService } from '../../core/config/portal-config.service';
 import { JourneyIssuanceStore, OfferCall } from '../../core/journey/journey-issuance.store';
-import { JourneyNavigator, isJourneyClosed, stepUrl } from '../../core/journey/journey-navigator';
-import { QR_PATH } from '../../core/journey/journey-paths';
-import { SESSION_ACTIONS } from '../../core/session/session-actions';
+import {
+  JourneyNavigator,
+  isAvailable,
+  hasPendingRequests,
+  isEmailVerified,
+  isJourneyClosed,
+  requestOf,
+  stepUrl,
+} from '../../core/journey/journey-navigator';
+import { DONE_PATH, REQUESTS_PATH } from '../../core/journey/journey-paths';
 import { ErrorReason, errorUrl } from '../error/error-reason';
 import { CredentialOfferService } from './credential-offer.service';
 import { resolveOfferAddress } from './resolve-offer-address';
@@ -35,13 +43,17 @@ const ISSUANCE_FAILURES: Readonly<Record<string, ErrorReason>> = {
   [ONBOARDING_UNAVAILABLE]: 'onboarding-unavailable',
 };
 
+/** Qué pasó al declarar guardada una solicitud: siguió, lo resolvió el interceptor de EUD-287, o falló y se puede repetir. */
+export type SaveResult = 'saved' | 'handled' | 'failed';
+
 /**
- * Pide la oferta al servicio y la presenta en QR (EUD-286, ac.md AC-08,
- * EC-02 a EC-04, ES-01 a ES-04). La confirmación no lleva cuerpo: usa el
- * correo que el servicio ya verificó (EUD-358). Qué llamada hacer lo dice
+ * Pide la oferta de una solicitud al servicio y la presenta en QR (EUD-286,
+ * ac.md AC-08, EC-02 a EC-04, ES-01 a ES-04). La confirmación y el código
+ * nuevo solo llevan el identificador de la solicitud (EUD-359): el correo y los
+ * datos son los que el servicio ya tiene. Qué llamada hacer lo dice
  * `JourneyIssuanceStore` o, sin llamada pendiente, `GET /journey`: la
- * confirmación con el correo verificado, un código nuevo tras caducar el QR y,
- * tras un fallo, la misma que falló.
+ * confirmación de una solicitud disponible, un código nuevo tras caducar el QR
+ * y, tras un fallo, la misma que falló.
  * Se provee en la pantalla QR: si el titular ya ha salido, no navega ni
  * presenta nada.
  */
@@ -53,33 +65,44 @@ export class OfferFlowService {
   private readonly presenter = inject(CredentialOfferService);
   private readonly navigator = inject(JourneyNavigator);
   private readonly router = inject(Router);
-  private readonly session = inject(SESSION_ACTIONS);
   private destroyed = false;
+  private readonly _typeName = signal<string | null>(null);
+
+  /** Nombre de la atestación de la solicitud, para el título del QR; `null` mientras no se sabe. */
+  readonly typeName = this._typeName.asReadonly();
 
   constructor() {
     inject(DestroyRef).onDestroy(() => (this.destroyed = true));
   }
 
-  /** QR (generando) al entrar: hace la llamada pendiente o retoma lo que dice el servicio. */
-  async enter(): Promise<void> {
+  /** QR (generando) de la solicitud al entrar: hace la llamada pendiente o retoma lo que dice el servicio. */
+  async enter(requestId: string): Promise<void> {
     this.presenter.startLoading();
-    const pending = this.store.pendingCall();
-    if (pending) {
-      return this.request(pending);
+    const pending = this.store.pending();
+    if (pending?.requestId === requestId) {
+      this._typeName.set(pending.typeName ?? null);
+      return this.request(pending.call, requestId);
     }
     const journey = await this.readJourney();
     if (journey === undefined || this.destroyed) {
       return;
     }
-    if (journey.offer) {
+    const request = requestOf(journey, requestId);
+    this._typeName.set(request?.attestation?.type_name ?? null);
+    if (request?.offer) {
       // Recarga con la oferta ya obtenida: se presenta la que tiene el servicio (EC-02).
-      this.present(journey.offer);
-    } else if (journey.email_verification?.verified) {
-      this.store.requestConfirmation();
-      return this.request('confirmation');
+      this.present(request.offer);
+    } else if (isAvailable(request) && isEmailVerified(journey)) {
+      this.store.requestConfirmation(requestId, this._typeName());
+      return this.request('confirmation', requestId);
+    } else if (request?.status === 'in_offer') {
+      // La solicitud tiene proceso pero no oferta (el alta falló): una oferta nueva del mismo proceso.
+      this.store.requestNewOffer(requestId, this._typeName());
+      return this.request('offers', requestId);
     } else {
-      // Sin el correo verificado no se puede confirmar (AC-09): al paso que toca, Datos o Verificar correo.
-      this.leaveForStep(journey);
+      // Sin el correo verificado o con otro estado no se puede confirmar (AC-09, EC-07): al paso que toca.
+      // Nunca es el QR de esta solicitud: con una oferta vigente se habría presentado arriba.
+      void this.router.navigate(stepUrl(journey), { replaceUrl: true });
     }
   }
 
@@ -87,38 +110,46 @@ export class OfferFlowService {
    * «Generar un código nuevo» con el QR caducado (AC-06). Solo con el QR
    * caducado: una segunda pulsación, ya generando, no pide otro (EC-07).
    */
-  async newCode(): Promise<void> {
+  async newCode(requestId: string): Promise<void> {
     if (this.presenter.status() !== 'expired') {
       return;
     }
-    this.store.requestNewOffer();
+    this.store.requestNewOffer(requestId, this._typeName());
     this.presenter.startLoading();
-    return this.request('offers');
+    return this.request('offers', requestId);
   }
 
   /**
-   * «He terminado» (ac.md AC-15): termina el recorrido y descarta los tokens
-   * (design.md §3.1, punto 7). Si la retirada falla, los tokens se descartan
-   * igual (ES-05). Con un 410, el interceptor ya lleva a la sesión caducada.
+   * «Ya lo he guardado» (design.md AD-10, §3.3 punto 6): declara guardada la
+   * solicitud y sigue: a Solicitudes si queda alguna pendiente, o a Final si
+   * no. El portal no comprueba que la cartera la haya guardado. Con 409
+   * `step_not_allowed` y con 410 el interceptor de EUD-287 lleva al paso o a
+   * la sesión caducada. Otro fallo (red, 5xx) deja al titular en QR con el
+   * aviso de que no se ha podido anotar, y puede volver a pulsarlo.
    */
-  async finish(): Promise<void> {
-    this.presenter.reset();
+  async declareSaved(requestId: string): Promise<SaveResult> {
     try {
-      await firstValueFrom(this.journeyApi.withdrawJourney());
+      await firstValueFrom(this.journeyApi.declareRequestSaved(requestId));
     } catch (error: unknown) {
-      if (isJourneyClosed(error)) {
-        this.store.clear();
-        return;
-      }
+      const type = error instanceof ApiProblemError ? error.type : undefined;
+      return type === STEP_NOT_ALLOWED || type === JOURNEY_CLOSED ? 'handled' : 'failed';
+    }
+    if (this.destroyed) {
+      return 'saved';
     }
     this.store.clear();
-    this.session.discardTokens();
-    void this.router.navigate(['/']);
+    const journey = await this.readJourney();
+    if (journey === undefined || this.destroyed) {
+      return 'saved';
+    }
+    this.presenter.reset();
+    void this.router.navigate(['/', hasPendingRequests(journey) ? REQUESTS_PATH : DONE_PATH]);
+    return 'saved';
   }
 
-  private async request(call: OfferCall): Promise<void> {
+  private async request(call: OfferCall, requestId: string): Promise<void> {
     try {
-      const offer = await firstValueFrom(this.call(call));
+      const offer = await firstValueFrom(this.call(call, requestId));
       if (this.destroyed) {
         return;
       }
@@ -126,25 +157,14 @@ export class OfferFlowService {
       this.present(offer);
     } catch (error: unknown) {
       if (!this.destroyed) {
-        await this.onFailure(call, error);
+        await this.onFailure(requestId, error);
       }
     }
   }
 
-  private call(call: OfferCall): Observable<Offer> {
-    return call === 'confirmation'
-      ? this.journeyApi.confirmAndIssue()
-      : this.journeyApi.newOffer();
-  }
-
-  /**
-   * Va a la ruta del paso. Si esa ruta es la propia QR (un recorrido sin
-   * oferta que el servicio da por completado) el router no navegaría y la
-   * pantalla se quedaría en «generando»: se va al caso de emisión.
-   */
-  private leaveForStep(journey: Journey): void {
-    const url = stepUrl(journey);
-    void this.router.navigate(url.at(-1) === QR_PATH ? errorUrl('issuance-failed') : url, { replaceUrl: true });
+  private call(call: OfferCall, requestId: string): Observable<Offer> {
+    const reference = { request_id: requestId };
+    return call === 'confirmation' ? this.journeyApi.confirmAndIssue(reference) : this.journeyApi.newOffer(reference);
   }
 
   /** Sin una dirección que funcione no hay QR: error de emisión (ES-03). */
@@ -163,41 +183,37 @@ export class OfferFlowService {
    * interceptor de EUD-287, salvo cuando su destino es la propia QR
    * (`presentCurrentOffer`), y el 401, EUD-314.
    */
-  private async onFailure(call: OfferCall, error: unknown): Promise<void> {
+  private async onFailure(requestId: string, error: unknown): Promise<void> {
     if (!(error instanceof ApiProblemError)) {
       return;
     }
     const reason = ISSUANCE_FAILURES[error.type];
     if (reason) {
       void this.router.navigate(errorUrl(reason));
-    } else if (error.type === OFFER_NOT_RENEWABLE) {
-      // El recorrido ha terminado en el servicio: el correo y los tokens se
-      // descartan ya (design.md §3.1, punto 7; review W4).
+    } else if (error.type === REQUEST_SAVED) {
+      // La solicitud ya está guardada en la cartera: el servicio la da por guardada y el recorrido sigue,
+      // así que los tokens no se descartan (design.md §3.2; ac.md, decisión 5).
       this.store.clear();
-      this.session.discardTokens();
-      void this.router.navigate(errorUrl('offer-not-renewable'));
+      void this.router.navigate(errorUrl('request-saved'));
     } else if (error.type === STEP_NOT_ALLOWED) {
       // El servicio ya tiene una oferta vigente (desfase de reloj en un código
       // nuevo, o una confirmación repetida con atrás y adelante): se presenta (ES-02).
-      await this.presentCurrentOffer();
+      await this.presentCurrentOffer(requestId);
     }
   }
 
   /**
-   * Sin oferta, el interceptor de EUD-287 lleva a la ruta del paso. Si esa
-   * ruta es la propia QR, el router no navega y la pantalla se quedaría en
-   * «generando»: se va al caso de emisión, que deja reintentar (review W2).
+   * Sin oferta, el interceptor de EUD-287 lleva a la ruta del paso.
    */
-  private async presentCurrentOffer(): Promise<void> {
+  private async presentCurrentOffer(requestId: string): Promise<void> {
     const journey = await this.readJourney();
     if (!journey || this.destroyed) {
       return;
     }
-    if (journey.offer) {
+    const offer = requestOf(journey, requestId)?.offer;
+    if (offer) {
       this.store.offerReceived();
-      this.present(journey.offer);
-    } else if (stepUrl(journey).at(-1) === QR_PATH) {
-      void this.router.navigate(errorUrl('issuance-failed'));
+      this.present(offer);
     }
   }
 

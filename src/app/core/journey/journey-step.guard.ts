@@ -4,29 +4,36 @@ import { firstValueFrom } from 'rxjs';
 import { Journey, JourneyApi } from '../api/generated/journey';
 import { ISSUANCE_PORTAL_ACCESS_TOKEN } from '../api/issuance-portal-api.interceptor';
 import { SESSION_ACTIONS } from '../session/session-actions';
-import { DATA_PATH, EMAIL_PATH, ENTITLEMENT_PATH, QR_PATH } from './journey-paths';
+import { DATA_ROUTE, DONE_PATH, EMAIL_PATH, ENTITLEMENT_PATH, QR_ROUTE, REQUESTS_PATH, REQUEST_ID_PARAM } from './journey-paths';
 import {
   JourneyNavigator,
-  hasConfirmedEntitlement,
-  hasPendingEmailCode,
-  hasVerifiedEmail,
+  isAvailable,
+  isEmailVerified,
   isJourneyActive,
   isJourneyClosed,
+  requestOf,
   stepUrl,
 } from './journey-navigator';
 
 /**
- * Cuándo se puede estar en cada ruta. Datos se puede ver con el derecho
- * confirmado y sin oferta, con el correo verificado o no, porque Cambiar el
- * correo y el botón atrás de Verificar correo vuelven a ella. Verificar correo
- * pide un código pendiente. QR pide el correo verificado (QR, generando, es
- * quien pide la confirmación) o una oferta ya obtenida.
+ * Cuándo se puede estar en cada ruta (design.md AD-8, AD-9). Correo, con las
+ * solicitudes obtenidas y el correo sin verificar: el estado del correo y el
+ * del código los distingue la pantalla. Solicitudes y Final piden el correo verificado.
+ * Datos y QR piden además que `requestId` sea una solicitud del recorrido en
+ * un estado que permita la pantalla: Datos, disponible; QR, disponible
+ * (generando, confirma) o con oferta (recarga o código nuevo). Cualquier otra
+ * (no disponible, guardada o que no es suya) lleva al paso que toca (EC-07).
  */
-const ALLOWED: Record<string, (journey: Journey) => boolean> = {
+const ALLOWED: Record<string, (journey: Journey, requestId: string | null) => boolean> = {
   [ENTITLEMENT_PATH]: (journey) => journey.step === 'identified',
-  [DATA_PATH]: hasConfirmedEntitlement,
-  [EMAIL_PATH]: hasPendingEmailCode,
-  [QR_PATH]: (journey) => journey.step === 'offer_obtained' || hasVerifiedEmail(journey),
+  [EMAIL_PATH]: (journey) => journey.step !== 'identified' && !isEmailVerified(journey),
+  [REQUESTS_PATH]: isEmailVerified,
+  [DONE_PATH]: isEmailVerified,
+  [DATA_ROUTE]: (journey, requestId) => isEmailVerified(journey) && isAvailable(requestOf(journey, requestId)),
+  [QR_ROUTE]: (journey, requestId) => {
+    const status = requestOf(journey, requestId)?.status;
+    return isEmailVerified(journey) && (status === 'available' || status === 'in_offer');
+  },
 };
 
 /**
@@ -35,20 +42,22 @@ const ALLOWED: Record<string, (journey: Journey) => boolean> = {
  * a la que toca (`stepUrl`); un recorrido sin paso (`isJourneyActive`) lleva a Inicio y uno
  * caducado (410), a sesión caducada. Sin token (el titular recargó la página)
  * intenta el login sin interacción y cancela la navegación: a la vuelta, el
- * callback abre el recorrido y va a su paso (AC-07). La renovación del token
+ * callback abre el recorrido y vuelve a esta ruta, que la guarda vuelve a
+ * comprobar (AC-07, EC-06). La renovación del token
  * ante un 401 es del interceptor `tokenRenewalInterceptor`.
  */
-export const journeyStepGuard: CanActivateFn = async (route) => {
+export const journeyStepGuard: CanActivateFn = async (route, state) => {
   const router = inject(Router);
   if (!inject(ISSUANCE_PORTAL_ACCESS_TOKEN)()) {
-    await inject(SESSION_ACTIONS).resumeLogin();
+    await inject(SESSION_ACTIONS).resumeLogin(state.url);
     return false;
   }
   const journeyApi = inject(JourneyApi);
   const navigator = inject(JourneyNavigator);
   try {
     const journey = await firstValueFrom(journeyApi.getJourney());
-    const allowed = isJourneyActive(journey) && ALLOWED[route.routeConfig?.path ?? '']?.(journey) === true;
+    const requestId = route.paramMap.get(REQUEST_ID_PARAM);
+    const allowed = isJourneyActive(journey) && ALLOWED[route.routeConfig?.path ?? '']?.(journey, requestId) === true;
     return allowed ? true : router.createUrlTree(stepUrl(journey));
   } catch (error: unknown) {
     return router.createUrlTree(isJourneyClosed(error) ? navigator.expireSession() : ['/']);

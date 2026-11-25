@@ -60,6 +60,24 @@ describe('IssuanceInfoComponent', () => {
     expect(startCtas[0].textContent?.trim().length).toBeGreaterThan(0);
   });
 
+  it('prd 3.1: Inicio says how long it takes and what to have at hand: the certificate and the device of the wallet', () => {
+    const compiled = render(FULL_CONFIG);
+
+    expect(compiled.querySelector('[data-testid="duration"]')?.textContent).toContain('issuanceInfo.duration');
+    const handy = Array.from(compiled.querySelectorAll('[data-testid="handy"] li')).map((li) => li.textContent?.trim());
+    expect(handy).toEqual(['issuanceInfo.handy.certificate', 'issuanceInfo.handy.device']);
+  });
+
+  it('wireframes, Inicio: "Ten a mano" comes right before how long it takes, before "Empezar"', () => {
+    const compiled = render(FULL_CONFIG);
+
+    const handy = compiled.querySelector('[data-testid="handy"]')!;
+    const duration = compiled.querySelector('[data-testid="duration"]')!;
+    const start = compiled.querySelector('[data-testid="hero-help"]')!;
+    expect(handy.compareDocumentPosition(duration) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(duration.compareDocumentPosition(start) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('AC-02: "Empezar" asks the session to go to the Verifier, without navigating or storing anything', () => {
     const compiled = render(FULL_CONFIG);
     const router = TestBed.inject(Router);

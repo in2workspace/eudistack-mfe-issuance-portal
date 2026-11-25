@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { Title } from '@angular/platform-browser';
 import { ActivatedRouteSnapshot, NavigationEnd, Router } from '@angular/router';
@@ -34,13 +34,16 @@ export class PortalHeaderComponent {
   protected readonly branding = inject(BrandingService);
   protected readonly language = inject(TenantLanguageService);
 
-  protected readonly backTo = toSignal(
+  private readonly routeBack = toSignal(
     this.router.events.pipe(
       filter((event) => event instanceof NavigationEnd),
       map(() => backOf(this.router.routerState.snapshot.root)),
     ),
     { initialValue: null },
   );
+
+  /** Hay botón de volver: el de la ruta (Ayuda). El de los pasos va junto a «Paso X de 3» (StepBackService). */
+  protected readonly hasBack = computed(() => this.routeBack() !== null);
 
   constructor() {
     const title = inject(Title);
@@ -51,7 +54,7 @@ export class PortalHeaderComponent {
   }
 
   onBack(): void {
-    const back = this.backTo();
+    const back = this.routeBack();
     if (back !== null) {
       void this.router.navigateByUrl(`/${back}`);
     }

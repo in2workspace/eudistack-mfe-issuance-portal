@@ -1,6 +1,16 @@
 import { Routes } from '@angular/router';
 import { journeyStepGuard } from './core/journey/journey-step.guard';
-import { DATA_PATH, EMAIL_PATH, ENTITLEMENT_PATH, QR_PATH } from './core/journey/journey-paths';
+import { heldOutcomeGuard } from './core/journey/entitlement-outcome.store';
+import {
+  DATA_ROUTE,
+  DONE_PATH,
+  EMAIL_PATH,
+  ENTITLEMENT_PATH,
+  NO_REQUESTS_PATH,
+  QR_ROUTE,
+  REQUESTS_PATH,
+  REQUEST_UNAVAILABLE_PATH,
+} from './core/journey/journey-paths';
 import { CONFIG_UNAVAILABLE_PATH, configAvailableGuard, configUnavailableGuard } from './core/guards/config-available.guard';
 import { LOGIN_CALLBACK_PATH } from './core/auth/oidc-config';
 import { legacyQueryParamsGuard } from './core/guards/legacy-query-params.guard';
@@ -40,7 +50,7 @@ export const routes: Routes = [
           import('./features/login-callback/login-callback.component').then((m) => m.LoginCallbackComponent),
       },
       {
-        // Paso Comprobación (EUD-286): comprueba el derecho y pasa solo a Datos o a Error.
+        // Paso Comprobación (EUD-286): comprueba el derecho y pasa solo a Correo o a la pantalla que toque.
         path: ENTITLEMENT_PATH,
         data: { back: '' },
         loadComponent: () =>
@@ -48,8 +58,42 @@ export const routes: Routes = [
         canActivate: [journeyStepGuard],
       },
       {
-        path: DATA_PATH,
-        data: { back: '' },
+        // Paso Correo (EUD-358, EUD-359): el correo y el código que el servicio envía a él, una vez por sesión.
+        path: EMAIL_PATH,
+        loadComponent: () =>
+          import('./features/portal/verify-email/verify-email.component').then((m) => m.VerifyEmailComponent),
+        canActivate: [journeyStepGuard],
+      },
+      {
+        // Solicitudes (design.md §3.5): el estado de cada una, que se vuelve a pedir al entrar.
+        path: REQUESTS_PATH,
+        loadComponent: () => import('./features/requests/requests.component').then((m) => m.RequestsComponent),
+        canActivate: [journeyStepGuard],
+      },
+      {
+        // Final (design.md §3.5, punto 5): lo guardado, lo que tiene un problema y lo que queda.
+        path: DONE_PATH,
+        loadComponent: () => import('./features/done/done.component').then((m) => m.DoneComponent),
+        canActivate: [journeyStepGuard],
+      },
+      {
+        // Sin solicitudes y Tus datos no coinciden (AD-8): sin guarda de paso, muestran lo que hay en memoria.
+        path: NO_REQUESTS_PATH,
+        loadComponent: () =>
+          import('./features/no-requests/no-requests.component').then((m) => m.NoRequestsComponent),
+        canActivate: [heldOutcomeGuard('no-requests')],
+      },
+      {
+        path: REQUEST_UNAVAILABLE_PATH,
+        loadComponent: () =>
+          import('./features/request-unavailable/request-unavailable.component').then(
+            (m) => m.RequestUnavailableComponent,
+          ),
+        canActivate: [heldOutcomeGuard('request-unavailable')],
+      },
+      {
+        // Datos de una solicitud (design.md AD-9): su identificador va en la ruta.
+        path: DATA_ROUTE,
         loadComponent: () =>
           import('./features/portal/user-data/user-data.component').then(
             (m) => m.UserDataComponent,
@@ -57,17 +101,9 @@ export const routes: Routes = [
         canActivate: [journeyStepGuard],
       },
       {
-        // Paso Verificar correo (EUD-358): el código que el servicio envió al correo de Datos.
-        path: EMAIL_PATH,
-        data: { back: DATA_PATH },
-        loadComponent: () =>
-          import('./features/portal/verify-email/verify-email.component').then((m) => m.VerifyEmailComponent),
-        canActivate: [journeyStepGuard],
-      },
-      {
-        // EUD-163: sustituye la ruta demo 'qr' (AD-5) — presenta la oferta real
-        // como QR + deeplink, con caducidad y timeout reales.
-        path: QR_PATH,
+        // EUD-163: sustituye la ruta demo 'qr' (AD-5) — presenta la oferta real de una
+        // solicitud como QR + deeplink, con caducidad y timeout reales.
+        path: QR_ROUTE,
         loadComponent: () =>
           import('./features/credential-offer/credential-offer.component').then(
             (m) => m.CredentialOfferComponent,

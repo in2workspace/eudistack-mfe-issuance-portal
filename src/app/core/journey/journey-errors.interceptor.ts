@@ -13,7 +13,7 @@ function isGetJourney(req: HttpRequest<unknown>): boolean {
 /**
  * 409 y 410 de cualquier llamada al servicio (design.md §3.2): con
  * `journey_closed` lleva a sesión caducada y con `step_not_allowed`, a la
- * ruta del paso que indique `GET /journey`. El resto, `offer_not_renewable`
+ * ruta del paso que indique `GET /journey`. El resto, `request_saved`
  * incluido, lo trata la pantalla que llamó. El error se propaga igualmente,
  * para que quien llamó no se quede esperando; las pantallas no muestran nada
  * para estos dos tipos. Va por fuera del interceptor de la API, que es quien

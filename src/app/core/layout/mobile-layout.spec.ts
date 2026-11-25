@@ -49,24 +49,24 @@ describe('MobileLayout', () => {
 });
 
 describe('OPEN_WALLET', () => {
-  it('AC-13, AC-14: opens the wallet in the same tab', () => {
-    const assign = jest.fn();
-    TestBed.configureTestingModule({ providers: [{ provide: DOCUMENT, useValue: { defaultView: { location: { assign } } } }] });
+  it('AC-14: opens the wallet in a new tab, without opener or referrer', () => {
+    const open = jest.fn();
+    TestBed.configureTestingModule({ providers: [{ provide: DOCUMENT, useValue: { defaultView: { open } } }] });
 
     TestBed.inject(OPEN_WALLET)('https://wallet.example/t/abc');
 
-    expect(assign).toHaveBeenCalledWith('https://wallet.example/t/abc');
+    expect(open).toHaveBeenCalledWith('https://wallet.example/t/abc', '_blank', 'noopener,noreferrer');
   });
 
   it.each(['javascript:alert(1)', 'http://wallet.example/t/abc', 'data:text/html,hi', 'not a url'])(
     'B1: never opens %s',
     (url) => {
-      const assign = jest.fn();
-      TestBed.configureTestingModule({ providers: [{ provide: DOCUMENT, useValue: { defaultView: { location: { assign } } } }] });
+      const open = jest.fn();
+      TestBed.configureTestingModule({ providers: [{ provide: DOCUMENT, useValue: { defaultView: { open } } }] });
 
       TestBed.inject(OPEN_WALLET)(url);
 
-      expect(assign).not.toHaveBeenCalled();
+      expect(open).not.toHaveBeenCalled();
     },
   );
 });

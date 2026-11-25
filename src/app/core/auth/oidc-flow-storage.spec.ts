@@ -1,4 +1,4 @@
-import { FLOW_STORAGE_KEY, OidcFlowStorage, REDIRECT_MARK_KEY } from './oidc-flow-storage';
+import { FLOW_STORAGE_KEY, OidcFlowStorage, REDIRECT_MARK_KEY, RETURN_PATH_KEY } from './oidc-flow-storage';
 
 describe('OidcFlowStorage', () => {
   const KEY = 'issuance-portal';
@@ -33,7 +33,7 @@ describe('OidcFlowStorage', () => {
       'authStateControl',
       'codeVerifier',
     ]);
-    expect(localStorage.length).toBe(0);
+    expect(localStorage).toHaveLength(0);
     expect(sessionStorage.length).toBe(1);
   });
 
@@ -70,7 +70,7 @@ describe('OidcFlowStorage', () => {
     storage.writeRedirectMark(1_700_000_000_000);
 
     expect(sessionStorage.getItem(REDIRECT_MARK_KEY)).toBe('1700000000000');
-    expect(localStorage.length).toBe(0);
+    expect(localStorage).toHaveLength(0);
     expect(storage.readRedirectMark()).toBe(1_700_000_000_000);
 
     storage.clearRedirectMark();
@@ -83,6 +83,28 @@ describe('OidcFlowStorage', () => {
     sessionStorage.setItem(REDIRECT_MARK_KEY, 'not-a-number');
 
     expect(storage.readRedirectMark()).toBeNull();
+  });
+
+  it('EC-06: the return path is only a route, is read once, and clear forgets it', () => {
+    storage.writeReturnPath('/requests/r1/data');
+
+    expect(sessionStorage.getItem(RETURN_PATH_KEY)).toBe('/requests/r1/data');
+    expect(localStorage).toHaveLength(0);
+    expect(storage.takeReturnPath()).toBe('/requests/r1/data');
+    expect(storage.takeReturnPath()).toBeNull();
+
+    storage.writeReturnPath('/requests');
+    storage.clear();
+
+    expect(storage.takeReturnPath()).toBeNull();
+  });
+
+  it('EC-06: clearing the flow after the return does not forget the return path', () => {
+    storage.writeReturnPath('/requests/r1/data');
+
+    storage.clearFlow();
+
+    expect(storage.takeReturnPath()).toBe('/requests/r1/data');
   });
 
   it('clear forgets everything', () => {

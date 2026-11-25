@@ -174,9 +174,10 @@ describe('provideHolderAuth', () => {
     const auth = TestBed.inject(HolderAuthService);
     const silent = jest.spyOn(auth, 'loginSilently').mockImplementation(() => undefined);
 
-    await TestBed.inject(SESSION_ACTIONS).resumeLogin();
+    await TestBed.inject(SESSION_ACTIONS).resumeLogin('/requests/r1/data');
 
     expect(silent).toHaveBeenCalledTimes(1);
+    expect(silent).toHaveBeenCalledWith('/requests/r1/data');
   });
 
   it('AC-08: Empezar and «Volver a intentarlo» go to the Verifier with prompt=login, so its SSO session is not reused', async () => {
