@@ -1,4 +1,17 @@
-import { Component, DestroyRef, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  ElementRef,
+  Injector,
+  OnInit,
+  afterNextRender,
+  computed,
+  effect,
+  inject,
+  signal,
+  untracked,
+  viewChild,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormControl, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -38,6 +51,7 @@ type Message =
   | 'generic'
   | 'tooManyRequests'
   | 'tooManyRequestsLater'
+  | 'tooManyChecks'
   | 'noMoreCodes';
 
 /** Por qué no ha salido el código desde el estado del correo (design.md §3.2). */
@@ -67,7 +81,9 @@ function trimmedEmail(control: AbstractControl<string>): ValidationErrors | null
  * 1 con el correo escrito. Con el límite de envíos agotado, Volver al inicio
  * retira el recorrido sin pedir confirmación; Cancelar lo pide. El correo y la
  * cuenta atrás salen de `GET /journey`: nada se guarda en el navegador
- * (AC-09). La ruta la protege `journeyStepGuard`.
+ * (AC-09). Las casillas solo están activas mientras el código se puede
+ * comprobar: vigente y sin un 429 de la comprobación en curso (AD-16). La
+ * ruta la protege `journeyStepGuard`.
  */
 @Component({
   selector: 'app-verify-email',
@@ -82,8 +98,10 @@ export class VerifyEmailComponent implements OnInit {
   private readonly store = inject(JourneyIssuanceStore);
   private readonly language = inject(TenantLanguageService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly injector = inject(Injector);
   private readonly codeInput = viewChild(CodeInputComponent);
   private readonly headerBack = inject(StepBackService);
+  private readonly resendButton = viewChild<ElementRef<HTMLButtonElement>>('resendButton');
 
   protected readonly stage = signal<Stage>('email');
   protected readonly verification = signal<EmailVerification | null>(null);
@@ -92,7 +110,7 @@ export class VerifyEmailComponent implements OnInit {
   protected readonly sending = signal(false);
   protected readonly cancelOpen = signal(false);
   protected readonly withdrawing = signal(false);
-  private readonly feedback = signal<Exclude<Message, 'noMoreCodes'> | null>(null);
+  private readonly feedback = signal<Exclude<Message, 'noMoreCodes' | 'expired' | 'tooManyChecks'> | null>(null);
   /** El código ya no sirve (caducado o con los intentos agotados). */
   private readonly codeRejected = signal(false);
   /** El servicio dijo `too_many_codes` al enviar desde el estado del código. */
@@ -101,6 +119,14 @@ export class VerifyEmailComponent implements OnInit {
   protected readonly resend = injectCountdown();
   /** Hasta cuándo vale el código pendiente. */
   private readonly expiry = injectCountdown();
+  /** Hasta cuándo no se puede comprobar el código: `Retry-After` del 429 de la comprobación (independiente de `resend`). */
+  private readonly checkLimit = injectCountdown();
+
+  /** El código no sirve (rechazado por el servicio o caducado según la cuenta atrás local). */
+  private readonly codeUnusable = computed(() => this.codeRejected() || this.expiry.seconds() === 0);
+
+  /** El código se puede comprobar: vigente y sin un límite de comprobaciones en curso (design.md §3.4, punto 5). */
+  protected readonly canCheck = computed(() => !this.codeUnusable() && this.checkLimit.seconds() === 0);
 
   /** Por qué no ha salido el código desde el estado del correo. */
   protected readonly sendProblem = signal<SendProblem | null>(null);
@@ -123,6 +149,7 @@ export class VerifyEmailComponent implements OnInit {
       }
     });
     this.destroyRef.onDestroy(() => this.headerBack.clear());
+    this.settleFocusOnCanCheckChange();
   }
 
   private rejectedByService(control: AbstractControl<string>): ValidationErrors | null {
@@ -132,8 +159,7 @@ export class VerifyEmailComponent implements OnInit {
   /** Sin envíos que quedar y sin un código que valga: el titular empieza de nuevo (AC-05). */
   protected readonly noMoreCodes = computed(() => {
     const verification = this.verification();
-    const unusable = this.codeRejected() || this.expiry.seconds() === 0;
-    return this.sendLimitReached() || (verification !== null && verification.sends_left === 0 && unusable);
+    return this.sendLimitReached() || (verification !== null && verification.sends_left === 0 && this.codeUnusable());
   });
 
   protected readonly message = computed<Message | null>(() => {
@@ -141,13 +167,69 @@ export class VerifyEmailComponent implements OnInit {
       return 'noMoreCodes';
     }
     const feedback = this.feedback();
-    return feedback === 'tooManyRequests' && this.resend.seconds() === 0 ? null : feedback;
+    // Los fallos de Pedir otro se muestran aunque el código ya no sirva: explican qué pasó con ese botón.
+    if (feedback === 'tooManyRequests') {
+      return this.resend.seconds() === 0 ? null : feedback;
+    }
+    if (feedback === 'unavailable' || feedback === 'tooManyRequestsLater') {
+      return feedback;
+    }
+    if (this.codeUnusable()) {
+      return 'expired';
+    }
+    return this.checkLimit.seconds() > 0 ? 'tooManyChecks' : feedback;
   });
+
+  /** La cuenta atrás que nombra el mensaje: la de la comprobación o la del envío. */
+  protected readonly countdownText = computed(() =>
+    this.message() === 'tooManyChecks' ? this.checkLimit.text() : this.resend.text(),
+  );
 
   protected readonly messageIsError = computed(() => {
     const message = this.message();
     return message !== null && message !== 'resent';
   });
+
+  /**
+   * Al desactivarse las casillas (código agotado, caducado por la cuenta atrás o 429 de la comprobación) se
+   * vacían y el foco va a Pedir otro si está activo; al reactivarse, a la primera casilla (AC-04, AC-07,
+   * EC-09; design.md §3.4, punto 8). Solo en el estado del código: al entrar en él con las casillas activas,
+   * las lleva el autofoco.
+   */
+  private settleFocusOnCanCheckChange(): void {
+    let previous: boolean | undefined;
+    effect(() => {
+      if (this.loading() || this.stage() !== 'code') {
+        previous = undefined;
+        return;
+      }
+      const can = this.canCheck();
+      const changed = previous === undefined ? !can : previous !== can;
+      previous = can;
+      if (changed) {
+        untracked(() => {
+          if (!can) {
+            this.codeInput()?.clear();
+          }
+          this.settleFocus();
+        });
+      }
+    });
+  }
+
+  /** Espera a que el DOM refleje las casillas activas o desactivadas y lleva el foco al sitio que toca. */
+  private settleFocus(): void {
+    afterNextRender(
+      () => {
+        if (this.canCheck()) {
+          this.codeInput()?.focusFirst();
+        } else {
+          this.resendButton()?.nativeElement.focus();
+        }
+      },
+      { injector: this.injector },
+    );
+  }
 
   ngOnInit(): void {
     this.journeyApi
@@ -164,9 +246,6 @@ export class VerifyEmailComponent implements OnInit {
           if (verification) {
             this.apply(verification);
             this.stage.set('code');
-            if (this.expiry.seconds() === 0 && verification.sends_left > 0) {
-              this.feedback.set('expired');
-            }
           } else {
             this.email.setValue(journey.known_email ?? '');
           }
@@ -267,7 +346,7 @@ export class VerifyEmailComponent implements OnInit {
 
   /** Los 6 dígitos están puestos (escritos, pegados o autocompletados): se comprueba el código. */
   protected onCode(code: string): void {
-    if (this.checking()) {
+    if (this.checking() || !this.canCheck()) {
       return;
     }
     this.checking.set(true);
@@ -292,7 +371,8 @@ export class VerifyEmailComponent implements OnInit {
       this.feedback.set('invalid');
     } else if (type === EXPIRED_CODE || type === TOO_MANY_ATTEMPTS) {
       this.codeRejected.set(true);
-      this.feedback.set('expired');
+    } else if (type === TOO_MANY_REQUESTS && error instanceof ApiProblemError && error.retryAfterSeconds !== undefined) {
+      this.checkLimit.startFor(error.retryAfterSeconds);
     } else {
       this.feedback.set('generic');
     }

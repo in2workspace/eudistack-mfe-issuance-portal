@@ -35,7 +35,11 @@ export const EMAIL_UNAVAILABLE = 'email_unavailable';
 export const RESEND_TOO_SOON = 'resend_too_soon';
 /** `type` del 429 del envío del código: el recorrido ya envió 3 códigos (sin `Retry-After`). */
 export const TOO_MANY_CODES = 'too_many_codes';
-/** `type` del 429 del envío del código: 10 envíos desde el mismo origen en la última hora (con `Retry-After`). */
+/**
+ * `type` del 429 por límite de frecuencia, con `Retry-After`: del envío del código (10 desde el mismo origen en la
+ * última hora) o de su comprobación (20 desde el origen o 10 en el recorrido en la última hora). La pantalla los
+ * distingue por la llamada que lo recibe.
+ */
 export const TOO_MANY_REQUESTS = 'too_many_requests';
 /** `type` del 400 de la comprobación: el código no es correcto; gasta un intento. */
 export const INVALID_CODE = 'invalid_code';

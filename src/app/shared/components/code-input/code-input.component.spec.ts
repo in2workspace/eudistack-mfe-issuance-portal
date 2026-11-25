@@ -11,6 +11,7 @@ expect.extend(toHaveNoViolations);
     label="Código de verificación"
     [invalid]="invalid()"
     [autofocus]="autofocus()"
+    [disabled]="disabled()"
     (completed)="completed.push($event)"
   />`,
 })
@@ -18,6 +19,7 @@ class HostComponent {
   readonly input = viewChild.required(CodeInputComponent);
   readonly invalid = signal(false);
   readonly autofocus = signal(false);
+  readonly disabled = signal(false);
   readonly completed: string[] = [];
 }
 
@@ -299,6 +301,38 @@ describe('CodeInputComponent', () => {
       boxes()[0].dispatchEvent(new Event('focus'));
 
       expect(select).toHaveBeenCalled();
+    });
+  });
+
+  describe('disabled (EUD-375)', () => {
+    it('disables the 6 boxes and enables them again', () => {
+      create();
+
+      host.disabled.set(true);
+      fixture.detectChanges();
+      expect(boxes().every((box) => box.disabled)).toBe(true);
+
+      host.disabled.set(false);
+      fixture.detectChanges();
+      expect(boxes().some((box) => box.disabled)).toBe(false);
+    });
+
+    it('does not emit completed when digits reach it while disabled', () => {
+      create();
+      host.disabled.set(true);
+      fixture.detectChanges();
+
+      paste(0, '482913');
+
+      expect(host.completed).toEqual([]);
+    });
+
+    it('has no accessibility violations while disabled', async () => {
+      create();
+      host.disabled.set(true);
+      fixture.detectChanges();
+
+      expect(await axe(fixture.nativeElement as HTMLElement)).toHaveNoViolations();
     });
   });
 

@@ -71,6 +71,7 @@
   "verifyEmail.message.generic": "No hemos podido comprobar el código. Inténtalo de nuevo.",
   "verifyEmail.message.tooManyRequests": "Ahora no se pueden enviar más códigos. Inténtalo de nuevo en {{countdown}}.",
   "verifyEmail.message.tooManyRequestsLater": "Ahora no se pueden enviar más códigos. Inténtalo de nuevo más tarde.",
+  "verifyEmail.message.tooManyChecks": "Demasiados intentos con el código. Inténtalo de nuevo en {{countdown}}.",
   "verifyEmail.message.noMoreCodes": "No se pueden enviar más códigos. Vuelve al inicio para empezar de nuevo.",
   "verifyEmail.resend.prompt": "¿No te ha llegado?",
   "verifyEmail.resend.action": "Reenviar",

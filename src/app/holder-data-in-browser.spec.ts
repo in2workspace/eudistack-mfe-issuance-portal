@@ -141,7 +141,13 @@ describe('Holder data in the browser', () => {
         useValue: {
           getJourney: () => of(journey),
           sendEmailCode: () => {
-            const verification = { email, verified: false, resend_available_at: IN_THREE_MINUTES(), sends_left: 2 };
+            const verification = {
+              email,
+              verified: false,
+              code_expires_at: new Date(Date.now() + 600_000).toISOString(),
+              resend_available_at: IN_THREE_MINUTES(),
+              sends_left: 2,
+            };
             journey = { ...journey, email_verification: verification };
             return of(verification);
           },
