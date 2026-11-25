@@ -372,6 +372,8 @@ export class VerifyEmailComponent implements OnInit {
     } else if (type === EXPIRED_CODE || type === TOO_MANY_ATTEMPTS) {
       this.codeRejected.set(true);
     } else if (type === TOO_MANY_REQUESTS && error instanceof ApiProblemError && error.retryAfterSeconds !== undefined) {
+      // EUD-375: el contrato siempre trae `Retry-After` en este 429. Sin él no hay cuenta atrás
+      // que esperar, así que cae en el mensaje genérico con las casillas activas (no lo cubre el design).
       this.checkLimit.startFor(error.retryAfterSeconds);
     } else {
       this.feedback.set('generic');
