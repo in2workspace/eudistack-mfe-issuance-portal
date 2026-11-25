@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-11-25
+
 ### Added
 
 - **EUD-314 — inicio de sesión con el Verifier**:
@@ -73,6 +75,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **EUD-284**: el envío simulado de Ayuda, su número de incidencia inventado y los contenidos de la demo que no están en los wireframes (teléfono gratuito, preguntas frecuentes y guía con `href="#"`, texto del número de colegiado), el botón «Contactar por Email» de Inicio y `resolve-support-email.ts`.
 
 - **EUD-287**: la pantalla `config-unavailable` y su ruta `unavailable`, `pendingJourneyGuard` y `cannot-continue-reason.ts`. La pantalla QR conserva su aviso de no disponible, sin motivo y con los textos en `credentialOffer.unavailable.*`, hasta que EUD-286 lo convierta en QR caducado.
+
+### Fixed
+
+- **EUD-374 — pantallas desplazadas al navegar**: cada pantalla nueva se abre arriba, con la cabecera a la vista. Antes se abría a la altura de la anterior, y «Abrir incidencia» mostraba Ayuda sin la cabecera.
+
+- **EUD-374 — volver atrás**: al volver atrás con el navegador desde Ayuda, Inicio recupera la posición en la que estaba.
 
 ## [0.4.0] - 2026-10-27
 
