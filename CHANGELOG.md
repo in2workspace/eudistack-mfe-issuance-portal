@@ -67,6 +67,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **EUD-375**: Correo, en el estado del código, no comprueba un código que ya no sirve. Con el código agotado (`too_many_attempts`), caducado (`expired_code` o la cuenta atrás local de `code_expires_at`, sin llamar al servicio) o con el 429 `too_many_requests` de la comprobación, las casillas se vacían y quedan desactivadas, con el mensaje en `aria-live` y el foco en Reenviar si está activo. El 429 muestra su propia cuenta atrás de `Retry-After`, independiente de la de Reenviar; al acabar, o con un código nuevo, las casillas se reactivan si el código sigue vigente y el foco va a la primera. Contrato `api/journey.openapi.yaml` (Recorrido 5): se añade el 429 de `checkEmailCode` con `Retry-After`.
 - **EUD-359**: los textos en castellano dicen «cartera» y «el dispositivo donde tienes o quieres tener tu cartera», nunca «wallet» ni «móvil». Inicio añade cuánto tarda y qué tener a mano. Datos ya no pide el correo; «Son correctos, continuar» ocupa todo el ancho y «Mis datos no son correctos» es un enlace centrado debajo. Final agrupa lo pendiente y sus acciones en un bloque centrado. En el ordenador, la cartera se abre en una pestaña nueva (`noopener`, `noreferrer`), para que el portal siga abierto.
 
 - **EUD-314**: `SESSION_ACTIONS` ya inicia el login y descarta los tokens de verdad en todos los finales del recorrido. La guarda de pasos ya no manda a Inicio sin token o con un 401.
