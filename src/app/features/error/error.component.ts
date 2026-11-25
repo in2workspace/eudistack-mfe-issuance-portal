@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
@@ -6,11 +6,11 @@ import { combineLatest, firstValueFrom, map } from 'rxjs';
 import { TenantLanguageService } from '../../core/branding/tenant-language.service';
 import { PortalConfigService } from '../../core/config/portal-config.service';
 import { hasSupportDetails } from '../../core/config/support-details';
-import { ENTITLEMENT_PATH, QR_PATH } from '../../core/journey/journey-paths';
+import { DONE_PATH, ENTITLEMENT_PATH, REQUESTS_PATH, qrUrl } from '../../core/journey/journey-paths';
 import { JourneyApi } from '../../core/api/generated/journey';
 import { ISSUANCE_PORTAL_ACCESS_TOKEN } from '../../core/api/issuance-portal-api.interceptor';
 import { JourneyIssuanceStore } from '../../core/journey/journey-issuance.store';
-import { isJourneyClosed } from '../../core/journey/journey-navigator';
+import { hasPendingRequests, isJourneyClosed } from '../../core/journey/journey-navigator';
 import { SESSION_ACTIONS } from '../../core/session/session-actions';
 import { ErrorReason, RETRY_REASONS, isErrorReason } from './error-reason';
 
@@ -46,6 +46,31 @@ export class ErrorComponent {
   );
 
   protected readonly retrying = signal(false);
+
+  /** Con la atestación ya guardada: si quedan solicitudes pendientes. `null` mientras se consulta. */
+  private readonly pendingLeft = signal<boolean | null>(null);
+
+  /** Clave del texto de la acción principal; «Ya guardada» ofrece seguir con las solicitudes o ir al final. */
+  protected readonly actionKey = computed(() => {
+    const reason = this.reason();
+    return reason === 'request-saved' && this.pendingLeft() === false
+      ? 'error.request-saved.actionEnd'
+      : `error.${reason}.action`;
+  });
+
+  constructor() {
+    // Ya guardada no descarta los tokens: el recorrido sigue, y a dónde ir depende de lo que quede pendiente.
+    effect(() => {
+      if (this.reason() === 'request-saved' && this.accessToken()) {
+        this.journeyApi
+          .getJourney()
+          .subscribe({
+            next: (journey) => this.pendingLeft.set(hasPendingRequests(journey)),
+            error: () => this.pendingLeft.set(true),
+          });
+      }
+    });
+  }
 
   /** «Volver al inicio» como acción secundaria de los casos con reintento (AC-17). */
   protected readonly canGoHome = computed(() => {
@@ -114,9 +139,14 @@ export class ErrorComponent {
         return () => this.router.navigate(['/', ENTITLEMENT_PATH]);
       case 'issuance-failed':
       case 'onboarding-unavailable':
-        // QR (generando) repite la llamada que falló con los mismos datos (EUD-286).
-        return () => this.router.navigate(['/', QR_PATH]);
-      case 'offer-not-renewable':
+        // QR (generando) repite la llamada que falló con los mismos datos, para la misma
+        // solicitud (EUD-286). Sin ella en memoria (la página se recargó), el paso que toque.
+        return () => {
+          const pending = this.issuance.pending();
+          return this.router.navigate(pending ? qrUrl(pending.requestId) : ['/', REQUESTS_PATH]);
+        };
+      case 'request-saved':
+        return () => this.router.navigate(['/', this.pendingLeft() === false ? DONE_PATH : REQUESTS_PATH]);
       case 'not-entitled':
         // El recorrido ya ha terminado o lo ha retirado el servicio (design.md §3.1, punto 7).
         return () => {

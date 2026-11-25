@@ -10,12 +10,17 @@ import { LoginCallbackComponent } from './login-callback.component';
 
 describe('LoginCallbackComponent', () => {
   const JOURNEY_URL = '/issuance-portal/api/v1/journey';
-  let auth: { completeLogin: jest.Mock; discard: jest.Mock; login: jest.Mock };
+  let auth: { completeLogin: jest.Mock; discard: jest.Mock; login: jest.Mock; takeReturnPath: jest.Mock };
   let navigate: jest.SpyInstance;
   let backend: HttpTestingController;
 
   beforeEach(() => {
-    auth = { completeLogin: jest.fn().mockResolvedValue('authenticated'), discard: jest.fn(), login: jest.fn() };
+    auth = {
+      completeLogin: jest.fn().mockResolvedValue('authenticated'),
+      discard: jest.fn(),
+      login: jest.fn(),
+      takeReturnPath: jest.fn().mockReturnValue(null),
+    };
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
@@ -59,12 +64,67 @@ describe('LoginCallbackComponent', () => {
     await settle();
 
     backend.expectOne(JOURNEY_URL).flush(
-      { state: 'in_progress', step: 'entitlement_confirmed', attestation: { type_name: 'DoctorID', fields: [], email_required: true } },
+      { state: 'in_progress', step: 'entitlement_confirmed', requests: [{ id: 'r1', status: 'available' }] },
       { status: 200, statusText: 'OK' },
     );
     await settle();
 
-    expect(navigate).toHaveBeenCalledWith(['/', 'user-data'], { replaceUrl: true });
+    expect(navigate).toHaveBeenCalledWith(['/', 'email'], { replaceUrl: true });
+  });
+
+  describe('EC-06: coming back to the screen the holder was on', () => {
+    const existing = {
+      state: 'in_progress',
+      step: 'email_verified',
+      email_verification: { email: 'maria@example.org', verified: true, resend_available_at: '2026-11-11T10:03:00Z', sends_left: 2 },
+      requests: [{ id: 'r1', status: 'available' }, { id: 'r2', status: 'available' }],
+    };
+
+    async function openWithReturnPath(path: string | null): Promise<void> {
+      auth.takeReturnPath.mockReturnValue(path);
+      open();
+      await settle();
+      backend.expectOne(JOURNEY_URL).flush(existing, { status: 200, statusText: 'OK' });
+      await settle();
+    }
+
+    it.each(['/requests/r2/data', '/requests/r2/offer', '/requests', '/email'])(
+      'goes back to %s, which the step guard checks against GET /journey',
+      async (path) => {
+        const navigateByUrl = jest.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+
+        await openWithReturnPath(path);
+
+        expect(navigateByUrl).toHaveBeenCalledTimes(1);
+        expect(TestBed.inject(Router).serializeUrl(navigateByUrl.mock.calls[0][0] as never)).toBe(path);
+        expect(navigate).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each(['/error/session-expired', '//evil.example/requests', 'https://evil.example/requests', '/incidents'])(
+      'ignores %s: it is not a step of the journey',
+      async (path) => {
+        await openWithReturnPath(path);
+
+        expect(navigate).toHaveBeenCalledWith(['/', 'requests'], { replaceUrl: true });
+      },
+    );
+
+    it('with no saved path goes to the step the service says', async () => {
+      await openWithReturnPath(null);
+
+      expect(navigate).toHaveBeenCalledWith(['/', 'requests'], { replaceUrl: true });
+    });
+
+    it('when the silent login could not resolve, the interactive one keeps the path', async () => {
+      auth.takeReturnPath.mockReturnValue('/requests/r2/data');
+      auth.completeLogin.mockResolvedValue('interaction-required');
+
+      open();
+      await settle();
+
+      expect(auth.login).toHaveBeenCalledWith('/requests/r2/data');
+    });
   });
 
   it('AC-03, ES-04: when the return is an error or does not validate, shows the identification not completed and does not open the journey', async () => {

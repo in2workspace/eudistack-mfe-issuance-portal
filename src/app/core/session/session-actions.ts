@@ -12,9 +12,10 @@ export interface SessionActions {
   restartLogin(): Promise<void>;
   /**
    * Recupera los tokens tras recargar la página con un `authorize` sin
-   * interacción (`prompt=none`) contra la sesión SSO del Verifier.
+   * interacción (`prompt=none`) contra la sesión SSO del Verifier. `returnTo`
+   * es la ruta de la interfaz a la que volver con los tokens (EC-06).
    */
-  resumeLogin(): Promise<void>;
+  resumeLogin(returnTo?: string): Promise<void>;
   /** Descarta los tokens del titular. */
   discardTokens(): void;
 }

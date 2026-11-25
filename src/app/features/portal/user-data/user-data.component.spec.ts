@@ -1,17 +1,18 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter, Router } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import { NEVER, Observable, of, Subject, throwError } from 'rxjs';
 import { UserDataComponent } from './user-data.component';
 import { ApiProblemError, NETWORK_ERROR } from '../../../core/api/api-problem.error';
-import { AttestationPreview, EmailVerification, Journey, JourneyApi } from '../../../core/api/generated/journey';
-import { TenantLanguageService } from '../../../core/branding/tenant-language.service';
+import { EntitlementApi } from '../../../core/api/generated/authentic-source';
+import { AttestationPreview, Journey, JourneyApi, JourneyRequest } from '../../../core/api/generated/journey';
+import { StepBackService } from '../../../shared/components/step-indicator/step-back.service';
+import { JourneyIssuanceStore } from '../../../core/journey/journey-issuance.store';
 import { JourneyNavigator } from '../../../core/journey/journey-navigator';
 import { SESSION_ACTIONS } from '../../../core/session/session-actions';
-import { JourneyIssuanceStore } from '../../../core/journey/journey-issuance.store';
 
 expect.extend(toHaveNoViolations);
 
@@ -21,8 +22,6 @@ const PREVIEW: AttestationPreview = {
     { label: 'Nombre', value: 'María García López' },
     { label: 'Número de colegiado', value: '282801234' },
   ],
-  email: 'maria@example.org',
-  email_required: true,
 };
 
 function catalog(lang: string): Record<string, string> {
@@ -40,28 +39,29 @@ describe('UserDataComponent', () => {
   let fixture: ComponentFixture<UserDataComponent>;
   let getJourney: jest.Mock<Observable<Journey>>;
   let withdrawJourney: jest.Mock<Observable<Journey>>;
-  let sendEmailCode: jest.Mock<Observable<EmailVerification>>;
-  let language: string;
   let discardTokens: jest.Mock;
   let toSessionExpired: jest.Mock;
+  let toCurrentStep: jest.Mock;
+  let disputeRequestData: jest.Mock<Observable<void>>;
   let navigate: jest.SpyInstance;
   let store: JourneyIssuanceStore;
 
   beforeEach(() => {
     getJourney = jest.fn();
     withdrawJourney = jest.fn();
-    sendEmailCode = jest.fn();
-    language = 'es';
     discardTokens = jest.fn();
     toSessionExpired = jest.fn().mockResolvedValue(true);
+    toCurrentStep = jest.fn().mockResolvedValue(true);
+    disputeRequestData = jest.fn();
     TestBed.configureTestingModule({
       imports: [UserDataComponent, TranslateModule.forRoot()],
       providers: [
         provideRouter([]),
-        { provide: JourneyApi, useValue: { getJourney, withdrawJourney, sendEmailCode } },
-        { provide: TenantLanguageService, useValue: { current: () => language } },
-        { provide: JourneyNavigator, useValue: { toSessionExpired } },
+        { provide: JourneyApi, useValue: { getJourney, withdrawJourney } },
+        { provide: JourneyNavigator, useValue: { toSessionExpired, toCurrentStep } },
+        { provide: EntitlementApi, useValue: { disputeRequestData } },
         { provide: SESSION_ACTIONS, useValue: { restartLogin: jest.fn(), discardTokens } },
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ requestId: 'r2' }) } } },
       ],
     });
     const translate = TestBed.inject(TranslateService);
@@ -71,16 +71,23 @@ describe('UserDataComponent', () => {
     store = TestBed.inject(JourneyIssuanceStore);
   });
 
-  function create(
-    attestation: AttestationPreview | undefined = PREVIEW,
-    email_verification?: EmailVerification,
-  ): void {
+  const requests = (target: JourneyRequest = { id: 'r2', status: 'available', attestation: PREVIEW }): JourneyRequest[] => [
+    { id: 'r1', status: 'available', attestation: { type_name: 'Otra', fields: [{ label: 'Otro', value: 'otro valor' }] } },
+    target,
+  ];
+
+  function create(list: JourneyRequest[] = requests()): void {
     getJourney.mockReturnValue(
       of({
         state: 'in_progress',
-        step: email_verification?.verified ? 'email_verified' : 'entitlement_confirmed',
-        attestation,
-        email_verification,
+        step: 'email_verified',
+        email_verification: {
+          email: 'maria@example.org',
+          verified: true,
+          resend_available_at: new Date().toISOString(),
+          sends_left: 2,
+        },
+        requests: list,
       }),
     );
     fixture = TestBed.createComponent(UserDataComponent);
@@ -88,41 +95,28 @@ describe('UserDataComponent', () => {
     fixture.detectChanges();
   }
 
-  afterEach(() => fixture?.nativeElement.remove());
-
-  function verification(overrides: Partial<EmailVerification> = {}): EmailVerification {
-    return {
-      email: 'maria@example.org',
-      verified: false,
-      code_expires_at: new Date(Date.now() + 600_000).toISOString(),
-      resend_available_at: new Date(Date.now() + 180_000).toISOString(),
-      sends_left: 2,
-      ...overrides,
-    };
-  }
-
-  function problem(type: string, status: number, retryAfter?: number): Observable<never> {
-    return throwError(() => new ApiProblemError(type, status, type, retryAfter));
-  }
+  afterEach(() => {
+    fixture?.nativeElement.remove();
+    TestBed.inject(StepBackService).clear();
+  });
 
   const element = (): HTMLElement => fixture.nativeElement as HTMLElement;
-  const emailInput = (): HTMLInputElement => element().querySelector('#holder-email')!;
   const button = (label: string): HTMLButtonElement =>
-    Array.from(element().querySelectorAll('button')).find((b) => b.textContent?.trim() === label)!;
-
-  function type(value: string): void {
-    emailInput().value = value;
-    emailInput().dispatchEvent(new Event('input'));
-    emailInput().dispatchEvent(new Event('blur'));
-    fixture.detectChanges();
-  }
+    // By accessible name: its text, or its aria-label when it only shows an icon (the X of Cancelar).
+    Array.from(element().querySelectorAll('button')).find((b) => (b.textContent?.trim() || b.getAttribute('aria-label')) === label)!;
 
   function click(label: string): void {
     button(label).click();
     fixture.detectChanges();
   }
 
-  it('while GET /journey answers, shows the waiting notice as a status region and no form', () => {
+  it('wireframes, Navegación: Datos shows "Paso 2 de 3" above its title', () => {
+    create();
+
+    expect(element().querySelector('[data-testid="step-indicator"]')?.textContent?.trim()).toBe('Paso 2 de 3');
+  });
+
+  it('while GET /journey answers, shows the waiting notice as a status region and no data', () => {
     getJourney.mockReturnValue(NEVER);
     fixture = TestBed.createComponent(UserDataComponent);
     fixture.detectChanges();
@@ -130,11 +124,11 @@ describe('UserDataComponent', () => {
     const status = statusRegions(element());
     expect(status).toHaveLength(1);
     expect(status[0].textContent).toContain(catalog('es')['userData.loading']);
-    expect(element().querySelector('#holder-email')).toBeNull();
+    expect(element().querySelector('dl')).toBeNull();
   });
 
-  describe('preview and email', () => {
-    it('AC-01: shows the attestation name and every field as the service gives it', () => {
+  describe('data of the request of the route (AD-9)', () => {
+    it('AC-24: shows the attestation name and every field of that request as the service gives it', () => {
       create();
 
       expect(element().textContent).toContain('Datos de tu DoctorID');
@@ -142,390 +136,231 @@ describe('UserDataComponent', () => {
       const values = Array.from(element().querySelectorAll('dd')).map((dd) => dd.textContent?.trim());
       expect(terms).toEqual(['Nombre', 'Número de colegiado']);
       expect(values).toEqual(['María García López', '282801234']);
+      expect(element().textContent).not.toContain('otro valor');
     });
 
-    it('AC-01: fills the email the service knows and lets the holder change it', () => {
-      create();
-
-      expect(emailInput().value).toBe('maria@example.org');
-      type('otra@example.org');
-      expect(button('Continuar').disabled).toBe(false);
-    });
-
-    it('AC-01: shows the email field empty when the service does not know it', () => {
-      create({ ...PREVIEW, email: undefined });
-
-      expect(emailInput().value).toBe('');
-      expect(button('Continuar').disabled).toBe(true);
-    });
-
-    it.each(['', 'maria', 'maria@', '@example.org'])('AC-01: Continuar stays disabled with %j', (value) => {
-      create();
-
-      type(value);
-
-      expect(button('Continuar').disabled).toBe(true);
-      expect(emailInput().getAttribute('aria-invalid')).toBe('true');
-      expect(element().textContent).toContain('Escribe un correo electrónico válido.');
-    });
-
-    it('EC-05: with no fields shows the attestation name and the email, and can continue', () => {
-      create({ type_name: 'DoctorID', fields: [], email_required: true });
+    it('EC-05: with no fields shows the attestation name and can continue', () => {
+      create(requests({ id: 'r2', status: 'available', attestation: { type_name: 'DoctorID', fields: [] } }));
 
       expect(element().querySelector('dl')).toBeNull();
       expect(element().textContent).toContain('Datos de tu DoctorID');
-      type('maria@example.org');
-      expect(button('Continuar').disabled).toBe(false);
+      expect(button('Son correctos, continuar').disabled).toBe(false);
     });
 
-    it('AC-07: back from Verificar correo, the email the code was sent to wins over the one the source knows', () => {
-      create(PREVIEW, verification({ email: 'escrito@example.org' }));
+    it('has no email field: the email is verified in Correo', () => {
+      create();
 
-      expect(emailInput().value).toBe('escrito@example.org');
+      expect(element().querySelector('input')).toBeNull();
     });
 
-    it('AC-07: back from Verificar correo with the email verified, shows it too', () => {
-      create(PREVIEW, verification({ email: 'verificado@example.org', verified: true }));
+    it.each<[string, JourneyRequest[]]>([
+      ['not of the journey', [{ id: 'r1', status: 'available' }]],
+      ['saved', requests({ id: 'r2', status: 'saved' })],
+      ['not available', requests({ id: 'r2', status: 'not_available', not_available_reason: 'under_review' })],
+    ])('EC-07: a request %s goes to the step the journey says', (_name, list) => {
+      create(list);
 
-      expect(emailInput().value).toBe('verificado@example.org');
+      expect(navigate).toHaveBeenCalledWith(expect.any(Array), { replaceUrl: true });
+      expect(element().querySelector('dl')).toBeNull();
     });
   });
 
-  describe('Continuar', () => {
-    beforeEach(() => sendEmailCode.mockReturnValue(of(verification())));
-
-    it('AC-01: sends the code to the email, with the language being shown, and goes to Verificar correo', () => {
-      create();
-      type('maria@example.org');
-
-      click('Continuar');
-
-      expect(sendEmailCode).toHaveBeenCalledWith({ email: 'maria@example.org' }, 'es');
-      expect(navigate).toHaveBeenCalledWith(['/', 'verify-email']);
-    });
-
-    it('AC-01: sends the language of the tenant being shown when the holder changed it', () => {
-      language = 'en';
+  describe('Son correctos, continuar', () => {
+    it('goes to the QR of the request, which confirms it', () => {
       create();
 
-      click('Continuar');
+      click('Son correctos, continuar');
 
-      expect(sendEmailCode).toHaveBeenCalledWith({ email: 'maria@example.org' }, 'en');
+      expect(navigate).toHaveBeenCalledWith(['/', 'requests', 'r2', 'offer']);
     });
 
-    it('AC-01: sends no language when none has been chosen yet', () => {
-      language = '';
-      create();
-
-      click('Continuar');
-
-      expect(sendEmailCode).toHaveBeenCalledWith({ email: 'maria@example.org' }, undefined);
-    });
-
-    it('EC-01: the email filled from the source goes out without the holder changing it', () => {
-      create();
-
-      click('Continuar');
-
-      expect(sendEmailCode).toHaveBeenCalledWith({ email: 'maria@example.org' }, 'es');
-    });
-
-    it('EC-07 (service): an email with spaces around it is valid and goes out without them', () => {
-      create();
-      type(' maria@example.org ');
-
-      click('Continuar');
-
-      expect(sendEmailCode).toHaveBeenCalledWith({ email: 'maria@example.org' }, 'es');
-    });
-
-    it('EC-07: a second click while sending does not send another code', () => {
-      sendEmailCode.mockReturnValue(NEVER);
-      create();
-
-      button('Continuar').click();
-      button('Continuar').click();
-
-      expect(sendEmailCode).toHaveBeenCalledTimes(1);
-      fixture.detectChanges();
-      expect(button('Continuar').disabled).toBe(true);
-    });
-
-    it('EC-07: a second click while going to Verificar correo does not send another code', () => {
+    it('EC-07: a second click while going to QR does not navigate again', () => {
       navigate.mockReturnValue(new Promise(() => undefined));
       create();
 
-      button('Continuar').click();
-      button('Continuar').click();
+      button('Son correctos, continuar').click();
+      button('Son correctos, continuar').click();
 
-      expect(sendEmailCode).toHaveBeenCalledTimes(1);
       expect(navigate).toHaveBeenCalledTimes(1);
     });
 
-    it('EC-07: if Verificar correo does not let the holder in, Continuar works again', async () => {
+    it('if QR does not let the holder in, the button works again', async () => {
       navigate.mockResolvedValue(false);
       create();
 
-      button('Continuar').click();
+      button('Son correctos, continuar').click();
       await fixture.whenStable();
       fixture.detectChanges();
 
-      expect(button('Continuar').disabled).toBe(false);
-    });
-
-    it('AC-09: keeps the email nowhere but the field: the store holds no email', () => {
-      create();
-      type('maria@example.org');
-
-      click('Continuar');
-
-      expect('email' in store).toBe(false);
-      expect(store.pendingCall()).toBeNull();
+      expect(button('Son correctos, continuar').disabled).toBe(false);
     });
   });
 
-  describe('Continuar fails', () => {
-    it.each(['email_required', 'email_invalid'])(
-      'ES-01: %s marks the email as not valid in the field and Continuar stays disabled until it changes',
-      (problemType) => {
-        sendEmailCode.mockReturnValue(problem(problemType, 400));
-        create();
-        type('rechazado@example.org');
+  describe('Mis datos no son correctos (FR-15, AD-11)', () => {
+    const problem = (type: string, status: number): Observable<never> =>
+      throwError(() => new ApiProblemError(type, status, type));
 
-        click('Continuar');
-
-        expect(navigate).not.toHaveBeenCalled();
-        expect(emailInput().getAttribute('aria-invalid')).toBe('true');
-        expect(element().textContent).toContain('Escribe un correo electrónico válido.');
-        expect(button('Continuar').disabled).toBe(true);
-
-        type('corregido@example.org');
-        expect(button('Continuar').disabled).toBe(false);
-      },
-    );
-
-    it('AC-06: email_unavailable stays in Datos with the notice, and Continuar tries again', () => {
-      sendEmailCode.mockReturnValueOnce(problem('email_unavailable', 503)).mockReturnValueOnce(of(verification()));
+    it('AC-06: reports the request of the route with no confirmation first, and no data of the holder', () => {
+      disputeRequestData.mockReturnValue(of(undefined));
       create();
 
-      click('Continuar');
+      click('Mis datos no son correctos');
 
+      expect(element().querySelector('[role="dialog"]')).toBeNull();
+      expect(disputeRequestData).toHaveBeenCalledTimes(1);
+      expect(disputeRequestData).toHaveBeenCalledWith('r2');
+    });
+
+    it('AC-06: on 204 shows the notice: corrected at the source, the request stays open, with Volver a mis solicitudes and Salir', () => {
+      disputeRequestData.mockReturnValue(of(undefined));
+      create();
+
+      click('Mis datos no son correctos');
+
+      expect(element().querySelector('h1')?.textContent).toBe('Tus datos se corrigen en su origen');
+      expect(element().textContent).toContain('Tu solicitud sigue abierta');
+      expect(element().querySelector('dl')).toBeNull();
+      expect(button('Volver a mis solicitudes')).toBeDefined();
+      expect(button('Salir')).toBeDefined();
+    });
+
+    it('AC-06: Volver a mis solicitudes goes to Solicitudes', () => {
+      disputeRequestData.mockReturnValue(of(undefined));
+      create();
+      click('Mis datos no son correctos');
+
+      click('Volver a mis solicitudes');
+
+      expect(navigate).toHaveBeenCalledWith(['/', 'requests']);
+    });
+
+    it('AC-06: Salir withdraws the journey, discards the tokens and goes to Inicio, without confirmation', () => {
+      disputeRequestData.mockReturnValue(of(undefined));
+      withdrawJourney.mockReturnValue(of({ state: 'withdrawn', step: 'email_verified' }));
+      create();
+      click('Mis datos no son correctos');
+
+      click('Salir');
+
+      expect(element().querySelector('[role="dialog"]')).toBeNull();
+      expect(withdrawJourney).toHaveBeenCalledTimes(1);
+      expect(discardTokens).toHaveBeenCalledTimes(1);
+      expect(navigate).toHaveBeenCalledWith(['/']);
+    });
+
+    it('with a single request the notice has no Volver a mis solicitudes', () => {
+      disputeRequestData.mockReturnValue(of(undefined));
+      create([{ id: 'r2', status: 'available', attestation: PREVIEW }]);
+
+      click('Mis datos no son correctos');
+
+      expect(button('Volver a mis solicitudes')).toBeUndefined();
+      expect(button('Salir')).toBeDefined();
+    });
+
+    it.each([
+      [NETWORK_ERROR, 0],
+      ['unexpected_error', 500],
+    ])('ES-03: %s says it could not be recorded and lets the holder try again', (type, status) => {
+      disputeRequestData.mockReturnValueOnce(problem(type, status)).mockReturnValueOnce(of(undefined));
+      create();
+
+      click('Mis datos no son correctos');
+
+      expect(element().textContent).toContain('No se ha podido anotar. Inténtalo de nuevo.');
+      expect(element().querySelector('dl')).not.toBeNull();
       expect(navigate).not.toHaveBeenCalled();
-      expect(element().textContent).toContain('Ahora no se puede enviar el código.');
-      expect(button('Continuar').disabled).toBe(false);
 
-      click('Continuar');
+      click('Volver a intentarlo');
 
-      expect(sendEmailCode).toHaveBeenCalledTimes(2);
-      expect(navigate).toHaveBeenCalledWith(['/', 'verify-email']);
-      expect(element().textContent).not.toContain('Ahora no se puede enviar el código.');
+      expect(disputeRequestData).toHaveBeenCalledTimes(2);
+      expect(element().querySelector('h1')?.textContent).toBe('Tus datos se corrigen en su origen');
     });
 
-    it('AC-06: a failure with no answer is shown as email_unavailable', () => {
-      sendEmailCode.mockReturnValue(problem(NETWORK_ERROR, 0));
+    it.each([
+      ['request_not_found', 404],
+      ['request_not_available', 409],
+    ])('ES-02: %s goes to the step the journey says', (type, status) => {
+      disputeRequestData.mockReturnValue(problem(type, status));
       create();
 
-      click('Continuar');
+      click('Mis datos no son correctos');
 
-      expect(element().textContent).toContain('Ahora no se puede enviar el código.');
-    });
-
-    it('AC-05: too_many_requests shows the countdown of Retry-After and blocks Continuar until it ends', () => {
-      jest.useFakeTimers();
-      try {
-        sendEmailCode.mockReturnValue(problem('too_many_requests', 429, 90));
-        create();
-
-        click('Continuar');
-
-        expect(element().textContent).toContain('Ahora no se pueden enviar más códigos. Inténtalo de nuevo en 01:30.');
-        expect(button('Continuar').disabled).toBe(true);
-        expect(navigate).not.toHaveBeenCalled();
-
-        jest.advanceTimersByTime(91_000);
-        fixture.detectChanges();
-
-        expect(element().textContent).not.toContain('Ahora no se pueden enviar más códigos');
-        expect(button('Continuar').disabled).toBe(false);
-      } finally {
-        jest.useRealTimers();
-      }
-    });
-
-    it('AC-05: too_many_requests with no Retry-After says to try again later and does not block Continuar', () => {
-      sendEmailCode.mockReturnValue(problem('too_many_requests', 429));
-      create();
-
-      click('Continuar');
-
-      expect(element().textContent).toContain('Inténtalo de nuevo más tarde.');
-      expect(button('Continuar').disabled).toBe(false);
-    });
-
-    describe('resend_too_soon and too_many_codes', () => {
-      const pending = (email = 'maria@example.org'): EmailVerification => verification({ email });
-
-      it.each(['resend_too_soon', 'too_many_codes'])(
-        'AC-04, AC-05: %s with a code pending for the same email goes to Verificar correo, which says what is left',
-        (problemType) => {
-          sendEmailCode.mockReturnValue(problem(problemType, 429, 120));
-          create(PREVIEW, pending());
-
-          click('Continuar');
-
-          expect(navigate).toHaveBeenCalledWith(['/', 'verify-email']);
-          expect(element().textContent).not.toContain('Ahora no se pueden enviar');
-        },
-      );
-
-      it('AC-04, AC-05: with the email typed with spaces around it, it is still the same email', () => {
-        sendEmailCode.mockReturnValue(problem('resend_too_soon', 429, 120));
-        create(PREVIEW, pending());
-        type(' maria@example.org ');
-
-        click('Continuar');
-
-        expect(navigate).toHaveBeenCalledWith(['/', 'verify-email']);
-      });
-
-      it('AC-07: resend_too_soon with a different email stays in Datos with the wait, and Continuar sends again when it ends', () => {
-        jest.useFakeTimers();
-        try {
-          sendEmailCode.mockReturnValueOnce(problem('resend_too_soon', 429, 120)).mockReturnValueOnce(of(verification()));
-          create(PREVIEW, pending('verificado@example.org'));
-          type('nuevo@example.org');
-
-          click('Continuar');
-
-          expect(navigate).not.toHaveBeenCalled();
-          expect(element().textContent).toContain('Podrás pedir otro código en 02:00.');
-          expect(button('Continuar').disabled).toBe(true);
-          expect(emailInput().value).toBe('nuevo@example.org');
-
-          jest.advanceTimersByTime(121_000);
-          fixture.detectChanges();
-
-          expect(element().textContent).not.toContain('Podrás pedir otro código');
-          expect(button('Continuar').disabled).toBe(false);
-
-          click('Continuar');
-
-          expect(sendEmailCode).toHaveBeenLastCalledWith({ email: 'nuevo@example.org' }, 'es');
-          expect(navigate).toHaveBeenCalledWith(['/', 'verify-email']);
-        } finally {
-          jest.useRealTimers();
-        }
-      });
-
-      it('AC-07: Continuar with the email already verified, unchanged, sends no code and goes straight to QR', () => {
-        create(PREVIEW, verification({ verified: true }));
-
-        click('Continuar');
-
-        expect(sendEmailCode).not.toHaveBeenCalled();
-        expect(navigate).toHaveBeenCalledWith(['/', 'offer']);
-      });
-
-      it('AC-07: the verified email typed with spaces around it is still the same email', () => {
-        create(PREVIEW, verification({ verified: true }));
-        type(' maria@example.org ');
-
-        click('Continuar');
-
-        expect(sendEmailCode).not.toHaveBeenCalled();
-        expect(navigate).toHaveBeenCalledWith(['/', 'offer']);
-      });
-
-      it('AC-07: the comparison is exact: the same verified email in another case sends a new code', () => {
-        sendEmailCode.mockReturnValue(of(verification()));
-        create(PREVIEW, verification({ verified: true }));
-        type('MARIA@example.org');
-
-        click('Continuar');
-
-        expect(sendEmailCode).toHaveBeenCalledWith({ email: 'MARIA@example.org' }, 'es');
-      });
-
-      it('AC-07: a different email than the verified one still sends a code', () => {
-        sendEmailCode.mockReturnValue(of(verification({ email: 'nuevo@example.org' })));
-        create(PREVIEW, verification({ verified: true }));
-        type('nuevo@example.org');
-
-        click('Continuar');
-
-        expect(sendEmailCode).toHaveBeenCalledWith({ email: 'nuevo@example.org' }, 'es');
-        expect(navigate).toHaveBeenCalledWith(['/', 'verify-email']);
-      });
-
-      it('AC-07: resend_too_soon with no Retry-After says to try again later', () => {
-        sendEmailCode.mockReturnValue(problem('resend_too_soon', 429));
-        create(PREVIEW, pending('verificado@example.org'));
-        type('nuevo@example.org');
-
-        click('Continuar');
-
-        expect(navigate).not.toHaveBeenCalled();
-        expect(element().textContent).toContain('Inténtalo de nuevo más tarde.');
-        expect(button('Continuar').disabled).toBe(false);
-      });
-
-      it('AC-05, AC-07: too_many_codes with a different email stays in Datos, says no more codes and offers Volver al inicio', () => {
-        sendEmailCode.mockReturnValue(problem('too_many_codes', 429));
-        create(PREVIEW, pending('verificado@example.org'));
-        type('nuevo@example.org');
-
-        click('Continuar');
-
-        expect(navigate).not.toHaveBeenCalled();
-        expect(element().textContent).toContain('No se pueden enviar más códigos en este recorrido.');
-        expect(button('Continuar').disabled).toBe(true);
-        expect(button('Volver al inicio')).toBeDefined();
-      });
-
-      it('AC-05: Volver al inicio withdraws the journey, discards the tokens, forgets the pending call and goes to Inicio, without confirmation', () => {
-        sendEmailCode.mockReturnValue(problem('too_many_codes', 429));
-        withdrawJourney.mockReturnValue(of({ state: 'withdrawn', step: 'entitlement_confirmed' }));
-        store.requestConfirmation();
-        create(PREVIEW, verification({ email: 'verificado@example.org', verified: true }));
-        type('nuevo@example.org');
-        click('Continuar');
-
-        click('Volver al inicio');
-
-        expect(element().querySelector('[role="dialog"]')).toBeNull();
-        expect(withdrawJourney).toHaveBeenCalledTimes(1);
-        expect(discardTokens).toHaveBeenCalledTimes(1);
-        expect(store.pendingCall()).toBeNull();
-        expect(navigate).toHaveBeenCalledWith(['/']);
-      });
-
-      it.each(['resend_too_soon', 'too_many_codes'])(
-        'AC-07: %s with a different email navigates nowhere, so QR is never reached with the old email',
-        (problemType) => {
-          sendEmailCode.mockReturnValue(problem(problemType, 429, 120));
-          create(PREVIEW, verification({ email: 'verificado@example.org', verified: true }));
-          type('nuevo@example.org');
-
-          click('Continuar');
-
-          expect(navigate).not.toHaveBeenCalled();
-          expect(sendEmailCode).toHaveBeenCalledWith({ email: 'nuevo@example.org' }, 'es');
-        },
-      );
+      expect(toCurrentStep).toHaveBeenCalledTimes(1);
+      expect(element().textContent).not.toContain('No se ha podido anotar');
     });
 
     it.each([
       ['step_not_allowed', 409],
       ['journey_closed', 410],
-    ])('ES-04: %s is left to the journey interceptor: no message and Continuar works again', (problemType, status) => {
-      sendEmailCode.mockReturnValue(problem(problemType, status));
+    ])('ES-08: %s is left to the journey interceptor: no message', (type, status) => {
+      disputeRequestData.mockReturnValue(problem(type, status));
       create();
 
-      click('Continuar');
+      click('Mis datos no son correctos');
 
-      expect(navigate).not.toHaveBeenCalled();
-      expect(element().textContent).not.toContain('Ahora no se puede enviar el código.');
-      expect(button('Continuar').disabled).toBe(false);
+      expect(element().textContent).not.toContain('No se ha podido anotar');
+      expect(toCurrentStep).not.toHaveBeenCalled();
+    });
+
+    it('sends the notice only once while it is being sent', () => {
+      disputeRequestData.mockReturnValue(NEVER);
+      create();
+
+      button('Mis datos no son correctos').click();
+      button('Mis datos no son correctos').click();
+
+      expect(disputeRequestData).toHaveBeenCalledTimes(1);
+    });
+
+    it('NFR-5: the notice has no accessibility violations', async () => {
+      disputeRequestData.mockReturnValue(of(undefined));
+      create();
+      click('Mis datos no son correctos');
+
+      expect(await axe(element())).toHaveNoViolations();
+    });
+
+    it('NFR-5: the failure message has no accessibility violations', async () => {
+      disputeRequestData.mockReturnValue(problem(NETWORK_ERROR, 0));
+      create();
+      click('Mis datos no son correctos');
+
+      expect(await axe(element())).toHaveNoViolations();
+    });
+  });
+
+  describe('going back to the requests (AC-24, wireframes)', () => {
+    it('with several requests the way back is only the arrow next to the step, to Solicitudes', () => {
+      create();
+
+      expect(button('Volver a mis solicitudes')).toBeUndefined();
+      TestBed.inject(StepBackService).action()!();
+      expect(navigate).toHaveBeenCalledWith(['/', 'requests']);
+    });
+
+    it('«Son correctos, continuar» comes first, with «Mis datos no son correctos» as a link below it', () => {
+      create();
+
+      const labels = Array.from(element().querySelectorAll('button')).map((b) => b.textContent?.trim());
+      const continueAt = labels.indexOf('Son correctos, continuar');
+      expect(continueAt).toBeGreaterThanOrEqual(0);
+      expect(labels.indexOf('Mis datos no son correctos')).toBe(continueAt + 1);
+    });
+
+    it('with a single request offers neither', () => {
+      create([{ id: 'r2', status: 'available', attestation: PREVIEW }]);
+
+      expect(button('Volver a mis solicitudes')).toBeUndefined();
+      expect(TestBed.inject(StepBackService).action()).toBeNull();
+    });
+
+    it('takes the header back button away when the screen is destroyed', () => {
+      create();
+
+      fixture.destroy();
+
+      expect(TestBed.inject(StepBackService).action()).toBeNull();
     });
   });
 
@@ -547,33 +382,30 @@ describe('UserDataComponent', () => {
     });
   });
 
-  describe('Cancelar', () => {
-    it('AC-12: asks for confirmation before withdrawing', () => {
+  describe('Cancelar (AC-22)', () => {
+    it('asks for confirmation before withdrawing', () => {
       create();
 
       click('Cancelar');
 
       expect(element().querySelector('[role="dialog"]')?.textContent).toContain('¿Seguro que quieres cancelar?');
-      expect(element().querySelector('[role="dialog"]')?.textContent).toContain('Tendrás que empezar de nuevo.');
       expect(withdrawJourney).not.toHaveBeenCalled();
     });
 
-    it('AC-12: «Seguir» closes the notice, keeps what was written and calls nothing', () => {
+    it('«Seguir» closes the notice and calls nothing', () => {
       create();
-      type('otra@example.org');
       click('Cancelar');
 
       click('Seguir');
 
       expect(element().querySelector('[role="dialog"]')).toBeNull();
-      expect(emailInput().value).toBe('otra@example.org');
       expect(withdrawJourney).not.toHaveBeenCalled();
       expect(navigate).not.toHaveBeenCalled();
     });
 
-    it('AC-12: «Sí, cancelar» withdraws the journey, discards the tokens, forgets the pending call and goes to Inicio', () => {
+    it('«Sí, cancelar» withdraws the journey, discards the tokens, forgets the pending call and goes to Inicio', () => {
       withdrawJourney.mockReturnValue(of({ state: 'withdrawn', step: 'entitlement_confirmed' }));
-      store.requestConfirmation();
+      store.requestConfirmation('r2');
       create();
       click('Cancelar');
 
@@ -581,7 +413,7 @@ describe('UserDataComponent', () => {
 
       expect(withdrawJourney).toHaveBeenCalledTimes(1);
       expect(discardTokens).toHaveBeenCalledTimes(1);
-      expect(store.pendingCall()).toBeNull();
+      expect(store.pending()).toBeNull();
       expect(navigate).toHaveBeenCalledWith(['/']);
     });
 
@@ -598,19 +430,18 @@ describe('UserDataComponent', () => {
 
     it('ES-05: with a 410 leaves the navigation to the journey interceptor', () => {
       withdrawJourney.mockReturnValue(throwError(() => new ApiProblemError('journey_closed', 410, 'Journey closed')));
-      store.requestConfirmation();
+      store.requestConfirmation('r2');
       create();
       click('Cancelar');
 
       click('Sí, cancelar');
 
       expect(navigate).not.toHaveBeenCalled();
-      expect(store.pendingCall()).toBeNull();
+      expect(store.pending()).toBeNull();
     });
 
     it('EC-07: withdraws only once while the withdrawal is running', () => {
-      const pending = new Subject<Journey>();
-      withdrawJourney.mockReturnValue(pending);
+      withdrawJourney.mockReturnValue(new Subject<Journey>());
       create();
       click('Cancelar');
       click('Sí, cancelar');

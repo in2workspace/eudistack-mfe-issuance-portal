@@ -24,8 +24,8 @@ describe('routes', () => {
     expect((loaded as { name: string }).name).toBe('IssuanceInfoComponent');
   });
 
-  it('"offer" lazy-loads CredentialOfferComponent and is protected by journeyStepGuard', async () => {
-    const offer = findRoute('offer');
+  it('AD-8: "requests/:requestId/offer" lazy-loads CredentialOfferComponent and is protected by journeyStepGuard', async () => {
+    const offer = findRoute('requests/:requestId/offer');
 
     const loaded = await (offer.loadComponent as () => Promise<unknown>)();
 
@@ -33,14 +33,41 @@ describe('routes', () => {
     expect(offer.canActivate).toEqual([journeyStepGuard]);
   });
 
-  it('EUD-358: "verify-email" lazy-loads VerifyEmailComponent, is protected by journeyStepGuard and goes back to Datos', async () => {
-    const verifyEmail = findRoute('verify-email');
+  it('AD-8: "requests/:requestId/data" lazy-loads UserDataComponent and is protected by journeyStepGuard', async () => {
+    const data = findRoute('requests/:requestId/data');
 
-    const loaded = await (verifyEmail.loadComponent as () => Promise<unknown>)();
+    const loaded = await (data.loadComponent as () => Promise<unknown>)();
+
+    expect((loaded as { name: string }).name).toBe('UserDataComponent');
+    expect(data.canActivate).toEqual([journeyStepGuard]);
+  });
+
+  it('AD-8: "email" lazy-loads VerifyEmailComponent and is protected by journeyStepGuard', async () => {
+    const email = findRoute('email');
+
+    const loaded = await (email.loadComponent as () => Promise<unknown>)();
 
     expect((loaded as { name: string }).name).toBe('VerifyEmailComponent');
-    expect(verifyEmail.canActivate).toEqual([journeyStepGuard]);
-    expect(verifyEmail.data?.['back']).toBe('user-data');
+    expect(email.canActivate).toEqual([journeyStepGuard]);
+  });
+
+  it.each([
+    ['requests', 'RequestsComponent'],
+    ['no-requests', 'NoRequestsComponent'],
+    ['request-unavailable', 'RequestUnavailableComponent'],
+    ['done', 'DoneComponent'],
+  ])('AD-8: "%s" lazy-loads %s', async (path, name) => {
+    const loaded = await (findRoute(path).loadComponent as () => Promise<unknown>)();
+
+    expect((loaded as { name: string }).name).toBe(name);
+  });
+
+  it.each(['no-requests', 'request-unavailable'])('AD-8: "%s" has no step guard of the journey', (path) => {
+    expect(findRoute(path).canActivate).not.toContain(journeyStepGuard);
+  });
+
+  it.each(['user-data', 'verify-email', 'offer'])('AD-8: the old route "%s" no longer exists', (path) => {
+    expect(screens.find((r) => r.path === path)).toBeUndefined();
   });
 
   it('"incidents/sent" lazy-loads IncidentSentComponent, only after sending an incident, without a back button', async () => {

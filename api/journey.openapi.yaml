@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: EUDIStack — Issuance Portal Service · Journey module
-  version: "1"
+  version: "5"
   summary: Journey module of the issuance portal service, used by the issuance portal interface.
   description: |
     The issuance portal service has two modules, each with its own part of the API under the same base URL
@@ -12,25 +12,34 @@ info:
     tokens that are valid, issued by the tenant's Verifier for the portal and with a high level of assurance;
     otherwise it answers 401. It takes the holder's verified identity from the token.
 
-    The journey is linked to the holder of the token. A holder has at most one journey in progress per tenant,
-    and every call works on that journey. The verified identity and the attestation data live only in the
-    service and never come from the browser: this module only accepts the holder's confirmation, the email and
-    the code that verifies it.
+    The journey is linked to the holder of the token. A holder has at most one active journey per tenant, and
+    every call works on that journey. The verified identity and the attestation data live only in the service
+    and never come from the browser: this module only accepts the email, the code that verifies it and which
+    request the holder confirms.
 
-    Before confirming, the holder verifies the email with a 6-digit code sent to it (valid 10 minutes, 5
-    attempts; a new code voids the previous one). At most one send every 3 minutes, 3 per journey and 10 per
-    origin and hour. The confirmation, the issuance request and the onboarding ticket use only the verified email.
+    A journey has one or more requests, for example one per professional registration number of the holder.
+    The Authentic source module puts them in the journey, each with an identifier (`request_id`, opaque and
+    unique in the journey), its status and, when available, its attestation data. The holder can obtain an
+    attestation for each available request in the same journey, without identifying again.
 
-    Journey states: `in_progress`, `completed` (an offer was obtained) and `withdrawn` (cancelled by the
+    Before the first confirmation, the holder verifies the email once per journey with a 6-digit code sent to it
+    (valid 10 minutes, 5 attempts; a new code voids the previous one). At most one send every 3 minutes, 3 per
+    journey and 10 per origin and hour. Every confirmation, issuance request and onboarding ticket of the
+    journey uses only that verified email.
+
+    Each request creates at most one issuance process. A new QR is a new credential offer for that same process,
+    requested from the issuance API as a system; it voids the previous offer. There is no automatic detection
+    that the attestation is saved: when the holder says so on the QR, the interface declares the request saved.
+
+    Journey states: `in_progress`, `completed` (the first offer was delivered) and `withdrawn` (cancelled by the
     holder, not entitled according to the authentic source, or expired after 15 minutes of inactivity, before
-    an offer was obtained). A journey is never deleted. When it ends, is withdrawn or expires, personal data is
-    deleted; the journey keeps its state, the step reached and the withdrawal reason.
-
-    A journey creates at most one issuance process. A new QR is a new credential offer for that same process,
-    requested from the issuance API as a system; it voids the previous offer.
+    an offer was delivered). A completed journey stays active: the holder can request new QRs and obtain the
+    other available requests until the holder ends it (`POST /journey/withdrawal`) or it expires after 15 minutes
+    of inactivity. A journey is never deleted. When it ends, is withdrawn or expires, personal data is deleted;
+    the journey keeps its state, the step reached and the withdrawal reason.
 
     A step whose prerequisites are not in the journey gets 409 `step_not_allowed`. A request on a journey that
-    is no longer in progress, or that expired, gets 410 `journey_closed`. The tenant comes from the host.
+    was withdrawn, ended or expired gets 410 `journey_closed`. The tenant comes from the host.
   contact:
     name: EUDIStack
     url: https://eudistack.net
@@ -49,7 +58,7 @@ tags:
   - name: Configuration
     description: Portal configuration of the tenant.
   - name: Journey
-    description: Lifecycle of the holder's journey and issuance request.
+    description: Lifecycle of the holder's journey and the issuance of its requests.
   - name: Incidents
     description: Support requests from holders.
 
@@ -77,11 +86,11 @@ paths:
       tags: [Journey]
       operationId: openJourney
       summary: Open the holder's journey
-      description: Opens a journey in progress for the holder of the token, or returns the one already in progress.
+      description: Opens a journey in progress for the holder of the token, or returns the active one (in progress, or completed and not ended yet).
       security: [{ idpAccessToken: [] }]
       responses:
         "200":
-          description: Journey already in progress.
+          description: Active journey of the holder.
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Journey" }
@@ -95,7 +104,9 @@ paths:
       tags: [Journey]
       operationId: getJourney
       summary: Get the current journey
-      description: State, step reached and, once the attestation data is in the journey, what the Data step shows.
+      description: |
+        State, step reached, email verification and the journey's requests: for each one its identifier, status,
+        what the Data step shows and, once delivered, its current offer with the onboarding address and expiries.
       security: [{ idpAccessToken: [] }]
       responses:
         "200":
@@ -112,8 +123,9 @@ paths:
       operationId: withdrawJourney
       summary: Withdraw the journey
       description: |
-        The holder cancels before obtaining an offer. The journey becomes `withdrawn` with the step reached and
-        reason `cancelled`, and personal data is deleted. On a `completed` journey it ends it and deletes personal data.
+        Before the first offer is delivered, the holder cancels: the journey becomes `withdrawn` with the step
+        reached and reason `cancelled`, and personal data is deleted. On a `completed` journey, the holder ends it:
+        it stays `completed` and personal data is deleted. Either way, later calls get 410 `journey_closed`.
       security: [{ idpAccessToken: [] }]
       responses:
         "200":
@@ -130,8 +142,9 @@ paths:
       operationId: sendEmailCode
       summary: Send a verification code to the holder's email
       description: |
-        Requires a confirmed entitlement and no offer delivered yet. Sends a 6-digit code to `email`, valid 10
-        minutes with 5 attempts. A new code voids the previous one, also for another email, and the journey's
+        Requires a confirmed entitlement (at least one available request) and no confirmation yet in the journey:
+        the email is verified once per journey, before the first confirmation. Sends a 6-digit code to `email`,
+        valid 10 minutes with 5 attempts. A new code voids the previous one, also for another email, and the journey's
         email is no longer verified until the new code is checked (step back to `entitlement_confirmed`).
 
         At most one send every 3 minutes and 3 sends per journey, plus 10 sends per origin and hour. A send that
@@ -230,34 +243,47 @@ paths:
     post:
       tags: [Journey]
       operationId: confirmAndIssue
-      summary: Confirm the data and request issuance
+      summary: Confirm the data of a request and request its issuance
       description: |
-        Requires a verified identity, a confirmed entitlement and a verified email in the journey. It takes no
-        data: any body is ignored. The verified email is also the holder's wallet account email. The service
-        requests issuance with delivery by link and authorization code grant, then, if the tenant uses onboarding
-        tickets, requests one from the Wallet Unit Service with that email and the offer link. The journey becomes
-        `completed` when the offer is returned.
+        Requires a verified identity, a verified email in the journey and that `request_id` is an `available`
+        request of the journey. The body only says which request the holder confirms: any other field is ignored,
+        and the attestation data and the email are always the journey's. The verified email is also the holder's
+        wallet account email. The service requests issuance of that request with delivery by link and
+        authorization code grant, then, if the tenant uses onboarding tickets, requests one from the Wallet Unit
+        Service with that email and the offer link. The request becomes `in_offer`. The journey becomes
+        `completed` when its first offer is returned, and stays active for the other requests.
 
         If the Wallet Unit Service rejects the ticket request or does not answer, the service answers 503
         `onboarding_unavailable` and returns no offer. The offer obtained is never used and no attestation is issued.
-        The journey stays `in_progress` at step `email_verified`; the interface calls this operation again.
-        Once the journey has its issuance process, a repeated confirmation does not request issuance again: it
-        renews the offer of that process and asks for a new ticket, like `POST /journey/offers`. Retries of the
-        issuance request reuse the journey's idempotency key.
+        A journey without any offer yet stays `in_progress`; the interface calls this operation again.
+        Once the request has its issuance process, a repeated confirmation of it does not request issuance again:
+        it renews the offer of that process and asks for a new ticket, like `POST /journey/offers`. Retries of the
+        issuance request reuse the request's idempotency key.
       security: [{ idpAccessToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RequestReference" }
       responses:
         "200":
           description: Offer ready.
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Offer" }
+        "400":
+          description: "`type` `bad_request`: missing or malformed `request_id`."
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
         "409":
           description: |
             - `type` `step_not_allowed`: what the step needs is not in the journey yet (for example, no verified
-              email), or the address already delivered has not expired.
-            - `type` `offer_not_renewable`: the issuance process of the journey is no longer a draft (the holder
-              collected the attestation, or it was withdrawn or revoked). The journey ends, its personal data is
-              deleted and no other issuance is requested.
+              email); `request_id` is not a request of the journey, is not available (mismatch or under review) or is
+              already saved; or the address already delivered for it has not expired.
+            - `type` `request_saved`: the issuance process of the request is no longer a draft (the holder
+              collected the attestation, or it was withdrawn or revoked). The request becomes `saved`, no other
+              issuance is requested for it and the journey goes on with the other requests.
           content:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Problem" }
@@ -281,28 +307,40 @@ paths:
     post:
       tags: [Journey]
       operationId: newOffer
-      summary: Request a new offer
+      summary: Request a new offer for a request
       description: |
-        After the address delivered expired, or after a previous call got `onboarding_unavailable`, while the
-        journey is active. The service asks the issuance API for a new credential offer for the journey's issuance
-        process, which voids the previous one, and, if the tenant uses them, for a new onboarding ticket. No new
-        issuance process is created. If the ticket cannot be obtained, it answers 503 `onboarding_unavailable` with
-        no offer and the interface calls this operation again. If the address delivered has not expired yet, it
-        answers 409 `step_not_allowed` and the current offer keeps working.
+        For a request with its issuance process, after the address delivered for it expired, or after a previous
+        call got `onboarding_unavailable`, while the journey is active. The service asks the issuance API for a
+        new credential offer for that request's issuance process, which voids the previous one, and, if the tenant
+        uses them, for a new onboarding ticket. No new issuance process is created. If the ticket cannot be
+        obtained, it answers 503 `onboarding_unavailable` with no offer and the interface calls this operation
+        again. If the address delivered has not expired yet, it answers 409 `step_not_allowed` and the current
+        offer keeps working. If the offer can no longer be renewed, the request becomes `saved` (409
+        `request_saved`) and the journey goes on.
       security: [{ idpAccessToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RequestReference" }
       responses:
         "200":
           description: New offer ready.
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Offer" }
+        "400":
+          description: "`type` `bad_request`: missing or malformed `request_id`."
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
         "409":
           description: |
-            - `type` `step_not_allowed`: what the step needs is not in the journey yet, or the address already
-              delivered has not expired.
-            - `type` `offer_not_renewable`: the issuance process of the journey is no longer a draft (the holder
-              collected the attestation, or it was withdrawn or revoked). The journey ends, its personal data is
-              deleted and no other issuance is requested.
+            - `type` `step_not_allowed`: `request_id` is not a request of the journey with an issuance process, it
+              is already saved, or the address already delivered for it has not expired.
+            - `type` `request_saved`: the issuance process of the request is no longer a draft (the holder
+              collected the attestation, or it was withdrawn or revoked). The request becomes `saved`, no other
+              issuance is requested for it and the journey goes on with the other requests.
           content:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Problem" }
@@ -318,6 +356,40 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Problem" }
+
+  /journey/requests/{request_id}/saved:
+    post:
+      tags: [Journey]
+      operationId: declareRequestSaved
+      summary: Declare the attestation of a request saved
+      description: |
+        The interface calls it when the holder presses "I have saved it" on the QR of the request. The holder
+        declares that the attestation is saved in the wallet. The service does not check it and does not call the
+        issuance API: the request becomes `saved` in the journey only. If the holder declared it without saving
+        it, a new journey gets the request again as available from the authentic source. Counts as journey
+        activity.
+      security: [{ idpAccessToken: [] }]
+      parameters:
+        - name: request_id
+          in: path
+          required: true
+          schema: { type: string, maxLength: 64 }
+          description: Identifier of the request in the journey.
+      responses:
+        "204":
+          description: The request is `saved` in the journey. No body.
+        "400":
+          description: "`type` `bad_request`: malformed `request_id`."
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "409":
+          description: "`type` `step_not_allowed`: `request_id` is not a request of the journey in `in_offer`, or it has no offer delivered."
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "410": { $ref: "#/components/responses/JourneyClosed" }
 
   /incidents:
     post:
@@ -373,7 +445,7 @@ components:
         application/problem+json:
           schema: { $ref: "#/components/schemas/Problem" }
     JourneyClosed:
-      description: "`type` `journey_closed`: the journey is no longer in progress or it expired."
+      description: "`type` `journey_closed`: the journey was withdrawn, ended or expired."
       content:
         application/problem+json:
           schema: { $ref: "#/components/schemas/Problem" }
@@ -430,10 +502,66 @@ components:
           type: string
           enum: [cancelled, not_entitled, expired]
           description: Only with `withdrawn`.
-        attestation:
-          $ref: "#/components/schemas/AttestationPreview"
+        known_email:
+          type: string
+          format: email
+          description: Email the Access Token or the authentic source provided, to prefill the email step. It still needs the code.
         email_verification:
           $ref: "#/components/schemas/EmailVerification"
+        requests:
+          type: array
+          description: The journey's requests, once the Authentic source module put them in the journey.
+          items:
+            $ref: "#/components/schemas/JourneyRequest"
+
+    RequestReference:
+      type: object
+      required: [request_id]
+      properties:
+        request_id:
+          type: string
+          maxLength: 64
+          description: Identifier of the request in the journey, as the journey returns it.
+
+    JourneyRequest:
+      type: object
+      required: [id, status]
+      properties:
+        id:
+          type: string
+          maxLength: 64
+          description: Identifier of the request in the journey, assigned by the Authentic source module. Opaque, with no personal data.
+        status:
+          type: string
+          enum: [available, in_offer, saved, not_available]
+          description: |
+            - `available`: the holder can confirm it.
+            - `in_offer`: confirmed; its issuance process exists and the holder has, or can request, a QR.
+            - `saved`: the holder declared its attestation saved (`POST /journey/requests/{request_id}/saved`), or
+              its offer can no longer be renewed (409 `request_saved`).
+            - `not_available`: it cannot be issued in this journey; `not_available_reason` says why.
+        not_available_reason:
+          type: string
+          enum: [identifier_mismatch, identity_mismatch, under_review]
+          description: Only with `not_available`, the status the Authentic source module gave the request. `under_review` once the holder said its data is not correct.
+        requested_by:
+          type: string
+          description: Who asked for it, when the authentic source gives it.
+        requested_at:
+          type: string
+          format: date-time
+          description: When it was asked for, when the authentic source gives it.
+        renewal:
+          type: boolean
+          description: True when it renews an attestation the holder already had, when the authentic source gives it.
+        organization:
+          type: string
+          description: Organization the request belongs to, as the authentic source gives it. Absent when the source does not give it.
+        display_identifier:
+          type: string
+          description: Identifier that lets the holder recognise the request, for example a registration number. Absent when the source does not give one. Not the request `id`, and never sent back by the interface.
+        attestation:
+          $ref: "#/components/schemas/AttestationPreview"
         offer:
           $ref: "#/components/schemas/Offer"
 
@@ -441,7 +569,7 @@ components:
       type: object
       description: |
         The email of the pending or completed verification. Present once a code has been sent, until the journey
-        obtains its offer or ends.
+        ends. One per journey: it serves every request.
       required: [email, verified, resend_available_at, sends_left]
       properties:
         email:
@@ -467,8 +595,8 @@ components:
 
     AttestationPreview:
       type: object
-      description: What the interface shows in the Data step. Read only. Present once the entitlement is confirmed.
-      required: [type_name, fields, email_required]
+      description: What the interface shows in the Data step of a request. Read only. Present with `available` and `in_offer`.
+      required: [type_name, fields]
       properties:
         type_name: { type: string }
         fields:
@@ -479,18 +607,11 @@ components:
             properties:
               label: { type: string }
               value: { type: string }
-        email:
-          type: string
-          format: email
-          description: Present when the Access Token or the authentic source provided it.
-        email_required:
-          type: boolean
-          description: True when the interface must ask the holder for an email.
 
     Offer:
       type: object
       description: |
-        With `onboarding_url`, the QR, the button and the copy link carry it as is. Without it (the tenant does not
+        The current offer of a request. With `onboarding_url`, the QR, the button and the copy link carry it as is. Without it (the tenant does not
         use onboarding tickets), the interface builds the tenant's wallet address with `wallet_url` and the offer link.
       required: [credential_offer_uri, expires_at]
       properties:

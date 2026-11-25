@@ -9,7 +9,7 @@ describe('JourneyIssuanceStore', () => {
   });
 
   it('starts with nothing to call', () => {
-    expect(store.pendingCall()).toBeNull();
+    expect(store.pending()).toBeNull();
   });
 
   it('EUD-358: holds no email, the verified one lives in the service', () => {
@@ -17,33 +17,33 @@ describe('JourneyIssuanceStore', () => {
     expect('confirm' in store).toBe(false);
   });
 
-  it('with the email verified, asks for the confirmation', () => {
-    store.requestConfirmation();
+  it('with the email verified, asks for the confirmation of the request', () => {
+    store.requestConfirmation('r1');
 
-    expect(store.pendingCall()).toBe('confirmation');
+    expect(store.pending()).toEqual({ call: 'confirmation', requestId: 'r1' });
   });
 
-  it('a new code asks for a new offer', () => {
-    store.requestConfirmation();
+  it('a new code asks for a new offer of the request', () => {
+    store.requestConfirmation('r1');
 
-    store.requestNewOffer();
+    store.requestNewOffer('r2');
 
-    expect(store.pendingCall()).toBe('offers');
+    expect(store.pending()).toEqual({ call: 'offers', requestId: 'r2' });
   });
 
   it('an offer received leaves nothing to call', () => {
-    store.requestConfirmation();
+    store.requestConfirmation('r1');
 
     store.offerReceived();
 
-    expect(store.pendingCall()).toBeNull();
+    expect(store.pending()).toBeNull();
   });
 
   it('NFR-1: clearing forgets everything', () => {
-    store.requestNewOffer();
+    store.requestNewOffer('r1');
 
     store.clear();
 
-    expect(store.pendingCall()).toBeNull();
+    expect(store.pending()).toBeNull();
   });
 });

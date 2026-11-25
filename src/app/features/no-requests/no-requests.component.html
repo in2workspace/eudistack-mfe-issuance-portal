@@ -1,0 +1,36 @@
+<main class="min-h-screen bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
+  <div class="mx-auto flex max-w-lg flex-col items-center gap-6 rounded-xl border bg-white p-8 text-center">
+    <div class="flex h-16 w-16 items-center justify-center rounded-full bg-gray-100">
+      <svg class="h-8 w-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    </div>
+    <h1 class="text-2xl font-bold text-gray-900">{{ 'noRequests.title' | translate }}</h1>
+    <p class="text-gray-600">{{ 'noRequests.description' | translate }}</p>
+
+    <div class="w-full rounded-lg border bg-gray-50 p-4 text-left text-sm text-gray-700" data-testid="no-requests-contact">
+      <p class="mb-2 font-semibold">{{ 'noRequests.contact' | translate }}</p>
+      @if (support(); as support) {
+        <ul class="space-y-1">
+          @if (support.email) {
+            <li>{{ 'error.support.email' | translate: { email: support.email } }}</li>
+          }
+          @if (support.phone) {
+            <li>{{ 'error.support.phone' | translate: { phone: support.phone } }}</li>
+          }
+          @if (support.schedule) {
+            <li>{{ 'error.support.schedule' | translate: { schedule: support.schedule } }}</li>
+          }
+        </ul>
+      }
+    </div>
+
+    <button
+      type="button"
+      (click)="onHome()"
+      class="inline-flex h-10 items-center justify-center rounded-md bg-gray-900 px-6 text-sm font-medium text-white transition-colors hover:bg-gray-700"
+    >
+      {{ 'noRequests.home' | translate }}
+    </button>
+  </div>
+</main>

@@ -4,6 +4,7 @@ import { Title } from '@angular/platform-browser';
 import { provideRouter, Router } from '@angular/router';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { axe, toHaveNoViolations } from 'jest-axe';
+import { StepBackService } from '../step-indicator/step-back.service';
 import { PortalHeaderComponent } from './portal-header.component';
 import { BrandingService } from '../../../core/branding/branding.service';
 import { TenantLanguageService } from '../../../core/branding/tenant-language.service';
@@ -84,6 +85,15 @@ describe('PortalHeaderComponent', () => {
     await fixture.whenStable();
 
     expect(router.url).toBe('/');
+  });
+
+  it('the back arrow of a step is not in the header: it goes next to «Paso X de 3»', async () => {
+    await navigate('/');
+
+    TestBed.inject(StepBackService).set(jest.fn());
+    fixture.detectChanges();
+
+    expect(element().querySelector('button')).toBeNull();
   });
 
   it('sets the tab title to the portal name in the active language', () => {

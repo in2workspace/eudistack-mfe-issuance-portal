@@ -23,7 +23,7 @@ describe('JourneyInactivityService', () => {
   beforeEach(() => {
     jest.useFakeTimers();
     token = 'access-token';
-    url = '/user-data';
+    url = '/requests/r1/data';
     getJourney = jest.fn().mockReturnValue(of({ state: 'in_progress', step: 'entitlement_confirmed' }));
     toSessionExpired = jest.fn().mockResolvedValue(true);
     TestBed.configureTestingModule({
@@ -123,7 +123,7 @@ describe('JourneyInactivityService', () => {
     expect(touch).not.toHaveBeenCalled();
   });
 
-  it.each(['/', '/incidents', '/error/not-entitled'])('EC-04: on %s there is no journey to watch', async (path) => {
+  it.each(['/', '/incidents', '/error/not-entitled', '/no-requests', '/request-unavailable'])('EC-04: on %s there is no journey to watch', async (path) => {
     url = path;
     service.touch();
 
@@ -142,7 +142,7 @@ describe('JourneyInactivityService', () => {
     expect(getJourney).not.toHaveBeenCalled();
   });
 
-  it.each(['/entitlement', '/verify-email', '/offer'])('watches the step route %s too', async (path) => {
+  it.each(['/entitlement', '/email', '/requests', '/requests/r1/offer'])('watches the step route %s too', async (path) => {
     url = path;
     service.touch();
 

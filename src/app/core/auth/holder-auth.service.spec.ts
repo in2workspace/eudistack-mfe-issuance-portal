@@ -1,4 +1,5 @@
 import { signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { TestBed } from '@angular/core/testing';
 import { LoginResponse, OidcSecurityService } from 'angular-auth-oidc-client';
 import { Subject, of, throwError } from 'rxjs';
@@ -16,7 +17,7 @@ describe('HolderAuthService', () => {
     forceRefreshSession: jest.Mock;
     preloadAuthWellKnownDocument: jest.Mock;
   };
-  let flow: { clearFlow: jest.Mock; clear: jest.Mock; readRedirectMark: jest.Mock; writeRedirectMark: jest.Mock; clearRedirectMark: jest.Mock };
+  let flow: { clearFlow: jest.Mock; clear: jest.Mock; readRedirectMark: jest.Mock; writeRedirectMark: jest.Mock; clearRedirectMark: jest.Mock; writeReturnPath: jest.Mock; takeReturnPath: jest.Mock };
   let mark: number | null;
   const portalConfig = signal<Partial<PortalConfig> | null>(null);
   let service: HolderAuthService;
@@ -38,6 +39,8 @@ describe('HolderAuthService', () => {
     flow = {
       clearFlow: jest.fn(),
       clear: jest.fn(),
+      writeReturnPath: jest.fn(),
+      takeReturnPath: jest.fn(() => '/requests/r1/data'),
       readRedirectMark: jest.fn(() => mark),
       writeRedirectMark: jest.fn((at: number) => (mark = at)),
       clearRedirectMark: jest.fn(() => (mark = null)),
@@ -202,6 +205,25 @@ describe('HolderAuthService', () => {
     expect(navigate.mock.calls[3][0]).toBe(built);
   });
 
+  it('EC-06: the silent login remembers the route to come back to, and the interactive one too', () => {
+    service.loginSilently('/requests/r1/data');
+    service.login('/requests/r2/offer');
+
+    expect(flow.writeReturnPath).toHaveBeenNthCalledWith(1, '/requests/r1/data');
+    expect(flow.writeReturnPath).toHaveBeenNthCalledWith(2, '/requests/r2/offer');
+  });
+
+  it('EC-06: without a route to come back to nothing is remembered', () => {
+    service.loginSilently();
+    service.login();
+
+    expect(flow.writeReturnPath).not.toHaveBeenCalled();
+  });
+
+  it('EC-06: takeReturnPath gives the route the storage kept', () => {
+    expect(service.takeReturnPath()).toBe('/requests/r1/data');
+  });
+
   describe('renewal (AC-06, EC-06)', () => {
     const jwt = (claims: object) => `h.${btoa(JSON.stringify(claims)).replace(/=+$/, '')}.s`;
     const nowSeconds = () => Math.floor(Date.now() / 1000);
@@ -272,6 +294,15 @@ describe('HolderAuthService', () => {
       expect(service.isAccessTokenExpired()).toBe(false);
       await login('opaque-token');
       expect(service.isAccessTokenExpired()).toBe(false);
+    });
+
+    it('AC-23: going to the Verifier because the token could not be renewed remembers the current route, the request included', async () => {
+      await login('old-token');
+      jest.spyOn(TestBed.inject(Router), 'url', 'get').mockReturnValue('/requests/r2/data');
+
+      service.redirectToVerifier();
+
+      expect(flow.writeReturnPath).toHaveBeenCalledWith('/requests/r2/data');
     });
 
     it('goes to the Verifier once, discarding the session first, however many requests fail', async () => {

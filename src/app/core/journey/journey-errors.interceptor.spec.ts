@@ -51,12 +51,12 @@ describe('journeyErrorsInterceptor', () => {
     expect(error).toMatchObject({ type: 'step_not_allowed' });
   });
 
-  it('EC-06: a 409 offer_not_renewable is left to the screen that called', async () => {
-    const error = await failWith('POST', `${api}/journey/offers`, 'offer_not_renewable', 409);
+  it('EC-06: a 409 request_saved is left to the screen that called', async () => {
+    const error = await failWith('POST', `${api}/journey/offers`, 'request_saved', 409);
 
     expect(navigator.toCurrentStep).not.toHaveBeenCalled();
     expect(navigator.toSessionExpired).not.toHaveBeenCalled();
-    expect(error).toMatchObject({ type: 'offer_not_renewable' });
+    expect(error).toMatchObject({ type: 'request_saved' });
   });
 
   it('leaves GET /journey to the guard and the navigator, so they do not navigate twice', async () => {

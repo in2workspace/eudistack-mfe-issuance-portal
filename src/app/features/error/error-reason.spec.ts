@@ -39,7 +39,7 @@ describe('errorReasonGuard', () => {
   beforeEach(() => TestBed.configureTestingModule({ providers: [provideRouter([])] }));
 
   it('lets a known case through', () => {
-    expect(run('offer-not-renewable')).toBe(true);
+    expect(run('request-saved')).toBe(true);
   });
 
   it('EC-03: sends an unknown case to Inicio', () => {

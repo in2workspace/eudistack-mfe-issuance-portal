@@ -27,10 +27,14 @@ export class MobileLayout {
 }
 
 /**
- * Abre el wallet del tenant en la misma pestaña (design.md §6: en otra
- * pestaña no funciona en el móvil). Inyectable para poder probarlo.
- * `location.assign` no pasa por el saneador de Angular: solo abre
- * direcciones `https:` (review B1).
+ * Abre el wallet del tenant en una pestaña nueva, para que el portal siga
+ * abierto y el titular pueda pulsar «Ya lo he guardado» al volver (decisión
+ * de la Tech Lead, 2026-11-18; el wireframe decía la misma pestaña). Solo lo
+ * usa el ordenador, tras el aviso de ordenador personal: en el teléfono es un
+ * enlace en la misma pestaña (design.md §6: en otra no funciona en el móvil).
+ * Sin `opener` ni `Referer` hacia el wallet. Inyectable para poder probarlo.
+ * `window.open` no pasa por el saneador de Angular: solo abre direcciones
+ * `https:` (review B1).
  */
 export const OPEN_WALLET = new InjectionToken<(url: string) => void>('OPEN_WALLET', {
   providedIn: 'root',
@@ -38,7 +42,7 @@ export const OPEN_WALLET = new InjectionToken<(url: string) => void>('OPEN_WALLE
     const view = inject(DOCUMENT).defaultView;
     return (url: string) => {
       if (isHttps(url)) {
-        view?.location.assign(url);
+        view?.open(url, '_blank', 'noopener,noreferrer');
       }
     };
   },

@@ -4,9 +4,9 @@ import { firstValueFrom } from 'rxjs';
 import { JourneyApi } from '../api/generated/journey';
 import { ISSUANCE_PORTAL_ACCESS_TOKEN } from '../api/issuance-portal-api.interceptor';
 import { JourneyNavigator, isJourneyClosed } from './journey-navigator';
-import { DATA_PATH, EMAIL_PATH, ENTITLEMENT_PATH, QR_PATH } from './journey-paths';
+import { JOURNEY_STEP_ROOTS } from './journey-paths';
 
-const STEP_PATHS: ReadonlySet<string> = new Set([ENTITLEMENT_PATH, DATA_PATH, EMAIL_PATH, QR_PATH]);
+const STEP_PATHS: ReadonlySet<string> = new Set(JOURNEY_STEP_ROOTS);
 
 /**
  * Aviso de caducidad del recorrido (prd.md §3.3, punto 4): el servicio lo

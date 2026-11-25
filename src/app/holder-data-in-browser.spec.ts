@@ -52,7 +52,7 @@ describe('Holder data in the browser', () => {
     return [...read(sessionStorage), ...read(localStorage)].join('\n');
   }
 
-  it.each(['/', '/identify', '/entitlement', '/user-data', '/verify-email', '/offer', '/incidents', '/incidents/sent', '/error/config-unavailable', '/error/session-expired', '/cliente'])(
+  it.each(['/', '/identify', '/entitlement', '/email', '/requests', '/done', '/no-requests', '/request-unavailable', '/requests/r1/data', '/requests/r1/offer', '/incidents', '/incidents/sent', '/error/config-unavailable', '/error/session-expired', '/cliente'])(
     'AC-05: visiting %s leaves no holder data in the storage or the address',
     async (url) => {
       const harness = await RouterTestingHarness.create();
@@ -63,7 +63,7 @@ describe('Holder data in the browser', () => {
     },
   );
 
-  it.each(['/?u=eyJuYW1lIjoiRHJhIn0&code=abc&identified=1', '/user-data?u=eyJuYW1lIjoiRHJhIn0', '/unavailable?identified=1'])(
+  it.each(['/?u=eyJuYW1lIjoiRHJhIn0&code=abc&identified=1', '/requests/r1/data?u=eyJuYW1lIjoiRHJhIn0', '/unavailable?identified=1'])(
     'AC-05, EC-01: an old demo address (%s) stores nothing and its parameters leave the address',
     async (url) => {
       const harness = await RouterTestingHarness.create();
@@ -104,7 +104,7 @@ describe('Holder data in the browser', () => {
     }
   });
 
-  describe('NFR-1 (EUD-286, EUD-358): Comprobación, Datos, Verificar correo and QR', () => {
+  describe('NFR-1 (EUD-286, EUD-358, EUD-359): Comprobación, Correo, Datos and QR', () => {
     const email = 'maria.holder@example.org';
     const code = '482913';
     const IN_THREE_MINUTES = () => new Date(Date.now() + 180_000).toISOString();
@@ -115,8 +115,8 @@ describe('Holder data in the browser', () => {
         { label: 'Nombre', value: 'María Holder Privada' },
         { label: 'Número de colegiado', value: '282809999' },
       ],
-      email_required: true,
     };
+    const request = { id: 'r1', status: 'available' as const, attestation, organization: 'Colegio Privado', display_identifier: '282809999' };
     let journey: Journey;
 
     beforeEach(() => {
@@ -128,11 +128,12 @@ describe('Holder data in the browser', () => {
         onboarding_expires_at: new Date(Date.now() + 300_000).toISOString(),
       };
       TestBed.overrideProvider(ISSUANCE_PORTAL_ACCESS_TOKEN, { useValue: () => 'test-access-token' });
+      TestBed.overrideProvider(HolderAuthService, { useValue: { givenName: () => 'María' } });
       TestBed.overrideProvider(EntitlementApi, {
         useValue: {
           verifyEntitlement: () => {
-            journey = { state: 'in_progress', step: 'entitlement_confirmed', attestation };
-            return of({ result: 'confirmed', attestation });
+            journey = { state: 'in_progress', step: 'entitlement_confirmed', known_email: email, requests: [request] };
+            return of({ result: 'confirmed', requests: [{ ...request, renewal: false }] });
           },
         },
       });
@@ -141,16 +142,21 @@ describe('Holder data in the browser', () => {
           getJourney: () => of(journey),
           sendEmailCode: () => {
             const verification = { email, verified: false, resend_available_at: IN_THREE_MINUTES(), sends_left: 2 };
-            journey = { state: 'in_progress', step: 'entitlement_confirmed', attestation, email_verification: verification };
+            journey = { ...journey, email_verification: verification };
             return of(verification);
           },
           checkEmailCode: () => {
             const verification = { email, verified: true, resend_available_at: IN_THREE_MINUTES(), sends_left: 2 };
-            journey = { state: 'in_progress', step: 'email_verified', attestation, email_verification: verification };
+            journey = { ...journey, step: 'email_verified', email_verification: verification };
             return of(journey);
           },
           confirmAndIssue: () => {
-            journey = { state: 'completed', step: 'offer_obtained', attestation, offer };
+            journey = {
+              ...journey,
+              state: 'completed',
+              step: 'offer_obtained',
+              requests: [{ ...request, status: 'in_offer', offer }],
+            };
             return of(offer);
           },
         },
@@ -163,18 +169,13 @@ describe('Holder data in the browser', () => {
       const harness = await RouterTestingHarness.create();
       await harness.navigateByUrl('/entitlement');
       await harness.fixture.whenStable();
-      expect(TestBed.inject(Router).url).toBe('/user-data');
+      expect(TestBed.inject(Router).url).toBe('/email');
 
-      harness.detectChanges();
-      const input = (harness.routeNativeElement as HTMLElement).querySelector('#holder-email') as HTMLInputElement;
-      input.value = email;
-      input.dispatchEvent(new Event('input'));
       harness.detectChanges();
       (harness.routeNativeElement as HTMLElement).querySelector<HTMLButtonElement>('button[type="submit"]')!.click();
       await harness.fixture.whenStable();
       harness.detectChanges();
 
-      expect(TestBed.inject(Router).url).toBe('/verify-email');
       const first = (harness.routeNativeElement as HTMLElement).querySelector('input')!;
       const paste = new Event('paste', { bubbles: true, cancelable: true });
       Object.defineProperty(paste, 'clipboardData', { value: { getData: () => code } });
@@ -182,13 +183,23 @@ describe('Holder data in the browser', () => {
       await harness.fixture.whenStable();
       harness.detectChanges();
 
-      expect(TestBed.inject(Router).url).toBe('/offer');
-      // QR lee el recorrido y pide la oferta al entrar: se dejan terminar esas llamadas.
+      expect(TestBed.inject(Router).url).toBe('/requests/r1/data');
+      harness.detectChanges();
+      Array.from((harness.routeNativeElement as HTMLElement).querySelectorAll('button'))
+        .find((button) => button.textContent?.trim() === 'userData.continue')!
+        .click();
       await harness.fixture.whenStable();
-      await new Promise((resolve) => setTimeout(resolve));
+
+      expect(TestBed.inject(Router).url).toBe('/requests/r1/offer');
+      // QR lee el recorrido y pide la oferta al entrar: se dejan terminar esas llamadas.
+      for (let i = 0; i < 50 && !TestBed.inject(CredentialOfferService).address(); i++) {
+        harness.detectChanges();
+        await harness.fixture.whenStable();
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
       expect(TestBed.inject(CredentialOfferService).address()?.url).toBe(onboardingUrl);
       const browser = [storageContents(), TestBed.inject(Router).url, JSON.stringify(history.state ?? {})].join('\n');
-      for (const value of [email, code, onboardingUrl, 'María Holder Privada', '282809999']) {
+      for (const value of [email, code, onboardingUrl, 'María Holder Privada', '282809999', 'Colegio Privado']) {
         expect(browser).not.toContain(value);
       }
     });
@@ -223,6 +234,7 @@ describe('Holder data in the browser', () => {
             return 'authenticated';
           },
           accessToken: () => accessToken,
+          takeReturnPath: () => storage.takeReturnPath(),
           discard: () => storage.clear(),
         },
       });
