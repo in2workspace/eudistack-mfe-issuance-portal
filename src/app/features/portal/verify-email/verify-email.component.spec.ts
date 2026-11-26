@@ -1154,6 +1154,36 @@ describe('VerifyEmailComponent', () => {
       expect(button('Reenviar en 01:29')?.disabled).toBe(true);
     });
 
+    it('NFR-2: when the countdown of a 429 of the send ends with the code rejected, the boxes stay disabled with the expired message', () => {
+      jest.useFakeTimers();
+      create(verification({ resend_available_at: resendAllowed() }));
+      checkEmailCode.mockReturnValue(problem('too_many_attempts', 400));
+      paste(CODE);
+      sendEmailCode.mockReturnValue(problem('too_many_requests', 429, 20));
+
+      click('Reenviar');
+      expect(message()).toBe('Ahora no se pueden enviar más códigos. Inténtalo de nuevo en 00:20.');
+
+      advance(21_000);
+
+      expect(boxesDisabled()).toBe(true);
+      expect(message()).toBe('Este código ya no sirve. Pide otro.');
+    });
+
+    it('NFR-2: when the countdown of a 429 of the send ends during a 429 of the check, the message names the check countdown', () => {
+      jest.useFakeTimers();
+      create(verification({ resend_available_at: resendAllowed() }));
+      checkEmailCode.mockReturnValue(problem('too_many_requests', 429, 60));
+      paste(CODE);
+      sendEmailCode.mockReturnValue(problem('too_many_requests', 429, 20));
+      click('Reenviar');
+
+      advance(21_000);
+
+      expect(boxesDisabled()).toBe(true);
+      expect(message()).toBe('Demasiados intentos con el código. Inténtalo de nuevo en 00:39.');
+    });
+
     it('a failed send with the code rejected still shows its own message', () => {
       create(verification({ resend_available_at: resendAllowed() }));
       checkEmailCode.mockReturnValue(problem('too_many_attempts', 400));

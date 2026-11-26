@@ -168,16 +168,21 @@ export class VerifyEmailComponent implements OnInit {
     }
     const feedback = this.feedback();
     // Los fallos de Pedir otro se muestran aunque el código ya no sirva: explican qué pasó con ese botón.
-    if (feedback === 'tooManyRequests') {
-      return this.resend.seconds() === 0 ? null : feedback;
+    if (feedback === 'tooManyRequests' && this.resend.seconds() > 0) {
+      return feedback;
     }
     if (feedback === 'unavailable' || feedback === 'tooManyRequestsLater') {
       return feedback;
     }
+    // Acabada la cuenta atrás del 429 de Pedir otro, las casillas pueden seguir desactivadas: el mensaje
+    // explica por qué (NFR-2; design.md §3.4, punto 8).
     if (this.codeUnusable()) {
       return 'expired';
     }
-    return this.checkLimit.seconds() > 0 ? 'tooManyChecks' : feedback;
+    if (this.checkLimit.seconds() > 0) {
+      return 'tooManyChecks';
+    }
+    return feedback === 'tooManyRequests' ? null : feedback;
   });
 
   /** La cuenta atrás que nombra el mensaje: la de la comprobación o la del envío. */
