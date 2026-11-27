@@ -116,6 +116,7 @@
             describedBy="verify-email-message"
             [invalid]="message() === 'invalid'"
             [autofocus]="true"
+            [disabled]="!canCheck()"
             (completed)="onCode($event)"
           />
         }
@@ -124,7 +125,7 @@
         <div id="verify-email-message" aria-live="polite" class="text-center text-sm">
           @if (message(); as key) {
             <p [class]="messageIsError() ? 'text-red-700' : 'text-gray-600'">
-              {{ 'verifyEmail.message.' + key | translate: { countdown: resend.text() } }}
+              {{ 'verifyEmail.message.' + key | translate: { countdown: countdownText() } }}
             </p>
           }
         </div>
@@ -136,6 +137,7 @@
           <div class="flex flex-col items-center gap-2 text-sm text-gray-600 sm:flex-row sm:justify-center">
             <span>{{ 'verifyEmail.resend.prompt' | translate }}</span>
             <button
+              #resendButton
               type="button"
               (click)="onResend()"
               [disabled]="resend.seconds() > 0 || sending()"

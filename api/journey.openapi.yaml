@@ -207,6 +207,9 @@ paths:
       description: |
         Checks the code of the pending verification. If it is right, the email becomes the journey's verified
         email, the code stops working and the step becomes `email_verified`. A wrong code uses one attempt.
+
+        At most 20 checks from the same origin and 10 in the same journey in any hour, whatever their result,
+        also once the code is expired or out of attempts. A check refused by these limits uses no attempt.
       security: [{ idpAccessToken: [] }]
       requestBody:
         required: true
@@ -233,6 +236,17 @@ paths:
               schema: { $ref: "#/components/schemas/Problem" }
         "409":
           description: "`type` `step_not_allowed`: no code pending in the journey."
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "429":
+          description: |
+            `type` `too_many_requests`: 20 checks from the same origin, or 10 in the journey, in the last hour.
+            The code is not checked and no attempt is used. `Retry-After` gives the seconds left.
+          headers:
+            Retry-After:
+              schema: { type: integer }
+              description: Seconds until another check is allowed.
           content:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Problem" }

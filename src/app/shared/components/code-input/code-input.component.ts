@@ -29,10 +29,12 @@ let nextId = 0;
           spellcheck="false"
           [attr.aria-labelledby]="labelId"
           [attr.aria-describedby]="describedBy()"
+          [disabled]="disabled()"
           [attr.aria-invalid]="invalid() ? 'true' : null"
           class="h-14 w-11 rounded-lg border-2 bg-white text-center text-xl font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-accent"
           [class.border-red-600]="invalid()"
           [class.border-gray-300]="!invalid()"
+          [class.bg-gray-100]="disabled()"
           (input)="onInput($event, $index)"
           (keydown)="onKeydown($event, $index)"
           (paste)="onPaste($event)"
@@ -51,6 +53,8 @@ export class CodeInputComponent {
   readonly invalid = input(false);
   /** Lleva el foco a la primera casilla al mostrarse. */
   readonly autofocus = input(false);
+  /** Desactiva las 6 casillas: no se escribe ni se emite `completed` (EUD-375). */
+  readonly disabled = input(false);
   /** Los 6 dígitos, cuando el titular termina de escribirlos o pegarlos. */
   readonly completed = output<string>();
 
@@ -120,6 +124,9 @@ export class CodeInputComponent {
 
   /** Reparte los dígitos desde la casilla `from`, pasa el foco a la siguiente y emite si queda completo. */
   private fill(from: number, typed: string): void {
+    if (this.disabled()) {
+      return;
+    }
     const chars = Array.from(typed.slice(0, this.digits.length - from));
     chars.forEach((char, offset) => this.setDigit(from + offset, char));
     const next = from + chars.length;

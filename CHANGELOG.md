@@ -8,6 +8,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-27
+
+### Changed
+
+- **EUD-375**: Correo, en el estado del código, no comprueba un código que ya no sirve. Con el código agotado (`too_many_attempts`), caducado (`expired_code` o la cuenta atrás local de `code_expires_at`, sin llamar al servicio) o con el 429 `too_many_requests` de la comprobación, las casillas se vacían y quedan desactivadas, con el mensaje en `aria-live` y el foco en Reenviar si está activo. El 429 muestra su propia cuenta atrás de `Retry-After`, independiente de la de Reenviar; al acabar, o con un código nuevo, las casillas se reactivan si el código sigue vigente y el foco va a la primera. Contrato `api/journey.openapi.yaml` (Recorrido 5): se añade el 429 de `checkEmailCode` con `Retry-After`.
+
 ## [0.4.1] - 2026-11-25
 
 ### Added

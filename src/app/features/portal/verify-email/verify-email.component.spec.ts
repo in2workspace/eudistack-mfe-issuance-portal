@@ -334,7 +334,7 @@ describe('VerifyEmailComponent', () => {
     });
 
     it.each(['expired_code', 'too_many_attempts'])(
-      'AC-03: %s says the code no longer works, empties the boxes and focuses the first',
+      'AC-01: %s says the code no longer works and leaves the boxes visible, empty and disabled',
       (type) => {
         create();
         checkEmailCode.mockReturnValue(problem(type, 400));
@@ -342,8 +342,9 @@ describe('VerifyEmailComponent', () => {
         paste(CODE);
 
         expect(message()).toBe('Este código ya no sirve. Pide otro.');
+        expect(boxes()).toHaveLength(6);
         expect(boxValues()).toBe('');
-        expect(focusedBox()).toBe(0);
+        expect(boxes().every((box) => box.disabled)).toBe(true);
         expect(boxes()[0].getAttribute('aria-invalid')).toBeNull();
       },
     );
@@ -953,6 +954,264 @@ describe('VerifyEmailComponent', () => {
       expect(withdrawJourney).toHaveBeenCalledTimes(1);
       expect(discardTokens).toHaveBeenCalledTimes(1);
       expect(navigate).toHaveBeenCalledWith(['/']);
+    });
+  });
+
+  describe('boxes disabled when the code cannot be checked (EUD-375)', () => {
+    const boxesDisabled = (): boolean => boxes().every((box) => box.disabled);
+    const boxesEnabled = (): boolean => boxes().every((box) => !box.disabled);
+    const advance = (ms: number): void => {
+      jest.advanceTimersByTime(ms);
+      fixture.detectChanges();
+    };
+    const resendAllowed = (): string => new Date(Date.now() - 1000).toISOString();
+
+    it('AC-01: with the code rejected, a complete code is not sent to the service', () => {
+      create();
+      checkEmailCode.mockReturnValue(problem('too_many_attempts', 400));
+      paste(CODE);
+
+      paste('111111');
+
+      expect(checkEmailCode).toHaveBeenCalledTimes(1);
+      expect(boxesDisabled()).toBe(true);
+    });
+
+    it('AC-01: the reason is announced in the aria-live region', () => {
+      create();
+      checkEmailCode.mockReturnValue(problem('expired_code', 400));
+      paste(CODE);
+
+      const region = element().querySelector('#verify-email-message');
+
+      expect(region?.getAttribute('aria-live')).toBe('polite');
+      expect(region?.textContent).toContain('Este código ya no sirve. Pide otro.');
+    });
+
+    it('NFR-2: with the boxes disabled, the focus goes to Reenviar when it is enabled', () => {
+      create(verification({ resend_available_at: resendAllowed() }));
+      checkEmailCode.mockReturnValue(problem('expired_code', 400));
+
+      paste(CODE);
+
+      expect(document.activeElement).toBe(button('Reenviar'));
+    });
+
+    it('AC-05: with a valid code and no limit, the boxes are enabled and a wrong code does not disable them', () => {
+      create();
+      expect(boxesEnabled()).toBe(true);
+      checkEmailCode.mockReturnValue(problem('invalid_code', 400));
+
+      paste(CODE);
+
+      expect(boxesEnabled()).toBe(true);
+    });
+
+    it('AC-04: a 429 of the check shows the countdown of Retry-After, empties and disables the boxes, and sends nothing', () => {
+      jest.useFakeTimers();
+      create();
+      checkEmailCode.mockReturnValue(problem('too_many_requests', 429, 30));
+
+      paste(CODE);
+
+      expect(message()).toBe('Demasiados intentos con el código. Inténtalo de nuevo en 00:30.');
+      expect(boxValues()).toBe('');
+      expect(boxesDisabled()).toBe(true);
+
+      paste('111111');
+      expect(checkEmailCode).toHaveBeenCalledTimes(1);
+
+      advance(10_000);
+      expect(message()).toBe('Demasiados intentos con el código. Inténtalo de nuevo en 00:20.');
+    });
+
+    it('AC-04: when the countdown reaches 0 the boxes are enabled again, the focus goes to the first and the next code is checked', () => {
+      jest.useFakeTimers();
+      create();
+      checkEmailCode.mockReturnValueOnce(problem('too_many_requests', 429, 30));
+      paste(CODE);
+
+      advance(31_000);
+
+      expect(boxesEnabled()).toBe(true);
+      expect(message()).toBe('');
+      expect(focusedBox()).toBe(0);
+      checkEmailCode.mockReturnValue(of({ state: 'in_progress', step: 'email_verified' }));
+      paste('111111');
+      expect(checkEmailCode).toHaveBeenNthCalledWith(2, { code: '111111' });
+    });
+
+    it('a 429 of the check with no Retry-After gets the generic message and leaves the boxes enabled', () => {
+      create();
+      checkEmailCode.mockReturnValue(problem('too_many_requests', 429));
+
+      paste(CODE);
+
+      expect(message()).toBe('No hemos podido comprobar el código. Inténtalo de nuevo.');
+      expect(boxesEnabled()).toBe(true);
+    });
+
+    it('EC-08: reloading forgets the countdown and the boxes come back enabled while the code is valid', () => {
+      jest.useFakeTimers();
+      create();
+      checkEmailCode.mockReturnValue(problem('too_many_requests', 429, 30));
+      paste(CODE);
+      expect(boxesDisabled()).toBe(true);
+      fixture.destroy();
+
+      create();
+
+      expect(boxesEnabled()).toBe(true);
+      expect(message()).toBe('');
+    });
+
+    it('AC-07: when the code expiry reaches 0 the boxes are empty and disabled with the message, with no call to the service', () => {
+      jest.useFakeTimers();
+      create(verification({ code_expires_at: new Date(Date.now() + 5000).toISOString(), resend_available_at: resendAllowed() }));
+      expect(boxesEnabled()).toBe(true);
+
+      advance(6000);
+
+      expect(boxesDisabled()).toBe(true);
+      expect(boxValues()).toBe('');
+      expect(message()).toBe('Este código ya no sirve. Pide otro.');
+      expect(document.activeElement).toBe(button('Reenviar'));
+      paste(CODE);
+      expect(checkEmailCode).not.toHaveBeenCalled();
+    });
+
+    it('EC-09: if the code expires during the 429 countdown, the boxes stay disabled with the expired message when it ends', () => {
+      jest.useFakeTimers();
+      create(verification({ code_expires_at: new Date(Date.now() + 10_000).toISOString() }));
+      checkEmailCode.mockReturnValue(problem('too_many_requests', 429, 30));
+      paste(CODE);
+
+      advance(31_000);
+
+      expect(boxesDisabled()).toBe(true);
+      expect(message()).toBe('Este código ya no sirve. Pide otro.');
+    });
+
+    it('AC-08: a new code (202) after a rejected one empties and enables the boxes, focuses the first and is checked', () => {
+      create(verification({ resend_available_at: resendAllowed() }));
+      checkEmailCode.mockReturnValueOnce(problem('too_many_attempts', 400));
+      paste(CODE);
+      expect(boxesDisabled()).toBe(true);
+      sendEmailCode.mockReturnValue(of(verification({ sends_left: 1 })));
+
+      click('Reenviar');
+
+      expect(boxesEnabled()).toBe(true);
+      expect(boxValues()).toBe('');
+      expect(focusedBox()).toBe(0);
+      checkEmailCode.mockReturnValue(of({ state: 'in_progress', step: 'email_verified' }));
+      paste('111111');
+      expect(checkEmailCode).toHaveBeenNthCalledWith(2, { code: '111111' });
+    });
+
+    it('EC-04: a new code does not enable the boxes while the check countdown runs; they are enabled when it ends', () => {
+      jest.useFakeTimers();
+      create(verification({ resend_available_at: resendAllowed() }));
+      checkEmailCode.mockReturnValue(problem('too_many_requests', 429, 30));
+      paste(CODE);
+      sendEmailCode.mockReturnValue(of(verification({ sends_left: 1 })));
+
+      click('Reenviar');
+
+      expect(boxesDisabled()).toBe(true);
+      expect(message()).toContain('Demasiados intentos con el código');
+
+      advance(31_000);
+      expect(boxesEnabled()).toBe(true);
+    });
+
+    it('EC-06: a 429 of the check leaves Reenviar to its own rule', () => {
+      create(verification({ resend_available_at: resendAllowed() }));
+      checkEmailCode.mockReturnValue(problem('too_many_requests', 429, 30));
+
+      paste(CODE);
+
+      expect(button('Reenviar')?.disabled).toBe(false);
+    });
+
+    it('EC-06: a 429 of the send does not disable the boxes, and the two countdowns are independent', () => {
+      jest.useFakeTimers();
+      create(verification({ resend_available_at: resendAllowed() }));
+      sendEmailCode.mockReturnValue(problem('too_many_requests', 429, 120));
+
+      click('Reenviar');
+
+      expect(boxesEnabled()).toBe(true);
+      expect(message()).toBe('Ahora no se pueden enviar más códigos. Inténtalo de nuevo en 02:00.');
+
+      checkEmailCode.mockReturnValue(problem('too_many_requests', 429, 30));
+      paste(CODE);
+      expect(message()).toBe('Demasiados intentos con el código. Inténtalo de nuevo en 00:30.');
+      expect(button('Reenviar en 02:00')?.disabled).toBe(true);
+
+      advance(31_000);
+      expect(boxesEnabled()).toBe(true);
+      expect(button('Reenviar en 01:29')?.disabled).toBe(true);
+    });
+
+    it('NFR-2: when the countdown of a 429 of the send ends with the code rejected, the boxes stay disabled with the expired message', () => {
+      jest.useFakeTimers();
+      create(verification({ resend_available_at: resendAllowed() }));
+      checkEmailCode.mockReturnValue(problem('too_many_attempts', 400));
+      paste(CODE);
+      sendEmailCode.mockReturnValue(problem('too_many_requests', 429, 20));
+
+      click('Reenviar');
+      expect(message()).toBe('Ahora no se pueden enviar más códigos. Inténtalo de nuevo en 00:20.');
+
+      advance(21_000);
+
+      expect(boxesDisabled()).toBe(true);
+      expect(message()).toBe('Este código ya no sirve. Pide otro.');
+    });
+
+    it('NFR-2: when the countdown of a 429 of the send ends during a 429 of the check, the message names the check countdown', () => {
+      jest.useFakeTimers();
+      create(verification({ resend_available_at: resendAllowed() }));
+      checkEmailCode.mockReturnValue(problem('too_many_requests', 429, 60));
+      paste(CODE);
+      sendEmailCode.mockReturnValue(problem('too_many_requests', 429, 20));
+      click('Reenviar');
+
+      advance(21_000);
+
+      expect(boxesDisabled()).toBe(true);
+      expect(message()).toBe('Demasiados intentos con el código. Inténtalo de nuevo en 00:39.');
+    });
+
+    it('a failed send with the code rejected still shows its own message', () => {
+      create(verification({ resend_available_at: resendAllowed() }));
+      checkEmailCode.mockReturnValue(problem('too_many_attempts', 400));
+      paste(CODE);
+      sendEmailCode.mockReturnValue(problem('email_unavailable', 503));
+
+      click('Reenviar');
+
+      expect(message()).toBe('Ahora no se puede enviar el código. Inténtalo de nuevo.');
+      expect(boxesDisabled()).toBe(true);
+    });
+
+    it('NFR-2: has no accessibility violations with the boxes disabled by a rejected code', async () => {
+      create();
+      checkEmailCode.mockReturnValue(problem('too_many_attempts', 400));
+      paste(CODE);
+
+      expect(boxesDisabled()).toBe(true);
+      expect(await axe(element())).toHaveNoViolations();
+    });
+
+    it('NFR-2: has no accessibility violations with the boxes disabled by a 429 of the check', async () => {
+      create();
+      checkEmailCode.mockReturnValue(problem('too_many_requests', 429, 30));
+      paste(CODE);
+
+      expect(boxesDisabled()).toBe(true);
+      expect(await axe(element())).toHaveNoViolations();
     });
   });
 
