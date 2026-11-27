@@ -1,5 +1,5 @@
 import { ApplicationConfig, provideAppInitializer, provideZoneChangeDetection } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withInMemoryScrolling } from '@angular/router';
 import { HttpInterceptorFn, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { MissingTranslationHandler, TranslateLoader, provideTranslateService } from '@ngx-translate/core';
 
@@ -30,7 +30,7 @@ export const httpInterceptors: HttpInterceptorFn[] = [
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
-    provideRouter(routes),
+    provideRouter(routes, withInMemoryScrolling({ scrollPositionRestoration: 'enabled' })),
     provideHttpClient(withInterceptors(httpInterceptors)),
     provideIssuancePortalApi(),
     provideHolderAuth(),
